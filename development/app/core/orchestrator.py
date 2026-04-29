@@ -1,0 +1,133 @@
+from __future__ import annotations
+
+import traceback
+from pathlib import Path
+from typing import Callable
+
+from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal, Slot
+
+from .job import Job, TaskResult, TaskStatus
+from .models import Exchange, Period, Ticker
+from .settings import Settings
+
+
+class OrchestratorSignals(QObject):
+    job_started = Signal(int)                       # total tasks
+    task_started = Signal(object)                   # TaskResult
+    task_progress = Signal(object, str)             # TaskResult, status text
+    task_finished = Signal(object)                  # TaskResult (mutated in place)
+    job_finished = Signal(object)                   # Job
+    log = Signal(str, str)                          # level, message
+
+
+class _TaskRunnable(QRunnable):
+    def __init__(
+        self,
+        result: TaskResult,
+        signals: OrchestratorSignals,
+        output_root: Path,
+    ) -> None:
+        super().__init__()
+        self.result = result
+        self.signals = signals
+        self.output_root = output_root
+
+    @Slot()
+    def run(self) -> None:
+        from plugins import get_plugin
+
+        r = self.result
+        plugin = get_plugin(r.ticker.exchange)
+
+        try:
+            self.signals.task_started.emit(r)
+
+            if not r.ticker.name or not r.ticker.external_id:
+                r.status = TaskStatus.RESOLVING
+                self.signals.task_progress.emit(r, "识别公司名称")
+                resolved = plugin.resolve_name(r.ticker.code)
+                r.ticker.name = resolved.name
+                r.ticker.external_id = resolved.external_id
+
+            try:
+                r.company = plugin.fetch_company(r.ticker)
+            except Exception as exc:  # noqa: BLE001
+                self.signals.log.emit(
+                    "warning",
+                    f"{r.ticker.code} 公司基础资料获取失败，继续抓取报告和财务数据：{exc}",
+                )
+
+            r.status = TaskStatus.DOWNLOADING
+            self.signals.task_progress.emit(r, f"下载{r.period.label()}报告")
+            reports = plugin.download_reports(r.ticker, r.period, self.output_root)
+            r.reports = reports
+
+            r.status = TaskStatus.SCRAPING
+            self.signals.task_progress.emit(r, f"抓取{r.period.label()}财务数据")
+            statements = plugin.fetch_financials(r.ticker, r.period)
+            r.statements = statements
+
+            r.status = TaskStatus.DONE
+        except Exception as exc:  # noqa: BLE001
+            r.status = TaskStatus.FAILED
+            r.error = f"{type(exc).__name__}: {exc}"
+            self.signals.log.emit("error", traceback.format_exc())
+        finally:
+            self.signals.task_finished.emit(r)
+
+
+class Orchestrator(QObject):
+    """Coordinates ticker name resolution and per-task report+financial fetch."""
+
+    def __init__(self, settings: Settings, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self.settings = settings
+        self.signals = OrchestratorSignals()
+        self.pool = QThreadPool.globalInstance()
+        self.pool.setMaxThreadCount(settings.concurrency.max_workers)
+
+    # ---- Synchronous name resolution (called from UI for confirm step) ----
+
+    def resolve_name(self, exchange: Exchange, code: str) -> Ticker:
+        from plugins import get_plugin
+        return get_plugin(exchange).resolve_name(code)
+
+    # ---- Async job execution ----
+
+    def submit_job(self, job: Job) -> None:
+        output_root = Path(job.output_dir)
+        output_root.mkdir(parents=True, exist_ok=True)
+
+        tasks: list[TaskResult] = []
+        for t in job.tickers:
+            for p in job.periods:
+                tasks.append(TaskResult(ticker=t, period=p))
+        job.results = tasks
+        if not tasks:
+            self.signals.job_started.emit(0)
+            self.signals.job_finished.emit(job)
+            return
+
+        task_ids = {id(r) for r in tasks}
+
+        self.signals.job_started.emit(len(tasks))
+
+        state = {"n": 0, "total": len(tasks)}
+
+        def _on_finished(r: TaskResult) -> None:
+            # Only react to tasks belonging to *this* job
+            if id(r) not in task_ids:
+                return
+            state["n"] += 1
+            if state["n"] >= state["total"]:
+                # Disconnect this slot before emitting to avoid double-firing on subsequent jobs
+                try:
+                    self.signals.task_finished.disconnect(_on_finished)
+                except (RuntimeError, TypeError):
+                    pass
+                self.signals.job_finished.emit(job)
+
+        self.signals.task_finished.connect(_on_finished)
+
+        for r in tasks:
+            self.pool.start(_TaskRunnable(r, self.signals, output_root))

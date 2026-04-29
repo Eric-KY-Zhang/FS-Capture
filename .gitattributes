@@ -1,0 +1,5 @@
+* text=auto
+*.bat text eol=crlf
+*.qss text
+*.toml text
+*.md text

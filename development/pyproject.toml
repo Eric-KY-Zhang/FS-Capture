@@ -1,0 +1,42 @@
+[project]
+name = "fs-capture"
+version = "0.1.0"
+description = "One-click multi-market (A/HK/US/KR) annual report and financials capture tool"
+requires-python = ">=3.11,<3.15"
+authors = [{ name = "Eric", email = "kaiyu199602@gmail.com" }]
+
+dependencies = [
+    "PySide6>=6.8",
+    "httpx[http2]>=0.27",
+    "selectolax>=0.3.21",
+    "akshare>=1.14",
+    "OpenDartReader>=0.2.2",
+    "pykrx>=1.0.45",
+    "sec-edgar-downloader>=5.0",
+    "openpyxl>=3.1",
+    "pydantic>=2.7",
+    "tenacity>=8.2",
+    "diskcache>=5.6",
+    "loguru>=0.7",
+    "pandas>=2.2",
+    "pypdf>=4.2",
+    "tomli>=2.0; python_version<'3.11'",
+    "tomli-w>=1.0",
+    "playwright>=1.45",
+]
+
+[project.scripts]
+fs-capture = "app.main:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*", "plugins*"]
+
+[tool.setuptools.package-data]
+"app.ui.styles" = ["*.qss"]
+"app.exporters.templates" = ["*.xlsx"]
+"app.assets" = ["*.ico", "*.png"]

@@ -1,0 +1,410 @@
+/* ============================================================
+   FS Capture — global stylesheet
+   Tokens substituted at runtime (see qss_loader.py).
+   Aesthetic: flat, rounded, designer-quality.
+   ============================================================ */
+
+/* ---- Root ------------------------------------------------- */
+QWidget {
+    font-family: "Microsoft YaHei", "Microsoft YaHei UI", "PingFang SC", "HarmonyOS Sans SC", "Segoe UI", "Helvetica Neue", sans-serif;
+    color: $text;
+    font-size: 13px;
+}
+
+#WindowRoot {
+    background: $bg;
+    border-radius: 0;
+    border: 1px solid $border;
+}
+
+/* ---- Custom title bar ------------------------------------- */
+#TitleBar {
+    background: transparent;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+#TitleBarLogo {
+    color: $primary;
+    font-size: 15px;
+    font-weight: 700;
+    padding-left: 18px;
+}
+
+#TitleBarTitle {
+    color: $text;
+    font-size: 13px;
+    font-weight: 500;
+    padding-left: 8px;
+}
+
+#TitleBarSubtitle {
+    color: $text_subtle;
+    font-size: 12px;
+    padding-left: 6px;
+}
+
+#WindowControl {
+    background: transparent;
+    color: $text_muted;
+    border: none;
+    min-width: 38px;
+    max-width: 38px;
+    min-height: 28px;
+    max-height: 28px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+#WindowControl:hover {
+    background: $surface_alt;
+    color: $text;
+}
+
+#WindowControl[role="close"]:hover {
+    background: $danger;
+    color: white;
+}
+
+/* ---- Card -------------------------------------------------- */
+.Card, #Card {
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: 12px;
+}
+
+#CardHeader {
+    padding: 16px 20px 8px 20px;
+}
+
+#CardTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: $text;
+}
+
+#CardSubtitle {
+    font-size: 12px;
+    color: $text_muted;
+}
+
+#CardBody {
+    padding: 6px 20px 16px 20px;
+}
+
+/* ---- Section header -------------------------------------- */
+#SectionLabel {
+    color: $text_subtle;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* ---- Buttons ---------------------------------------------- */
+QPushButton {
+    background: $surface;
+    color: $text;
+    border: 1px solid $border;
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 13px;
+    min-height: 18px;
+}
+
+QPushButton:hover {
+    background: $surface_alt;
+    border-color: $border_strong;
+}
+
+QPushButton:pressed {
+    background: $border;
+}
+
+QPushButton:disabled {
+    color: $text_subtle;
+    background: $surface_alt;
+    border-color: $border;
+}
+
+QPushButton[variant="primary"] {
+    background: $primary;
+    color: $primary_text;
+    border: 1px solid $primary;
+    font-weight: 600;
+}
+
+QPushButton[variant="primary"]:hover {
+    background: $primary_hover;
+    border-color: $primary_hover;
+}
+
+QPushButton[variant="primary"]:pressed {
+    background: $primary_pressed;
+    border-color: $primary_pressed;
+}
+
+QPushButton[variant="ghost"] {
+    background: transparent;
+    border: 1px dashed $border_strong;
+    color: $text_muted;
+    font-weight: 500;
+}
+
+QPushButton[variant="ghost"]:hover {
+    background: $surface_alt;
+    border-color: $primary;
+    color: $primary;
+}
+
+QPushButton[variant="icon"] {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    border-radius: 8px;
+    min-height: 28px;
+    max-height: 28px;
+    min-width: 28px;
+    max-width: 28px;
+}
+
+QPushButton[variant="icon"]:hover {
+    background: $surface_alt;
+}
+
+QPushButton[variant="danger-icon"] {
+    background: transparent;
+    border: none;
+    color: $text_subtle;
+    padding: 4px;
+    border-radius: 8px;
+    min-height: 28px;
+    max-height: 28px;
+    min-width: 28px;
+    max-width: 28px;
+}
+
+QPushButton[variant="danger-icon"]:hover {
+    background: rgba(239, 68, 68, 0.12);
+    color: $danger;
+}
+
+/* ---- Inputs ----------------------------------------------- */
+QLineEdit, QSpinBox, QComboBox {
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: 10px;
+    padding: 7px 12px;
+    color: $text;
+    selection-background-color: $primary;
+    selection-color: $primary_text;
+    min-height: 18px;
+}
+
+QLineEdit:focus, QSpinBox:focus, QComboBox:focus {
+    border-color: $primary;
+}
+
+QLineEdit:disabled {
+    background: $surface_alt;
+    color: $text_subtle;
+}
+
+QLineEdit[readOnly="true"] {
+    background: $surface_alt;
+    color: $text_muted;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
+}
+
+QComboBox::down-arrow {
+    image: none;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid $text_muted;
+    margin-right: 8px;
+}
+
+QComboBox QAbstractItemView {
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: 10px;
+    padding: 4px;
+    selection-background-color: $surface_alt;
+    selection-color: $text;
+    outline: none;
+}
+
+QSpinBox::up-button, QSpinBox::down-button {
+    border: none;
+    background: transparent;
+    width: 16px;
+}
+
+/* ---- Checkbox --------------------------------------------- */
+QCheckBox {
+    spacing: 8px;
+    color: $text;
+    padding: 4px 0;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid $border_strong;
+    border-radius: 5px;
+    background: $surface;
+}
+
+QCheckBox::indicator:hover {
+    border-color: $primary;
+}
+
+QCheckBox::indicator:checked {
+    background: $primary;
+    border-color: $primary;
+    image: url(none);
+}
+
+/* ---- Exchange selector chips ----------------------------- */
+#ExchangeChip {
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: 12px;
+    padding: 14px 18px;
+    text-align: left;
+}
+
+#ExchangeChip:hover {
+    border-color: $border_strong;
+    background: $surface_alt;
+}
+
+#ExchangeChip[active="true"] {
+    border: 1.5px solid $primary;
+    background: $surface;
+}
+
+#ExchangeChipName {
+    font-size: 14px;
+    font-weight: 600;
+    color: $text;
+}
+
+#ExchangeChipMeta {
+    font-size: 11px;
+    color: $text_subtle;
+}
+
+/* ---- Status pill (resolved name OK / failed) ------------- */
+#StatusPill {
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+#StatusPill[state="ok"] {
+    background: rgba(16, 185, 129, 0.12);
+    color: $success;
+}
+
+#StatusPill[state="error"] {
+    background: rgba(239, 68, 68, 0.12);
+    color: $danger;
+}
+
+#StatusPill[state="pending"] {
+    background: rgba(99, 102, 241, 0.12);
+    color: $primary;
+}
+
+/* ---- Scroll areas ---------------------------------------- */
+QScrollArea, QScrollArea > QWidget > QWidget {
+    background: transparent;
+    border: none;
+}
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 4px 0;
+}
+QScrollBar::handle:vertical {
+    background: $border_strong;
+    border-radius: 5px;
+    min-height: 24px;
+}
+QScrollBar::handle:vertical:hover {
+    background: $text_subtle;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    margin: 0 4px;
+}
+QScrollBar::handle:horizontal {
+    background: $border_strong;
+    border-radius: 5px;
+    min-width: 24px;
+}
+QScrollBar::handle:horizontal:hover { background: $text_subtle; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
+
+/* ---- Progress dock --------------------------------------- */
+#ProgressDock {
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: 12px;
+}
+
+#ProgressItemRow {
+    background: $surface_alt;
+    border-radius: 10px;
+    padding: 8px 12px;
+}
+
+QProgressBar {
+    background: $surface_alt;
+    border: 1px solid $border;
+    border-radius: 8px;
+    height: 6px;
+    text-align: center;
+}
+
+QProgressBar::chunk {
+    background: $primary;
+    border-radius: 7px;
+}
+
+/* ---- Tooltip --------------------------------------------- */
+QToolTip {
+    background: $text;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+
+/* ---- Menus ----------------------------------------------- */
+QMenu {
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: 10px;
+    padding: 4px;
+}
+QMenu::item {
+    padding: 6px 18px;
+    border-radius: 6px;
+}
+QMenu::item:selected {
+    background: $surface_alt;
+}

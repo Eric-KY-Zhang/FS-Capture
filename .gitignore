@@ -1,0 +1,32 @@
+# User/runtime files
+config.toml
+output/
+development/output/
+data/
+logs/
+cache/
+crash.log
+*.xlsm
+
+# Packaged app runtime
+FS Capture.exe
+_internal/
+
+# Python/build artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# PyInstaller artifacts
+development/build/
+development/dist/
+development/build.log
+
+# Local editor/OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

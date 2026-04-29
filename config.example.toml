@@ -1,0 +1,26 @@
+[paths]
+output_dir = "output"
+cache_dir = "data/cache"
+log_dir = "data/logs"
+
+[concurrency]
+max_workers = 4
+
+[rate_limits]
+cninfo = 5
+hkexnews = 3
+sec = 8
+dart = 5
+akshare = 4
+
+[sec]
+user_agent = "FS Capture (your_email@example.com)"
+
+[dart]
+api_key = ""
+
+[ui]
+theme = "light"
+language = "zh_CN"
+window_width = 1280
+window_height = 820
