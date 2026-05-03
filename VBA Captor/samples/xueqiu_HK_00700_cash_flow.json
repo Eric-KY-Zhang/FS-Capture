@@ -1,0 +1,857 @@
+{
+  "data": {
+    "quote_name": "腾讯控股",
+    "currency_name": "人民币",
+    "sas": "国际会计准则",
+    "org_type": 1,
+    "annual_settle_date": "12-31",
+    "last_report_name": "2025年报",
+    "statuses": null,
+    "currency": "CNY",
+    "tip": "腾讯控股财年为每年的1月1日至12月31日，最新披露财报所属2025财年。",
+    "list": [
+      {
+        "report_date": 1767110400000,
+        "report_name": "2025年报",
+        "ctime": null,
+        "month_num": 12,
+        "sd": "2025-01-01",
+        "ed": "2025-12-31",
+        "depaz": [
+          65841000000.0,
+          0.17369912829563078
+        ],
+        "fxdiodtinstr": [
+          8968000000.0,
+          null
+        ],
+        "eqyfin": [
+          2721000000.0,
+          0.4083850931677019
+        ],
+        "ncfrldpty_finact": [
+          665000000.0,
+          3.130434782608696
+        ],
+        "rpafxdiodtinstr": [
+          -8587000000.0,
+          0.39583479912755926
+        ],
+        "ncfdchexrateot": [
+          -1643000000.0,
+          -5.576601671309192
+        ],
+        "icdccceq": [
+          10165000000.0,
+          1.253112549800797
+        ],
+        "cceqbegyr": [
+          132519000000.0,
+          -0.23097144846796658
+        ],
+        "cceqeyr": [
+          141041000000.0,
+          0.0643077596420136
+        ],
+        "intrc": [
+          14534000000.0,
+          -0.025414068262589688
+        ],
+        "intp": [
+          -13180000000.0,
+          -0.06144801481839414
+        ],
+        "divrc": [
+          6500000000.0,
+          0.8460664583925022
+        ],
+        "divp": [
+          -39907000000.0,
+          -0.2772692356932531
+        ],
+        "txprf": [
+          -44699000000.0,
+          0.03215399272475316
+        ],
+        "adtfxda": [
+          -87476000000.0,
+          -0.2558647026732133
+        ],
+        "icinv": [
+          -241835000000.0,
+          -1.6200691216779883
+        ],
+        "dsfxda": [
+          152000000.0,
+          -0.2512315270935961
+        ],
+        "dcinv": [
+          168408000000.0,
+          0.6849730357089258
+        ],
+        "ncfrldpty_invact": [
+          0.0,
+          null
+        ],
+        "nicln": [
+          222240000000.0,
+          0.9395378063254904
+        ],
+        "lnrpa": [
+          -176698000000.0,
+          -0.4595902858086899
+        ],
+        "nfcgcf": [
+          -87155000000.0,
+          0.5061871791675637
+        ],
+        "nocf": [
+          303052000000.0,
+          0.17225293109650666
+        ],
+        "ninvcf": [
+          -205732000000.0,
+          -0.6837470434661626
+        ],
+        "rptsourefc": 17
+      },
+      {
+        "report_date": 1759161600000,
+        "report_name": "2025三季报",
+        "ctime": null,
+        "month_num": 9,
+        "sd": "2025-01-01",
+        "ed": "2025-09-30",
+        "depaz": [
+          null,
+          null
+        ],
+        "fxdiodtinstr": [
+          null,
+          null
+        ],
+        "eqyfin": [
+          null,
+          null
+        ],
+        "ncfrldpty_finact": [
+          null,
+          null
+        ],
+        "rpafxdiodtinstr": [
+          null,
+          null
+        ],
+        "ncfdchexrateot": [
+          -452000000.0,
+          0.4005305039787798
+        ],
+        "icdccceq": [
+          27915000000.0,
+          2.069622193271515
+        ],
+        "cceqbegyr": [
+          132519000000.0,
+          -0.23097144846796658
+        ],
+        "cceqeyr": [
+          159982000000.0,
+          0.09977452085682074
+        ],
+        "intrc": [
+          null,
+          null
+        ],
+        "intp": [
+          null,
+          null
+        ],
+        "divrc": [
+          null,
+          null
+        ],
+        "divp": [
+          null,
+          null
+        ],
+        "txprf": [
+          null,
+          null
+        ],
+        "adtfxda": [
+          null,
+          null
+        ],
+        "icinv": [
+          null,
+          null
+        ],
+        "dsfxda": [
+          null,
+          null
+        ],
+        "dcinv": [
+          null,
+          null
+        ],
+        "ncfrldpty_invact": [
+          null,
+          null
+        ],
+        "nicln": [
+          null,
+          null
+        ],
+        "lnrpa": [
+          null,
+          null
+        ],
+        "nfcgcf": [
+          -60748000000.0,
+          0.5985726557853697
+        ],
+        "nocf": [
+          236577000000.0,
+          0.15699718792028367
+        ],
+        "ninvcf": [
+          -147914000000.0,
+          -0.8665875850232828
+        ],
+        "rptsourefc": 16
+      },
+      {
+        "report_date": 1751212800000,
+        "report_name": "2025中报",
+        "ctime": null,
+        "month_num": 6,
+        "sd": "2025-01-01",
+        "ed": "2025-06-30",
+        "depaz": [
+          30561000000.0,
+          0.12455843391227554
+        ],
+        "fxdiodtinstr": [
+          null,
+          null
+        ],
+        "eqyfin": [
+          null,
+          null
+        ],
+        "ncfrldpty_finact": [
+          null,
+          null
+        ],
+        "rpafxdiodtinstr": [
+          null,
+          null
+        ],
+        "ncfdchexrateot": [
+          791000000.0,
+          22.37837837837838
+        ],
+        "icdccceq": [
+          48747000000.0,
+          3.5967930961005754
+        ],
+        "cceqbegyr": [
+          132519000000.0,
+          -0.23097144846796658
+        ],
+        "cceqeyr": [
+          182057000000.0,
+          0.18595410100904822
+        ],
+        "intrc": [
+          null,
+          null
+        ],
+        "intp": [
+          null,
+          null
+        ],
+        "divrc": [
+          null,
+          null
+        ],
+        "divp": [
+          null,
+          null
+        ],
+        "txprf": [
+          null,
+          null
+        ],
+        "adtfxda": [
+          null,
+          null
+        ],
+        "icinv": [
+          null,
+          null
+        ],
+        "dsfxda": [
+          null,
+          null
+        ],
+        "dcinv": [
+          null,
+          null
+        ],
+        "ncfrldpty_invact": [
+          null,
+          null
+        ],
+        "nicln": [
+          null,
+          null
+        ],
+        "lnrpa": [
+          null,
+          null
+        ],
+        "nfcgcf": [
+          -30111000000.0,
+          0.6982291217766909
+        ],
+        "nocf": [
+          151265000000.0,
+          0.19616789764190481
+        ],
+        "ninvcf": [
+          -72407000000.0,
+          -0.5931483641004203
+        ],
+        "rptsourefc": 15
+      },
+      {
+        "report_date": 1743350400000,
+        "report_name": "2025一季报",
+        "ctime": null,
+        "month_num": 3,
+        "sd": "2025-01-01",
+        "ed": "2025-03-31",
+        "depaz": [
+          null,
+          null
+        ],
+        "fxdiodtinstr": [
+          null,
+          null
+        ],
+        "eqyfin": [
+          null,
+          null
+        ],
+        "ncfrldpty_finact": [
+          null,
+          null
+        ],
+        "rpafxdiodtinstr": [
+          null,
+          null
+        ],
+        "ncfdchexrateot": [
+          526000000.0,
+          3.481132075471698
+        ],
+        "icdccceq": [
+          72208000000.0,
+          7.514027965719441
+        ],
+        "cceqbegyr": [
+          132519000000.0,
+          -0.23097144846796658
+        ],
+        "cceqeyr": [
+          205253000000.0,
+          0.27468125671487925
+        ],
+        "intrc": [
+          null,
+          null
+        ],
+        "intp": [
+          null,
+          null
+        ],
+        "divrc": [
+          null,
+          null
+        ],
+        "divp": [
+          null,
+          null
+        ],
+        "txprf": [
+          null,
+          null
+        ],
+        "adtfxda": [
+          null,
+          null
+        ],
+        "icinv": [
+          null,
+          null
+        ],
+        "dsfxda": [
+          null,
+          null
+        ],
+        "dcinv": [
+          null,
+          null
+        ],
+        "ncfrldpty_invact": [
+          null,
+          null
+        ],
+        "nicln": [
+          null,
+          null
+        ],
+        "lnrpa": [
+          null,
+          null
+        ],
+        "nfcgcf": [
+          24818000000.0,
+          2.600025788150345
+        ],
+        "nocf": [
+          76889000000.0,
+          0.06273669661368349
+        ],
+        "ninvcf": [
+          -29499000000.0,
+          0.565705788822802
+        ],
+        "rptsourefc": 14
+      },
+      {
+        "report_date": 1735574400000,
+        "report_name": "2024年报",
+        "ctime": null,
+        "month_num": 12,
+        "sd": "2024-01-01",
+        "ed": "2024-12-31",
+        "depaz": [
+          56097000000.0,
+          -0.04804167797990768
+        ],
+        "fxdiodtinstr": [
+          0.0,
+          null
+        ],
+        "eqyfin": [
+          1932000000.0,
+          0.805607476635514
+        ],
+        "ncfrldpty_finact": [
+          161000000.0,
+          -0.08522727272727272
+        ],
+        "rpafxdiodtinstr": [
+          -14213000000.0,
+          -0.40153830983137756
+        ],
+        "ncfdchexrateot": [
+          359000000.0,
+          -0.7346637102734663
+        ],
+        "icdccceq": [
+          -40160000000.0,
+          -3.8226033174023053
+        ],
+        "cceqbegyr": [
+          172320000000.0,
+          0.09940729492978774
+        ],
+        "cceqeyr": [
+          132519000000.0,
+          -0.23097144846796658
+        ],
+        "intrc": [
+          14913000000.0,
+          0.4410087931201082
+        ],
+        "intp": [
+          -12417000000.0,
+          -0.0818086774699425
+        ],
+        "divrc": [
+          3521000000.0,
+          0.7508702138239681
+        ],
+        "divp": [
+          -31244000000.0,
+          -0.4340003671745915
+        ],
+        "txprf": [
+          -46184000000.0,
+          -0.32983961530709205
+        ],
+        "adtfxda": [
+          -69654000000.0,
+          -2.260191902644512
+        ],
+        "icinv": [
+          -92301000000.0,
+          -0.28635337402792876
+        ],
+        "dsfxda": [
+          203000000.0,
+          -0.21011673151750973
+        ],
+        "dcinv": [
+          99947000000.0,
+          0.6269004134518344
+        ],
+        "ncfrldpty_invact": [
+          0.0,
+          null
+        ],
+        "nicln": [
+          114584000000.0,
+          0.8058944050433412
+        ],
+        "lnrpa": [
+          -121060000000.0,
+          -1.3897980535760113
+        ],
+        "nfcgcf": [
+          -176494000000.0,
+          -1.1374299105034333
+        ],
+        "nocf": [
+          258521000000.0,
+          0.1647083735053748
+        ],
+        "ninvcf": [
+          -122187000000.0,
+          0.023761395322824203
+        ],
+        "rptsourefc": 17
+      },
+      {
+        "report_date": 1727625600000,
+        "report_name": "2024三季报",
+        "ctime": null,
+        "month_num": 9,
+        "sd": "2024-01-01",
+        "ed": "2024-09-30",
+        "depaz": [
+          null,
+          null
+        ],
+        "fxdiodtinstr": [
+          null,
+          null
+        ],
+        "eqyfin": [
+          null,
+          null
+        ],
+        "ncfrldpty_finact": [
+          null,
+          null
+        ],
+        "rpafxdiodtinstr": [
+          null,
+          null
+        ],
+        "ncfdchexrateot": [
+          -754000000.0,
+          -1.4456264775413712
+        ],
+        "icdccceq": [
+          -26098000000.0,
+          -1.1830196570472606
+        ],
+        "cceqbegyr": [
+          172320000000.0,
+          0.09940729492978774
+        ],
+        "cceqeyr": [
+          145468000000.0,
+          -0.006881673448209945
+        ],
+        "intrc": [
+          null,
+          null
+        ],
+        "intp": [
+          null,
+          null
+        ],
+        "divrc": [
+          null,
+          null
+        ],
+        "divp": [
+          null,
+          null
+        ],
+        "txprf": [
+          null,
+          null
+        ],
+        "adtfxda": [
+          null,
+          null
+        ],
+        "icinv": [
+          null,
+          null
+        ],
+        "dsfxda": [
+          null,
+          null
+        ],
+        "dcinv": [
+          null,
+          null
+        ],
+        "ncfrldpty_invact": [
+          null,
+          null
+        ],
+        "nicln": [
+          null,
+          null
+        ],
+        "lnrpa": [
+          null,
+          null
+        ],
+        "nfcgcf": [
+          -151330000000.0,
+          -1.4094831703977326
+        ],
+        "nocf": [
+          204475000000.0,
+          0.21705514023141756
+        ],
+        "ninvcf": [
+          -79243000000.0,
+          0.32361702672482223
+        ],
+        "rptsourefc": 16
+      },
+      {
+        "report_date": 1719676800000,
+        "report_name": "2024中报",
+        "ctime": null,
+        "month_num": 6,
+        "sd": "2024-01-01",
+        "ed": "2024-06-30",
+        "depaz": [
+          27176000000.0,
+          -0.12054626063881428
+        ],
+        "fxdiodtinstr": [
+          null,
+          null
+        ],
+        "eqyfin": [
+          null,
+          null
+        ],
+        "ncfrldpty_finact": [
+          null,
+          null
+        ],
+        "rpafxdiodtinstr": [
+          null,
+          null
+        ],
+        "ncfdchexrateot": [
+          -37000000.0,
+          -1.0164810690423163
+        ],
+        "icdccceq": [
+          -18772000000.0,
+          0.02921859647308269
+        ],
+        "cceqbegyr": [
+          172320000000.0,
+          0.09940729492978774
+        ],
+        "cceqeyr": [
+          153511000000.0,
+          0.09927889607367148
+        ],
+        "intrc": [
+          null,
+          null
+        ],
+        "intp": [
+          null,
+          null
+        ],
+        "divrc": [
+          null,
+          null
+        ],
+        "divp": [
+          null,
+          null
+        ],
+        "txprf": [
+          null,
+          null
+        ],
+        "adtfxda": [
+          null,
+          null
+        ],
+        "icinv": [
+          null,
+          null
+        ],
+        "dsfxda": [
+          null,
+          null
+        ],
+        "dcinv": [
+          null,
+          null
+        ],
+        "ncfrldpty_invact": [
+          null,
+          null
+        ],
+        "nicln": [
+          null,
+          null
+        ],
+        "lnrpa": [
+          null,
+          null
+        ],
+        "nfcgcf": [
+          -99781000000.0,
+          -1.6540323438663687
+        ],
+        "nocf": [
+          126458000000.0,
+          0.22795024421506463
+        ],
+        "ninvcf": [
+          -45449000000.0,
+          0.4635640432463056
+        ],
+        "rptsourefc": 15
+      },
+      {
+        "report_date": 1711814400000,
+        "report_name": "2024一季报",
+        "ctime": null,
+        "month_num": 3,
+        "sd": "2024-01-01",
+        "ed": "2024-03-31",
+        "depaz": [
+          null,
+          null
+        ],
+        "fxdiodtinstr": [
+          null,
+          null
+        ],
+        "eqyfin": [
+          null,
+          null
+        ],
+        "ncfrldpty_finact": [
+          null,
+          null
+        ],
+        "rpafxdiodtinstr": [
+          null,
+          null
+        ],
+        "ncfdchexrateot": [
+          -212000000.0,
+          0.7557603686635944
+        ],
+        "icdccceq": [
+          -11085000000.0,
+          -3.3590247738891073
+        ],
+        "cceqbegyr": [
+          172320000000.0,
+          0.09940729492978774
+        ],
+        "cceqeyr": [
+          161023000000.0,
+          0.05018652822706877
+        ],
+        "intrc": [
+          null,
+          null
+        ],
+        "intp": [
+          null,
+          null
+        ],
+        "divrc": [
+          null,
+          null
+        ],
+        "divp": [
+          null,
+          null
+        ],
+        "txprf": [
+          null,
+          null
+        ],
+        "adtfxda": [
+          null,
+          null
+        ],
+        "icinv": [
+          null,
+          null
+        ],
+        "dsfxda": [
+          null,
+          null
+        ],
+        "dcinv": [
+          null,
+          null
+        ],
+        "ncfrldpty_invact": [
+          null,
+          null
+        ],
+        "nicln": [
+          null,
+          null
+        ],
+        "lnrpa": [
+          null,
+          null
+        ],
+        "nfcgcf": [
+          -15511000000.0,
+          -44.20612813370474
+        ],
+        "nocf": [
+          72350000000.0,
+          0.1613721367000016
+        ],
+        "ninvcf": [
+          -67924000000.0,
+          -0.04179511955704842
+        ],
+        "rptsourefc": 14
+      }
+    ]
+  },
+  "error_code": 0,
+  "error_description": ""
+}
