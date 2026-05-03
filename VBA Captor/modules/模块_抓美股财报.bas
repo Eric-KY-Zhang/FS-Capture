@@ -167,8 +167,25 @@ NextRow:
 
     Application.StatusBar = "写入: " & targetSheet
     DoEvents
+    Dim dictReportingCurrency As Object: Set dictReportingCurrency = CreateObject("Scripting.Dictionary")
+    Dim usCode As Variant
+    For Each usCode In arrCodes
+        dictReportingCurrency(CStr(usCode)) = "USD"
+    Next usCode
+
+    Dim hookKind As String
+    Select Case True
+        Case InStr(targetSheet, "资产负债") > 0: hookKind = "BalanceSheet"
+        Case InStr(targetSheet, "利润") > 0:     hookKind = "Income"
+        Case InStr(targetSheet, "现金流") > 0:   hookKind = "CashFlow"
+        Case Else:                               hookKind = ""
+    End Select
+
     WriteWideTable wsTarget, arrCodes, dictCompanyName, dictData, _
-                    arrPeriods, arrIndicators, dictCategoryMap, True
+                    arrPeriods, arrIndicators, dictCategoryMap, _
+                    perCompanyPeriods:=True, _
+                    dictReportingCurrency:=dictReportingCurrency, _
+                    statementKind:=hookKind
 
     ' 单位标注: 在 R1 下方 / sheet 名字附近, A1 cell 内容补充
     On Error Resume Next

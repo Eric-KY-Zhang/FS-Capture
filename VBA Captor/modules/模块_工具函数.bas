@@ -1045,6 +1045,8 @@ End Function
 '   arrIndicators     : 指标名数组 (一维, 1-based, 已并集排序)
 '   dictCategory      : indicator -> 大类
 '   perCompanyPeriods : True 时每家公司只展开自己有数据的报告期 (美股用)
+'   dictReportingCurrency : code -> 报告币种; Nothing 时按 RMB 处理
+'   statementKind     : "BalanceSheet" / "Income" / "CashFlow", 用于选择期末/均值汇率
 Public Sub WriteWideTable(ByVal ws As Worksheet, _
                            ByRef arrCodes As Variant, _
                            ByRef dictCompanyName As Object, _
@@ -1052,11 +1054,18 @@ Public Sub WriteWideTable(ByVal ws As Worksheet, _
                            ByRef arrPeriodsSorted As Variant, _
                            ByRef arrIndicators As Variant, _
                            ByRef dictCategory As Object, _
-                           Optional ByVal perCompanyPeriods As Boolean = False)
+                           Optional ByVal perCompanyPeriods As Boolean = False, _
+                           Optional ByRef dictReportingCurrency As Object = Nothing, _
+                           Optional ByVal statementKind As String = "")
     Dim numCompanies As Long, numPeriods As Long, numIndicators As Long
     Dim i As Long, j As Long, k As Long, intRow As Long, intCol As Long
     Dim strCode As String, strName As String, strInd As String, strPeriod As String
     Dim varValue As Variant
+
+    ' Phase 4f Step 3: RMB 换算预读, 避免内循环反复读样本池 B6
+    Dim displayMode As String: displayMode = ReadDisplayCurrency()
+    Dim useEopForBS As Boolean
+    useEopForBS = (UCase$(Trim$(statementKind)) = "BALANCESHEET")
 
     numCompanies = UBound(arrCodes) - LBound(arrCodes) + 1
     numPeriods = UBound(arrPeriodsSorted) - LBound(arrPeriodsSorted) + 1
@@ -1224,7 +1233,24 @@ NextHeaderCompany:
                         If dictCompany.Exists(strPeriod) Then
                             Dim dictPer As Object: Set dictPer = dictCompany(strPeriod)
                             If dictPer.Exists(strInd) Then
-                                arrOut(k, intCol + j - 1) = dictPer(strInd)
+                                Dim rawVal As Variant: rawVal = dictPer(strInd)
+                                Dim writeVal As Variant: writeVal = rawVal
+                                ' Phase 4f Step 3: 统一RMB 显示模式 -> 按报告币种乘汇率
+                                If displayMode = "统一RMB" And IsNumeric(rawVal) Then
+                                    Dim curCode As String: curCode = "RMB"
+                                    If Not dictReportingCurrency Is Nothing Then
+                                        If dictReportingCurrency.Exists(strCode) Then _
+                                            curCode = CStr(dictReportingCurrency(strCode))
+                                    End If
+                                    Dim fx As Double
+                                    fx = GetFxRate(curCode, strPeriod, useEopForBS)
+                                    If fx > 0 Then
+                                        writeVal = CDbl(rawVal) * fx
+                                    Else
+                                        writeVal = rawVal
+                                    End If
+                                End If
+                                arrOut(k, intCol + j - 1) = writeVal
                             End If
                         End If
                     Next j
@@ -2248,7 +2274,10 @@ NextRow:
     Application.StatusBar = "写入: " & targetSheet
     DoEvents
     WriteWideTable wsTarget, arrCodes, dictCompanyName, dictData, _
-                    arrPeriods, arrIndicators, dictCategoryMap
+                    arrPeriods, arrIndicators, dictCategoryMap, _
+                    perCompanyPeriods:=False, _
+                    dictReportingCurrency:=Nothing, _
+                    statementKind:=strKind
 
 CleanUp:
     Application.ScreenUpdating = True

@@ -145,8 +145,25 @@ NextRow:
 
     Application.StatusBar = "写入: " & targetSheet
     DoEvents
+    Dim dictReportingCurrency As Object: Set dictReportingCurrency = CreateObject("Scripting.Dictionary")
+    Dim krCode As Variant
+    For Each krCode In arrCodes
+        dictReportingCurrency(CStr(krCode)) = "KRW"
+    Next krCode
+
+    Dim hookKind As String
+    Select Case True
+        Case InStr(targetSheet, "资产负债") > 0: hookKind = "BalanceSheet"
+        Case InStr(targetSheet, "利润") > 0:     hookKind = "Income"
+        Case InStr(targetSheet, "现金流") > 0:   hookKind = "CashFlow"
+        Case Else:                               hookKind = ""
+    End Select
+
     WriteWideTable wsTarget, arrCodes, dictCompanyName, dictData, _
-                   arrPeriods, arrIndicators, dictCategoryMap, True
+                   arrPeriods, arrIndicators, dictCategoryMap, _
+                   perCompanyPeriods:=True, _
+                   dictReportingCurrency:=dictReportingCurrency, _
+                   statementKind:=hookKind
 
     On Error Resume Next
     If Not wsTarget.Range("A1").Comment Is Nothing Then wsTarget.Range("A1").Comment.Delete

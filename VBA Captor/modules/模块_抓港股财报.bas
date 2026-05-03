@@ -34,6 +34,7 @@ Public Sub RunHKStatement(ByVal strKind As String, ByVal targetSheet As String, 
     Dim dictIndicatorSet As Object: Set dictIndicatorSet = CreateObject("Scripting.Dictionary")
     Dim dictCategoryMap As Object: Set dictCategoryMap = CreateObject("Scripting.Dictionary")
     Dim dictCompanyName As Object: Set dictCompanyName = CreateObject("Scripting.Dictionary")
+    Dim dictReportingCurrency As Object: Set dictReportingCurrency = CreateObject("Scripting.Dictionary")
     Dim collCodes As New Collection
     Dim collDiagRows As New Collection
 
@@ -81,7 +82,8 @@ Public Sub RunHKStatement(ByVal strKind As String, ByVal targetSheet As String, 
         On Error Resume Next
         Err.Clear
         FetchHKFromXueqiu strCode, strKind, conceptMap, strQuarter, lngYear, maxPeriods, _
-                          tempData, tempPeriodSet, tempIndicatorSet, tempCategoryMap, collDiagRows
+                          tempData, tempPeriodSet, tempIndicatorSet, tempCategoryMap, collDiagRows, _
+                          dictReportingCurrency
         Dim fetchErrNum As Long: fetchErrNum = Err.Number
         Dim fetchErrSource As String: fetchErrSource = Err.Source
         Dim fetchErrDesc As String: fetchErrDesc = Err.Description
@@ -143,8 +145,25 @@ NextRow:
 
     Application.StatusBar = "写入: " & targetSheet
     DoEvents
+    Dim hkCode As Variant
+    For Each hkCode In arrCodes
+        If Not dictReportingCurrency.Exists(CStr(hkCode)) Then _
+            dictReportingCurrency(CStr(hkCode)) = "HKD"
+    Next hkCode
+
+    Dim hookKind As String
+    Select Case True
+        Case InStr(targetSheet, "资产负债") > 0: hookKind = "BalanceSheet"
+        Case InStr(targetSheet, "利润") > 0:     hookKind = "Income"
+        Case InStr(targetSheet, "现金流") > 0:   hookKind = "CashFlow"
+        Case Else:                               hookKind = ""
+    End Select
+
     WriteWideTable wsTarget, arrCodes, dictCompanyName, dictData, _
-                   arrPeriods, arrIndicators, dictCategoryMap, True
+                   arrPeriods, arrIndicators, dictCategoryMap, _
+                   perCompanyPeriods:=True, _
+                   dictReportingCurrency:=dictReportingCurrency, _
+                   statementKind:=hookKind
 
     On Error Resume Next
     If Not wsTarget.Range("A1").Comment Is Nothing Then wsTarget.Range("A1").Comment.Delete
@@ -189,7 +208,8 @@ Private Sub FetchHKFromXueqiu(ByVal strTicker As String, _
                               ByRef dictPeriodSet As Object, _
                               ByRef dictIndicatorSet As Object, _
                               ByRef dictCategoryMap As Object, _
-                              Optional ByVal collDiagRows As Collection = Nothing)
+                              Optional ByVal collDiagRows As Collection = Nothing, _
+                              Optional ByRef dictReportingCurrency As Object = Nothing)
     Dim stage As String: stage = "init"
     On Error GoTo XqErr
 
@@ -235,6 +255,22 @@ Private Sub FetchHKFromXueqiu(ByVal strTicker As String, _
     Dim dataRoot As Object: Set dataRoot = parsed.Item("data")
     Dim currencyText As String: currencyText = HK_NzStr(dataRoot, "currency")
     If Len(currencyText) = 0 Then currencyText = "REPORT_CURRENCY"
+    If Not dictReportingCurrency Is Nothing Then
+        If Len(currencyText) > 0 And currencyText <> "REPORT_CURRENCY" Then
+            Dim normCur As String
+            Select Case UCase$(currencyText)
+                Case "CNY", "RMB", "人民币":    normCur = "RMB"
+                Case "HKD", "港币":             normCur = "HKD"
+                Case "USD", "美元":             normCur = "USD"
+                Case Else:                      normCur = currencyText
+            End Select
+            If dictReportingCurrency.Exists(strTicker) Then
+                dictReportingCurrency.Item(strTicker) = normCur
+            Else
+                dictReportingCurrency.Add strTicker, normCur
+            End If
+        End If
+    End If
 
     stage = "GetList"
     If Not dataRoot.Exists("list") Then
