@@ -81,6 +81,7 @@ def build_intro(ws):
         "",
         "【限制】",
         "  - 雪球 cookie 过期时需重新复制 xq_a_token 到 B5",
+        "  - 诊断 sheet 中同一 (公司, 指标) 先出现 MISSING_NON_USD、随后出现 OK_XUEQIU 属预期行为:表示 ifrs-full 有字段但单位不是 USD,系统改走雪球兜底",
         "  - 韩股目前为规划市场, 尚未接入抓数",
         "",
         "【来源说明】基于林铖 V2.2 重写并扩展。",

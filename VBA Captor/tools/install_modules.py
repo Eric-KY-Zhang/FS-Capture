@@ -602,6 +602,7 @@ def update_intro_sheet(wb):
         "美股优先使用 SEC EDGAR companyfacts; EDGAR 缺失或字段不匹配时, 支持的中概股 fallback 到雪球。",
         "港股来自雪球 HK API; 不做汇率换算, 币种以诊断表 Unit 列为准。",
         "雪球 cookie 过期时, 请重新复制 xq_a_token 到样本池 B5。",
+        "诊断 sheet 中同一 (公司, 指标) 先出现 MISSING_NON_USD、随后出现 OK_XUEQIU 属预期行为:表示 ifrs-full 有字段但单位不是 USD,系统改走雪球兜底。",
         "韩股目前为规划市场, 尚未接入抓数。",
     ]
 
