@@ -139,7 +139,7 @@ Public Sub EnsureDiagnosticSheet()
     Err.Clear
     On Error GoTo 0
 
-    ws.Cells(1, 1).Value = Replace(diagName, "_", "")
+    ws.Cells(1, 1).Value = Replace(diagName, "_", "") & " (每次跑数后自动刷新)"
     ws.Range(ws.Cells(1, 1), ws.Cells(1, 10)).Merge
     With ws.Range(ws.Cells(1, 1), ws.Cells(1, 10))
         .Font.Name = "微软雅黑"

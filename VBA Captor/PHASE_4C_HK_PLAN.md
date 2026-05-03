@@ -1,7 +1,7 @@
 # Phase 4c: 港股 (HK) 重启 — 走雪球 HK API
 
 > **版本**: v2(2026-05-03,Step 1 探查后调整)
-> **状态**: 🚧 Step 3 + Step 4 已实现,等待 Claude Code review
+> **状态**: 🚧 Step 5 + Step 6 已实现,等待 Claude Code review
 > **作者**: Claude(planner)+ Codex(executor)
 > **背景**: Phase 4b-14a 美股已闭环。港股是用户记忆里"A股 / 美股 / 港股 / 韩股"4 市场目标的第三块。早期 Phase 4a 走新浪 HK 失败已废弃,本期改走**雪球 HK API**,复用 Phase 4b-5 起雪球 fallback 的成熟框架。
 
@@ -158,7 +158,7 @@ modules/模块_抓港股指标表.bas
 - Step 2 临时私有 HK 诊断 writer 已删除,HK 诊断写入改走通用 `WriteDiagnosticForKind`。
 - `BuildStandardIndicatorSheet` / `AppendStandardIndicators` / `StandardRowMap` / `StandardTargetPeriodWanted` / `StandardDataStartCol` 已支持 `HK`。
 
-### Step 5 — install_modules.py + build_template.py
+### Step 5 — install_modules.py + build_template.py ✅ 已实现(2026-05-03)
 
 `tools/build_template.py`:
 - `main` 加创建 `港股_资产负债表` / `港股_利润表` / `港股_现金流量表` / `港股_指标表` 4 张 sheet(复用 `build_wide_table`)
@@ -171,7 +171,7 @@ modules/模块_抓港股指标表.bas
 - `BUTTONS` 加 4 个港股按钮(`BtnRunHKBalance` / `BtnRunHKProfit` / `BtnRunHKCash` / `BtnRunHKInd`),颜色用第三色(深绿 `#548235` / 白字 / 11pt,与 A 股蓝 + 美股红区分)
 - 「使用说明」refresh 加港股一段
 
-### Step 6 — `模块_总入口.一键全抓` 升到 12 张表
+### Step 6 — `模块_总入口.一键全抓` 升到 12 张表 ✅ 已实现(2026-05-03)
 
 ```vba
 Public Sub 一键全抓(...)
