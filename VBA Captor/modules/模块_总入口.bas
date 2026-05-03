@@ -6,6 +6,162 @@ Option Explicit
 '  基本资料 已废弃
 ' =================================================================
 
+Public Sub 一键A股(Optional ByVal blnSilent As Boolean = False)
+    Dim dtTime As Double: dtTime = Timer
+    Dim runErrDesc As String
+
+    g_silentMode = True
+    g_globalFails = 0
+    g_globalLog = ""
+    g_diagnosticAppendOnly = False
+    On Error GoTo CleanUp
+
+    Application.StatusBar = "[A股 1/4] 抓取资产负债表..."
+    模块_抓资产负债表.Main
+    Application.StatusBar = "[A股 2/4] 抓取利润表..."
+    模块_抓利润表.Main
+    Application.StatusBar = "[A股 3/4] 抓取现金流量表..."
+    模块_抓现金流量表.Main
+    Application.StatusBar = "[A股 4/4] 生成指标表..."
+    模块_抓指标表.Main
+
+CleanUp:
+    If Err.Number <> 0 Then
+        runErrDesc = vbCrLf & vbCrLf & "运行中断: " & Err.Description
+        Err.Clear
+    End If
+    g_silentMode = False
+    g_diagnosticAppendOnly = False
+    Application.StatusBar = False
+    Application.ScreenUpdating = True
+
+    If Not blnSilent Then ShowMarketRunSummary "A股", dtTime, runErrDesc
+End Sub
+
+
+Public Sub 一键美股(Optional ByVal blnSilent As Boolean = False)
+    Dim dtTime As Double: dtTime = Timer
+    Dim runErrDesc As String
+
+    g_silentMode = True
+    g_globalFails = 0
+    g_globalLog = ""
+    On Error GoTo CleanUp
+    g_diagnosticSheetName = "美股_抓取诊断"
+    ClearDiagnosticSheet
+    g_diagnosticAppendOnly = True
+
+    Application.StatusBar = "[美股 1/4] 抓取资产负债表..."
+    模块_抓美股资产负债表.Main
+    Application.StatusBar = "[美股 2/4] 抓取利润表..."
+    模块_抓美股利润表.Main
+    Application.StatusBar = "[美股 3/4] 抓取现金流量表..."
+    模块_抓美股现金流量表.Main
+    Application.StatusBar = "[美股 4/4] 生成指标表..."
+    模块_抓美股指标表.Main
+
+CleanUp:
+    If Err.Number <> 0 Then
+        runErrDesc = vbCrLf & vbCrLf & "运行中断: " & Err.Description
+        Err.Clear
+    End If
+    g_silentMode = False
+    g_diagnosticAppendOnly = False
+    Application.StatusBar = False
+    Application.ScreenUpdating = True
+
+    If Not blnSilent Then ShowMarketRunSummary "美股", dtTime, runErrDesc
+End Sub
+
+
+Public Sub 一键港股(Optional ByVal blnSilent As Boolean = False)
+    Dim dtTime As Double: dtTime = Timer
+    Dim runErrDesc As String
+
+    g_silentMode = True
+    g_globalFails = 0
+    g_globalLog = ""
+    On Error GoTo CleanUp
+    g_diagnosticSheetName = "港股_抓取诊断"
+    ClearDiagnosticSheet
+    g_diagnosticAppendOnly = True
+
+    Application.StatusBar = "[港股 1/4] 抓取资产负债表..."
+    模块_抓港股资产负债表.Main
+    Application.StatusBar = "[港股 2/4] 抓取利润表..."
+    模块_抓港股利润表.Main
+    Application.StatusBar = "[港股 3/4] 抓取现金流量表..."
+    模块_抓港股现金流量表.Main
+    Application.StatusBar = "[港股 4/4] 生成指标表..."
+    模块_抓港股指标表.Main
+
+CleanUp:
+    If Err.Number <> 0 Then
+        runErrDesc = vbCrLf & vbCrLf & "运行中断: " & Err.Description
+        Err.Clear
+    End If
+    g_silentMode = False
+    g_diagnosticAppendOnly = False
+    Application.StatusBar = False
+    Application.ScreenUpdating = True
+
+    If Not blnSilent Then ShowMarketRunSummary "港股", dtTime, runErrDesc
+End Sub
+
+
+Public Sub 一键韩股(Optional ByVal blnSilent As Boolean = False)
+    Dim dtTime As Double: dtTime = Timer
+    Dim runErrDesc As String
+
+    g_silentMode = True
+    g_globalFails = 0
+    g_globalLog = ""
+    On Error GoTo CleanUp
+    g_diagnosticSheetName = "韩股_抓取诊断"
+    ClearDiagnosticSheet
+    g_diagnosticAppendOnly = True
+
+    Application.StatusBar = "[韩股 1/4] 抓取资产负债表..."
+    模块_抓韩股资产负债表.Main
+    Application.StatusBar = "[韩股 2/4] 抓取利润表..."
+    模块_抓韩股利润表.Main
+    Application.StatusBar = "[韩股 3/4] 抓取现金流量表..."
+    模块_抓韩股现金流量表.Main
+    Application.StatusBar = "[韩股 4/4] 生成指标表..."
+    模块_抓韩股指标表.Main
+
+CleanUp:
+    If Err.Number <> 0 Then
+        runErrDesc = vbCrLf & vbCrLf & "运行中断: " & Err.Description
+        Err.Clear
+    End If
+    g_silentMode = False
+    g_diagnosticAppendOnly = False
+    Application.StatusBar = False
+    Application.ScreenUpdating = True
+
+    If Not blnSilent Then ShowMarketRunSummary "韩股", dtTime, runErrDesc
+End Sub
+
+
+Private Sub ShowMarketRunSummary(ByVal marketName As String, ByVal dtTime As Double, ByVal runErrDesc As String)
+    Dim msg As String
+    msg = "一键" & marketName & "完成" & vbCrLf & _
+          "总用时: " & Format(Timer - dtTime, "0.0 秒")
+    If g_globalFails > 0 Then
+        msg = msg & vbCrLf & vbCrLf & _
+              "失败 " & g_globalFails & " 条:" & g_globalLog
+    Else
+        msg = msg & vbCrLf & "全部成功 ✓"
+    End If
+    msg = msg & runErrDesc
+
+    Dim style As Long: style = vbInformation
+    If g_globalFails > 0 Or Len(runErrDesc) > 0 Then style = vbExclamation
+    MsgBox msg, style, "上市公司财务数据查询"
+End Sub
+
+
 Public Sub 一键全抓(Optional ByVal blnSilent As Boolean = False)
     Dim dtTime As Double: dtTime = Timer
 

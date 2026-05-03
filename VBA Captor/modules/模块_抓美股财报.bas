@@ -27,7 +27,7 @@ Public Sub RunUSStatement(ByVal strKind As String, ByVal targetSheet As String, 
     Dim arrPool As Variant
     Dim i As Long, lngRow As Long, numCompanies As Long
     Dim intFailCnt As Long, strErrLog As String
-    Dim strCode As String, strName As String, strMarket As String
+    Dim strCode As String, strName As String
     Dim dtTime As Double: dtTime = Timer
 
     Dim dictData As Object: Set dictData = CreateObject("Scripting.Dictionary")
@@ -46,16 +46,17 @@ Public Sub RunUSStatement(ByVal strKind As String, ByVal targetSheet As String, 
     On Error GoTo CleanUp
     Application.ScreenUpdating = False
 
-    lngRow = wsPool.Range("A" & wsPool.Rows.Count).End(xlUp).Row
+    lngRow = wsPool.Cells(wsPool.Rows.Count, POOL_US_CODE_COL).End(xlUp).Row
     If lngRow < POOL_DATA_START_ROW Then
         intFailCnt = 1
-        strErrLog = "样本池为空"
+        strErrLog = "样本池美股区为空"
         GoTo CleanUp
     End If
-    arrPool = wsPool.Range("A" & POOL_DATA_START_ROW & ":H" & lngRow).Value
+    arrPool = wsPool.Range(wsPool.Cells(POOL_DATA_START_ROW, POOL_US_CODE_COL), _
+                           wsPool.Cells(lngRow, POOL_US_NAME_COL)).Value
     If Not IsArray(arrPool) Then
         Dim singleVal As Variant: singleVal = arrPool
-        ReDim arrPool(1 To 1, 1 To POOL_LAST_COL)
+        ReDim arrPool(1 To 1, 1 To 2)
         arrPool(1, 1) = singleVal
     End If
     numCompanies = UBound(arrPool, 1)
@@ -78,8 +79,6 @@ Public Sub RunUSStatement(ByVal strKind As String, ByVal targetSheet As String, 
         strCode = Trim$(CStr(arrPool(i, 1)))
         If Len(strCode) = 0 Then GoTo NextRow
         strName = Trim$(CStr(arrPool(i, 2)))
-        strMarket = ResolveMarket(strCode, CStr(arrPool(i, POOL_MARKET_COL)))
-        If strMarket <> "US" Then GoTo NextRow
 
         Application.StatusBar = "抓取中: " & targetSheet & " (" & i & "/" & numCompanies & ") " & strCode
         DoEvents

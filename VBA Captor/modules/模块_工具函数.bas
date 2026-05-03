@@ -16,15 +16,25 @@ Option Explicit
 '    ExchangePrefix     : 按代码前缀推断 sh/sz
 ' =================================================================
 
-' --------- 样本池约定 (兄弟模块共享) ---------
-'   Row 1-6: 配置区 (A1=年份, A2=year, A3=季度, A4=quarter)
-'   Row 7  : 数据表头 (A=股票代码 / B=股票简称 / C=市场)
-'   Row 8+ : 股票数据
-'   列    : A=代码 / B=简称 / C=市场 (留空=A股, HK=港股, US=美股, KR=韩股)
+' --------- 样本池约定 (兄弟模块共享)
+'   Row 1-5: 全局配置区 (A1=年份, A2=year, A3=季度, A4=quarter, B5:F5=雪球 cookie)
+'   Row 7  : 分市场标题
+'   Row 8  : 分市场一键按钮
+'   Row 9  : 各市场数据表头
+'   Row 10+: 股票数据
+'   列    : A:B=A股, E:F=美股, I:J=港股, M:N=韩股
 '   URL 不再存 sheet, A 股抓数模块内部按代码+年份自拼 URL
-Public Const POOL_DATA_START_ROW As Long = 8
-Public Const POOL_LAST_COL As Long = 3        ' 数据区到 C 列 (市场)
-Public Const POOL_MARKET_COL As Long = 3      ' C 列
+Public Const POOL_DATA_START_ROW As Long = 10
+Public Const POOL_A_CODE_COL As Long = 1
+Public Const POOL_A_NAME_COL As Long = 2
+Public Const POOL_US_CODE_COL As Long = 5
+Public Const POOL_US_NAME_COL As Long = 6
+Public Const POOL_HK_CODE_COL As Long = 9
+Public Const POOL_HK_NAME_COL As Long = 10
+Public Const POOL_KR_CODE_COL As Long = 13
+Public Const POOL_KR_NAME_COL As Long = 14
+Public Const POOL_LAST_COL As Long = 14       ' 新布局数据区到 N 列
+Public Const POOL_MARKET_COL As Long = 3      ' legacy helper only: 旧 A:C 布局市场列
 
 ' --------- 全局状态 (用于一键全抓的静默调用 + 汇总错误) ---------
 Public g_silentMode As Boolean      ' 一键全抓时设为 True, 各 Main 不弹 MsgBox
@@ -179,6 +189,11 @@ Public Sub EnsureDiagnosticSheet()
     ws.Rows(1).RowHeight = 22
     ws.Rows(2).RowHeight = 20
     Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(2, 10)))
+
+    On Error Resume Next
+    ws.Visible = xlSheetHidden
+    Err.Clear
+    On Error GoTo 0
 End Sub
 
 
@@ -2008,17 +2023,18 @@ Public Sub RunOneStatement(ByVal strID As String, ByVal strType As String, _
     collFetchYears.Add lngYear
     If includePriorYear And lngYear > 0 Then collFetchYears.Add lngYear - 1
 
-    ' ---- 读样本池 (从 POOL_DATA_START_ROW 起, A=代码 / B=简称 / C=市场) ----
-    lngRow = wsPool.Range("A" & wsPool.Rows.Count).End(xlUp).Row
+    ' ---- 读样本池 A股区 (A=代码 / B=简称) ----
+    lngRow = wsPool.Cells(wsPool.Rows.Count, POOL_A_CODE_COL).End(xlUp).Row
     If lngRow < POOL_DATA_START_ROW Then
         intFailCnt = 1
-        strErrLog = "样本池为空, 请在第 " & POOL_DATA_START_ROW & " 行起录入股票代码和简称"
+        strErrLog = "样本池 A股区为空, 请在第 " & POOL_DATA_START_ROW & " 行起录入股票代码和简称"
         GoTo CleanUp
     End If
-    arrPool = wsPool.Range("A" & POOL_DATA_START_ROW & ":C" & lngRow).Value
+    arrPool = wsPool.Range(wsPool.Cells(POOL_DATA_START_ROW, POOL_A_CODE_COL), _
+                           wsPool.Cells(lngRow, POOL_A_NAME_COL)).Value
     If Not IsArray(arrPool) Then
         Dim singleVal As Variant: singleVal = arrPool
-        ReDim arrPool(1 To 1, 1 To POOL_LAST_COL)
+        ReDim arrPool(1 To 1, 1 To 2)
         arrPool(1, 1) = singleVal
     End If
     numCompanies = UBound(arrPool, 1)
@@ -2028,8 +2044,6 @@ Public Sub RunOneStatement(ByVal strID As String, ByVal strType As String, _
         strCode = Trim$(CStr(arrPool(i, 1)))
         If Len(strCode) = 0 Then GoTo NextRow
         strName = Trim$(CStr(arrPool(i, 2)))
-        ' Phase 4: 跳过非 A 股的行 (港股 / 美股 由别的 Main 处理)
-        If ResolveMarket(strCode, CStr(arrPool(i, POOL_MARKET_COL))) <> "A" Then GoTo NextRow
 
         Application.StatusBar = "抓取中: " & targetSheet & " (" & i & "/" & numCompanies & ") " & strName
         DoEvents

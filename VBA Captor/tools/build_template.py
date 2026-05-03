@@ -1,7 +1,7 @@
 """
 上市公司财务数据查询 — 工作簿模板生成器
 
-生成空的 xlsm 模板,含使用说明、样本池、A股 4 表、美股 4 表、港股 4 表的结构 + 列宽 + 表头容器 + 冻结窗格。
+生成空的 xlsm 模板,含使用说明、样本池、A股/美股/港股/韩股 16 张正式表的结构 + 列宽 + 表头容器 + 冻结窗格。
 不含任何 VBA 代码 — 后续由 install_modules.py 注入 modules/*.bas。
 
 用法:
@@ -56,17 +56,15 @@ def build_intro(ws):
         "【联系邮箱】214978902@qq.com",
         "",
         "【使用步骤】",
-        "1. 在『样本池』Sheet 第 8 行起录入公司:",
-        "     A 列代码, B 列简称, C 列市场 (A / US / HK / KR; 留空可自动判断 A/US/HK, KR 请手填)。",
+        "1. 在『样本池』Sheet 第 10 行起按市场录入公司:",
+        "     A:B=A股, E:F=美股, I:J=港股, M:N=韩股; 每个市场只填代码和简称。",
         "2. A2 填年份 (如 2025), 留空=取最新可用期间。",
         "3. A4 选择季度: 全部 / Q1 / Q2 / Q3 / Q4。",
         "4. B5 可填写雪球 xq_a_token cookie; POM、HTT 等 EDGAR 不完整的中概/20-F 公司会自动走雪球 fallback, 港股也使用该 cookie。",
-        "5. 点样本池右上角按钮抓数:",
-        "     【一键全抓】 — 顺序更新 A股、美股、港股、韩股 16 张表, 最后弹一次汇总",
-        "     【更新A股资产负债表 / 利润表 / 现金流量表 / 指标表】",
-        "     【更新美股资产负债表 / 利润表 / 现金流量表 / 指标表】",
-        "     【更新港股资产负债表 / 利润表 / 现金流量表 / 指标表】",
-        "     【更新韩股资产负债表 / 利润表 / 现金流量表 / 指标表】",
+        "5. 点样本池顶部按钮抓数:",
+        "     【一键 A股 / 一键 美股 / 一键 港股 / 一键 韩股】— 只更新对应市场 4 张表",
+        "     【一键全抓 4 市场】— 顺序更新 A股、美股、港股、韩股 16 张表",
+        "     16 个单表按钮保留在样本池下方辅助区,用于单独排查。",
         "",
         "【宽表格式】",
         "  R1: 公司名(代码), 跨该公司所有报告期合并",
@@ -85,7 +83,7 @@ def build_intro(ws):
         "【限制】",
         "  - 雪球 cookie 过期时需重新复制 xq_a_token 到 B5",
         "  - 诊断 sheet 中同一 (公司, 指标) 先出现 MISSING_NON_USD、随后出现 OK_XUEQIU 属预期行为:表示 ifrs-full 有字段但单位不是 USD,系统改走雪球兜底",
-        "  - 韩股需要在样本池 C 列手填 KR; 6 位纯数字无法自动区分 A 股与韩股",
+        "  - 样本池已按市场分栏,韩股代码请填在韩股区,不再需要市场列",
         "",
         "【来源说明】基于林铖 V2.2 重写并扩展。",
     ]
@@ -97,72 +95,129 @@ def build_intro(ws):
 
 def build_sample_pool(ws):
     """
-    样本池布局 (Phase 4b-3 简化版):
-      Row 1: A1=年份标签
-      Row 2: A2=年份值 (留空=取最新季度)
-      Row 3: A3=季度标签
-      Row 4: A4=季度值 (下拉: 全部/Q1/Q2/Q3/Q4)
-      Row 7: 数据表头 (A=股票代码 / B=股票简称 / C=市场)
-      Row 8+: 股票数据
-      D 列起: 按钮区 (install_modules.py 装的圆角按钮)
-
-    URL 不再存 sheet — 各抓数模块内部按代码 + A2 年份自拼新浪 URL
+    样本池布局 (Phase 4e):
+      Row 1-5: 全局配置区
+      Row 7: 4 市场标题
+      Row 8: 4 市场一键按钮位
+      Row 9: 各市场列头
+      Row 10+: 公司数据
     """
     sub_header_fill = PatternFill("solid", fgColor="FFB4C7E7")    # 浅蓝
-    main_header_fill = PatternFill("solid", fgColor=DARK_BLUE)
+    yellow_fill = PatternFill("solid", fgColor="FFFFE699")
+    cookie_fill = PatternFill("solid", fgColor="FFFFF2CC")
 
-    # ---- 列宽 (D=spacer 让市场列和按钮列之间有视觉间隔) ----
-    col_widths = {"A": 13, "B": 16, "C": 10, "D": 3, "E": 24, "F": 4}
+    # ---- 列宽 ----
+    col_widths = {
+        "A": 11, "B": 16, "C": 2, "D": 2,
+        "E": 8, "F": 18, "G": 2, "H": 2,
+        "I": 7, "J": 14, "K": 2, "L": 2,
+        "M": 8, "N": 16, "O": 2, "P": 2,
+        "Q": 22,
+    }
     for col, w in col_widths.items():
         ws.column_dimensions[col].width = w
 
-    # ---- Row 1 / Row 3: 配置区标签 ----
-    for addr, txt in [
+    # ---- Row 1-5: 全局配置区 ----
+    for addr, txt in (
         ("A1", "年份 (留空=取最新)"),
         ("A3", "季度 (Q1/Q2/Q3/Q4 或 全部)"),
-    ]:
+        ("A5", "雪球 Cookie"),
+    ):
         ws[addr] = txt
         ws[addr].font = Font(name="微软雅黑", size=10, bold=True)
         ws[addr].fill = sub_header_fill
         ws[addr].alignment = CENTER
         ws[addr].border = BORDER
 
-    # ---- A2: 年份默认 2025 ----
     ws["A2"] = 2025
     ws["A2"].font = Font(name="微软雅黑", size=11, bold=True)
-    ws["A2"].fill = PatternFill("solid", fgColor="FFFFE699")
+    ws["A2"].fill = yellow_fill
     ws["A2"].alignment = CENTER
     ws["A2"].border = BORDER
 
-    # ---- A4: 季度默认 全部, 下拉验证 ----
     ws["A4"] = "全部"
     ws["A4"].font = Font(name="微软雅黑", size=11, bold=True)
-    ws["A4"].fill = PatternFill("solid", fgColor="FFFFE699")
+    ws["A4"].fill = yellow_fill
     ws["A4"].alignment = CENTER
     ws["A4"].border = BORDER
     dv = DataValidation(type="list", formula1='"全部,Q1,Q2,Q3,Q4"', allow_blank=False)
     dv.add("A4")
     ws.add_data_validation(dv)
 
-    # ---- Row 7: 数据表头 ----
-    data_headers = [("A", "股票代码"), ("B", "股票简称"), ("C", "市场")]
-    for col, name in data_headers:
-        cell = ws[f"{col}7"]
-        cell.value = name
-        cell.font = HEADER_FONT
-        cell.fill = main_header_fill
-        cell.alignment = CENTER
-        cell.border = BORDER
+    ws.merge_cells("B5:F5")
+    ws["B5"] = ""
+    ws["B5"].font = Font(name="Consolas", size=9)
+    ws["B5"].fill = cookie_fill
+    ws["B5"].alignment = LEFT
+    for row in range(1, 6):
+        ws.row_dimensions[row].height = 22
 
-    ws.row_dimensions[7].height = 22
-    ws.freeze_panes = "A8"
+    # ---- Row 7: 市场标题 ----
+    markets = [
+        ("A7:B7", "A 股(新浪)", "FF4472C4"),
+        ("E7:F7", "美股(EDGAR+雪球)", "FFC00000"),
+        ("I7:J7", "港股(雪球 HK)", "FF548235"),
+        ("M7:N7", "韩股(stockanalysis)", "FF7030A0"),
+    ]
+    for rng, title, fill in markets:
+        ws.merge_cells(rng)
+        c = ws[rng.split(":")[0]]
+        c.value = title
+        c.font = HEADER_FONT
+        c.fill = PatternFill("solid", fgColor=fill)
+        c.alignment = CENTER
+        c.border = BORDER
 
-    # ---- Row 8: 示例数据 (300866 安克创新) ----
-    ws.cell(row=8, column=1, value=300866).alignment = CENTER
-    ws.cell(row=8, column=2, value="安克创新").alignment = CENTER
-    # C8 自动检测公式 (install_modules.py 也会复读 / 覆盖 H8:H1000)
-    formula = '=IF(A8="","",IF(ISNUMBER(--A8),IF(LEN(A8)=5,"HK","A"),"US"))'
-    ws.cell(row=8, column=3, value=formula).alignment = CENTER
+    # ---- Row 8: 按钮位提示, install_modules.py 会覆盖为 Shape 按钮 ----
+    button_placeholders = [
+        ("A8:B8", "一键 A 股", "FF4472C4"),
+        ("E8:F8", "一键 美股", "FFC00000"),
+        ("I8:J8", "一键 港股", "FF548235"),
+        ("M8:N8", "一键 韩股", "FF7030A0"),
+        ("Q1:Q3", "一键全抓 4 市场", "FF4472C4"),
+    ]
+    for rng, title, fill in button_placeholders:
+        ws.merge_cells(rng)
+        c = ws[rng.split(":")[0]]
+        c.value = title
+        c.font = HEADER_FONT
+        c.fill = PatternFill("solid", fgColor=fill)
+        c.alignment = CENTER
+        c.border = BORDER
+
+    # ---- Row 9: 数据表头 ----
+    for code_col, name_col in (("A", "B"), ("E", "F"), ("I", "J"), ("M", "N")):
+        for col, name in ((code_col, "代码"), (name_col, "简称")):
+            cell = ws[f"{col}9"]
+            cell.value = name
+            cell.font = HEADER_FONT
+            cell.fill = PatternFill("solid", fgColor=DARK_BLUE)
+            cell.alignment = CENTER
+            cell.border = BORDER
+
+    ws.row_dimensions[7].height = 24
+    ws.row_dimensions[8].height = 34
+    ws.row_dimensions[9].height = 22
+    ws.freeze_panes = "A10"
+
+    # ---- Row 10: 示例数据 ----
+    examples = [
+        (10, 1, "300866", "安克创新"),
+        (10, 5, "AAPL", "Apple"),
+        (10, 9, "00700", "腾讯控股"),
+        (10, 13, "005930", "三星电子"),
+    ]
+    for row, code_col, code, name in examples:
+        ws.cell(row=row, column=code_col, value=code).alignment = CENTER
+        ws.cell(row=row, column=code_col + 1, value=name).alignment = CENTER
+
+    for row in range(10, 31):
+        ws.row_dimensions[row].height = 20
+        for col in (1, 2, 5, 6, 9, 10, 13, 14):
+            cell = ws.cell(row=row, column=col)
+            cell.font = DATA_FONT
+            cell.border = BORDER
+            cell.alignment = CENTER if col in (1, 5, 9, 13) else LEFT
 
 
 def build_wide_table(ws):
@@ -240,6 +295,7 @@ def build_diagnostic_sheet(ws, market_label="美股"):
       冻结 Row 2; 列宽 + 表头颜色与 install_modules.py._make_diagnostic_sheet
         和 模块_工具函数.bas.EnsureDiagnosticSheet() 三处保持一致
     """
+    ws.sheet_state = "hidden"
     title_fill = PatternFill("solid", fgColor=DARK_BLUE)
     title_font = Font(name="微软雅黑", size=12, bold=True, color=WHITE)
 

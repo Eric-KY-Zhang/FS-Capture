@@ -28,7 +28,7 @@ Public Sub RunKRStatement(ByVal strKind As String, ByVal targetSheet As String, 
     Dim arrPool As Variant
     Dim i As Long, lngRow As Long, numCompanies As Long
     Dim intFailCnt As Long, strErrLog As String
-    Dim strCodeRaw As String, strCode As String, strName As String, strMarket As String
+    Dim strCodeRaw As String, strCode As String, strName As String
     Dim dtTime As Double: dtTime = Timer
 
     Dim dictData As Object: Set dictData = CreateObject("Scripting.Dictionary")
@@ -47,17 +47,18 @@ Public Sub RunKRStatement(ByVal strKind As String, ByVal targetSheet As String, 
     On Error GoTo CleanUp
     Application.ScreenUpdating = False
 
-    lngRow = wsPool.Range("A" & wsPool.Rows.Count).End(xlUp).Row
+    lngRow = wsPool.Cells(wsPool.Rows.Count, POOL_KR_CODE_COL).End(xlUp).Row
     If lngRow < POOL_DATA_START_ROW Then
         intFailCnt = 1
-        strErrLog = "样本池为空"
+        strErrLog = "样本池韩股区为空"
         GoTo CleanUp
     End If
 
-    arrPool = wsPool.Range("A" & POOL_DATA_START_ROW & ":C" & lngRow).Value
+    arrPool = wsPool.Range(wsPool.Cells(POOL_DATA_START_ROW, POOL_KR_CODE_COL), _
+                           wsPool.Cells(lngRow, POOL_KR_NAME_COL)).Value
     If Not IsArray(arrPool) Then
         Dim singleVal As Variant: singleVal = arrPool
-        ReDim arrPool(1 To 1, 1 To POOL_LAST_COL)
+        ReDim arrPool(1 To 1, 1 To 2)
         arrPool(1, 1) = singleVal
     End If
     numCompanies = UBound(arrPool, 1)
@@ -69,8 +70,6 @@ Public Sub RunKRStatement(ByVal strKind As String, ByVal targetSheet As String, 
         strCodeRaw = Trim$(CStr(arrPool(i, 1)))
         If Len(strCodeRaw) = 0 Then GoTo NextRow
         strName = Trim$(CStr(arrPool(i, 2)))
-        strMarket = ResolveMarket(strCodeRaw, CStr(arrPool(i, POOL_MARKET_COL)))
-        If strMarket <> "KR" Then GoTo NextRow
         strCode = NormalizeKRTicker(strCodeRaw)
 
         Application.StatusBar = "抓取中: " & targetSheet & " (" & i & "/" & numCompanies & ") " & strCode
