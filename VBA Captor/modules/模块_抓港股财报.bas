@@ -37,6 +37,8 @@ Public Sub RunHKStatement(ByVal strKind As String, ByVal targetSheet As String, 
     Dim collCodes As New Collection
     Dim collDiagRows As New Collection
 
+    g_diagnosticSheetName = "港股_抓取诊断"
+
     Set wsPool = ThisWorkbook.Sheets("样本池")
     Set wsTarget = ThisWorkbook.Sheets(targetSheet)
 
@@ -156,7 +158,7 @@ CleanUp:
     Application.StatusBar = False
 
     On Error Resume Next
-    WriteHKDiagnosticForKind strKind, collDiagRows
+    WriteDiagnosticForKind strKind, collDiagRows
     Err.Clear
     On Error GoTo 0
 
@@ -611,22 +613,16 @@ Private Sub AppendHKDiagnosticsForConceptMap(ByVal strTicker As String, _
         mapEntry = conceptMap(i)
         strLabel = MapEntryLabel(mapEntry)
         If dictMatchInfo.Exists(strLabel) Then
-            AppendHKMatchDiagnostic strTicker, strKind, strLabel, dictMatchInfo.Item(strLabel), collDiagRows
+            Dim info As Variant: info = dictMatchInfo.Item(strLabel)
+            Dim noteText As String: noteText = CStr(info(6))
+            If CLng(info(7)) > 0 Then noteText = noteText & "; periods_written=" & CStr(info(7))
+            AddDiagnosticRow collDiagRows, strTicker, strKind, strLabel, CStr(info(0)), CStr(info(1)), _
+                             CStr(info(2)), CStr(info(3)), CStr(info(4)), CStr(info(5)), noteText
         Else
             AddDiagnosticRow collDiagRows, strTicker, strKind, strLabel, "MISSING", "—", _
                              "xueqiu_hk", "—", "—", "—", "no xueqiu hk field matched"
         End If
     Next i
-End Sub
-
-
-Private Sub AppendHKMatchDiagnostic(ByVal strTicker As String, ByVal strKind As String, _
-                                    ByVal strLabel As String, ByVal info As Variant, _
-                                    ByVal collDiagRows As Collection)
-    Dim noteText As String: noteText = CStr(info(6))
-    If CLng(info(7)) > 0 Then noteText = noteText & "; periods_written=" & CStr(info(7))
-    AddDiagnosticRow collDiagRows, strTicker, strKind, strLabel, CStr(info(0)), CStr(info(1)), _
-                     CStr(info(2)), CStr(info(3)), CStr(info(4)), CStr(info(5)), noteText
 End Sub
 
 
@@ -767,111 +763,6 @@ Private Sub ClearHKWideTableOutput(ByVal ws As Worksheet)
         .VerticalAlignment = xlCenter
     End With
     Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(2, metaCols + 1)))
-End Sub
-
-
-Private Sub EnsureHKDiagnosticSheet()
-    Dim ws As Worksheet
-    On Error Resume Next
-    Set ws = ThisWorkbook.Sheets("港股_抓取诊断")
-    On Error GoTo 0
-    If ws Is Nothing Then
-        Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
-        ws.Name = "港股_抓取诊断"
-    End If
-
-    Dim headers As Variant
-    headers = Array("公司", "报表", "输出指标", "状态", "数据源", _
-                    "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注")
-
-    On Error Resume Next
-    ws.Range(ws.Cells(1, 1), ws.Cells(1, 10)).UnMerge
-    Err.Clear
-    On Error GoTo 0
-
-    ws.Cells(1, 1).Value = "港股抓取诊断"
-    ws.Range(ws.Cells(1, 1), ws.Cells(1, 10)).Merge
-    With ws.Range(ws.Cells(1, 1), ws.Cells(1, 10))
-        .Font.Name = "微软雅黑"
-        .Font.Size = 12
-        .Font.Bold = True
-        .Font.Color = RGB(255, 255, 255)
-        .Interior.Color = RGB(68, 114, 196)
-        .HorizontalAlignment = xlCenter
-        .VerticalAlignment = xlCenter
-    End With
-
-    Dim i As Long
-    For i = 0 To UBound(headers)
-        With ws.Cells(2, i + 1)
-            .Value = headers(i)
-            .Font.Name = "微软雅黑"
-            .Font.Size = 10
-            .Font.Bold = True
-            .Font.Color = RGB(255, 255, 255)
-            .Interior.Color = RGB(68, 114, 196)
-            .HorizontalAlignment = xlCenter
-            .VerticalAlignment = xlCenter
-        End With
-    Next i
-
-    ws.Columns("A").ColumnWidth = 14
-    ws.Columns("B").ColumnWidth = 16
-    ws.Columns("C").ColumnWidth = 30
-    ws.Columns("D").ColumnWidth = 18
-    ws.Columns("E").ColumnWidth = 18
-    ws.Columns("F").ColumnWidth = 14
-    ws.Columns("G").ColumnWidth = 42
-    ws.Columns("H").ColumnWidth = 14
-    ws.Columns("I").ColumnWidth = 10
-    ws.Columns("J").ColumnWidth = 58
-    ws.Rows(1).RowHeight = 22
-    ws.Rows(2).RowHeight = 20
-    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(2, 10)))
-End Sub
-
-
-Private Sub DeleteHKDiagnosticRowsForKind(ByVal strKind As String)
-    EnsureHKDiagnosticSheet
-    Dim ws As Worksheet: Set ws = ThisWorkbook.Sheets("港股_抓取诊断")
-    Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
-    Dim r As Long
-    For r = lastRow To 3 Step -1
-        If CStr(ws.Cells(r, 2).Value) = strKind Then ws.Rows(r).Delete
-    Next r
-End Sub
-
-
-Private Sub WriteHKDiagnosticForKind(ByVal strKind As String, ByVal collRows As Collection)
-    EnsureHKDiagnosticSheet
-    If Not g_diagnosticAppendOnly Then DeleteHKDiagnosticRowsForKind strKind
-    If collRows Is Nothing Then Exit Sub
-    If collRows.Count = 0 Then Exit Sub
-
-    Dim ws As Worksheet: Set ws = ThisWorkbook.Sheets("港股_抓取诊断")
-    Dim startRow As Long
-    startRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 1
-    If startRow < 3 Then startRow = 3
-
-    Dim arrOut As Variant
-    ReDim arrOut(1 To collRows.Count, 1 To 10)
-
-    Dim i As Long, j As Long, rowData As Variant
-    For i = 1 To collRows.Count
-        rowData = collRows.Item(i)
-        For j = 0 To 9
-            arrOut(i, j + 1) = rowData(j)
-        Next j
-    Next i
-
-    ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 10)).Value = arrOut
-    With ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 10))
-        .Font.Name = "微软雅黑"
-        .Font.Size = 9
-        .VerticalAlignment = xlCenter
-    End With
-    ws.Range(ws.Cells(startRow, 9), ws.Cells(startRow + collRows.Count - 1, 9)).HorizontalAlignment = xlRight
-    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(startRow + collRows.Count - 1, 10)))
 End Sub
 
 

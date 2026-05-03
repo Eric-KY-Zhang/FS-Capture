@@ -1,7 +1,7 @@
 # Phase 4c: 港股 (HK) 重启 — 走雪球 HK API
 
 > **版本**: v2(2026-05-03,Step 1 探查后调整)
-> **状态**: 🚧 Step 2 已实现,等待 Claude Code review
+> **状态**: 🚧 Step 3 + Step 4 已实现,等待 Claude Code review
 > **作者**: Claude(planner)+ Codex(executor)
 > **背景**: Phase 4b-14a 美股已闭环。港股是用户记忆里"A股 / 美股 / 港股 / 韩股"4 市场目标的第三块。早期 Phase 4a 走新浪 HK 失败已废弃,本期改走**雪球 HK API**,复用 Phase 4b-5 起雪球 fallback 的成熟框架。
 
@@ -132,7 +132,7 @@ End Function
 - 财年差异:阿里 H(03 月)、腾讯/美团/快手(12 月)— canonical 用 `max(end)+min(start)` 自然处理
 - 单位:**不强转**,sheet 数据列 = 原值/1e6,诊断 sheet Unit 列写 `data.currency`
 
-### Step 3 — 4 张 thin wrapper 模块
+### Step 3 — 4 张 thin wrapper 模块 ✅ 已实现(2026-05-03)
 
 ```
 modules/模块_抓港股资产负债表.bas
@@ -143,12 +143,20 @@ modules/模块_抓港股指标表.bas
 
 每个模块的 `Public Sub Main` 调 `RunHKStatement` + 自己的 conceptMap(BS/IS/CF)或 `BuildStandardIndicatorSheet "HK"`(Indicator)。
 
-### Step 4 — 工具函数升级
+### Step 4 — 工具函数升级 ✅ 已实现(2026-05-03)
 
 `modules/模块_工具函数.bas`:
 - `BuildStandardIndicatorSheet` 第二参数 `market` 加分支 `"HK"` — 拷源表头从 `港股_资产负债表` 而非 `美股_资产负债表`
 - `AppendStandardIndicators` 第二参数 `market` 加 `"HK"` 分支 — 公式引用 `'港股_资产负债表'!...` 等
 - 新增 `Public g_diagnosticSheetName As String`(默认 "美股_抓取诊断", HK 主流程入口设为 "港股_抓取诊断"),让 `WriteDiagnosticForKind` / `EnsureDiagnosticSheet` / `ClearDiagnosticSheet` / `DeleteDiagnosticRowsForKind` 全部按这个 var 决定写到哪张 sheet
+
+执行状态:✅ 已实现(2026-05-03)。
+
+- `RunUSStatement` 入口显式设置 `g_diagnosticSheetName = "美股_抓取诊断"`。
+- `RunHKStatement` 入口显式设置 `g_diagnosticSheetName = "港股_抓取诊断"`。
+- 公共诊断函数已按 `CurrentDiagnosticSheetName()` 路由。
+- Step 2 临时私有 HK 诊断 writer 已删除,HK 诊断写入改走通用 `WriteDiagnosticForKind`。
+- `BuildStandardIndicatorSheet` / `AppendStandardIndicators` / `StandardRowMap` / `StandardTargetPeriodWanted` / `StandardDataStartCol` 已支持 `HK`。
 
 ### Step 5 — install_modules.py + build_template.py
 
