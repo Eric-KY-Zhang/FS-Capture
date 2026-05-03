@@ -50,8 +50,8 @@ def build_intro(ws):
     lines = [
         "",
         "【用途】把上市公司财务数据抓成同业对标宽表,方便横向比较。",
-        "【当前支持】A股、美股、港股。",
-        "【后续规划】韩股。",
+        "【当前支持】A股、美股、港股、韩股。",
+        "【后续规划】更多市场。",
         "【作者】Eric Zhang",
         "【联系邮箱】214978902@qq.com",
         "",
@@ -62,27 +62,30 @@ def build_intro(ws):
         "3. A4 选择季度: 全部 / Q1 / Q2 / Q3 / Q4。",
         "4. B5 可填写雪球 xq_a_token cookie; POM、HTT 等 EDGAR 不完整的中概/20-F 公司会自动走雪球 fallback, 港股也使用该 cookie。",
         "5. 点样本池右上角按钮抓数:",
-        "     【一键全抓】 — 顺序更新 A股、美股、港股 12 张表, 最后弹一次汇总",
+        "     【一键全抓】 — 顺序更新 A股、美股、港股、韩股 16 张表, 最后弹一次汇总",
         "     【更新A股资产负债表 / 利润表 / 现金流量表 / 指标表】",
         "     【更新美股资产负债表 / 利润表 / 现金流量表 / 指标表】",
         "     【更新港股资产负债表 / 利润表 / 现金流量表 / 指标表】",
+        "     【更新韩股资产负债表 / 利润表 / 现金流量表 / 指标表】",
         "",
         "【宽表格式】",
         "  R1: 公司名(代码), 跨该公司所有报告期合并",
         "  R2: 报告期, 降序排列",
         "  A/B列: 大类或指标类型、指标名称; 指标表额外有 C列英文指标名",
-        "  A股: 报告期跨公司取并集对齐; 美股/港股: 每家公司只展开自己有数据的报告期",
+        "  A股: 报告期跨公司取并集对齐; 美股/港股/韩股: 每家公司只展开自己有数据的报告期",
         "  港股: 单位为百万(各家公司报告币种, 见 港股_抓取诊断 Unit 列), 不做汇率换算",
+        "  韩股: 单位为十亿韩元(KRW billions), 数据源表格为百万韩元, 写表时除以 1,000",
         "",
         "【数据源】",
         "  A股: 新浪财经",
         "  美股: SEC EDGAR companyfacts; 中概/20-F fallback 到雪球",
         "  港股: 雪球 HK API",
+        "  韩股: stockanalysis.com KRX 财报 HTML 表格",
         "",
         "【限制】",
         "  - 雪球 cookie 过期时需重新复制 xq_a_token 到 B5",
         "  - 诊断 sheet 中同一 (公司, 指标) 先出现 MISSING_NON_USD、随后出现 OK_XUEQIU 属预期行为:表示 ifrs-full 有字段但单位不是 USD,系统改走雪球兜底",
-        "  - 韩股目前为规划市场, 尚未接入抓数",
+        "  - 韩股需要在样本池 C 列手填 KR; 6 位纯数字无法自动区分 A 股与韩股",
         "",
         "【来源说明】基于林铖 V2.2 重写并扩展。",
     ]
@@ -170,8 +173,9 @@ def build_wide_table(ws):
       冻结 B3 (前 2 行表头 + 前 2 列锚定)
     """
     fill = PatternFill("solid", fgColor=DARK_BLUE)
+    is_indicator = ws.title in ("A股_指标表", "美股_指标表", "港股_指标表", "韩股_指标表")
 
-    ws["A1"] = "大类"
+    ws["A1"] = "指标类型" if is_indicator else "大类"
     ws["A1"].font = HEADER_FONT
     ws["A1"].fill = fill
     ws["A1"].alignment = CENTER
@@ -183,14 +187,26 @@ def build_wide_table(ws):
     ws["B1"].alignment = CENTER
     ws["B1"].border = BORDER
 
+    if is_indicator:
+        ws["C1"] = "英文指标名"
+        ws["C1"].font = HEADER_FONT
+        ws["C1"].fill = fill
+        ws["C1"].alignment = CENTER
+        ws["C1"].border = BORDER
+
     ws.column_dimensions["A"].width = 30
     ws.column_dimensions["B"].width = 40
-    ws.column_dimensions["C"].width = 15.875
+    if is_indicator:
+        ws.column_dimensions["A"].width = 18
+        ws.column_dimensions["B"].width = 28
+        ws.column_dimensions["C"].width = 34
+    else:
+        ws.column_dimensions["C"].width = 15.875
     ws.sheet_format.defaultColWidth = 15.875
 
     ws.row_dimensions[1].height = 22
     ws.row_dimensions[2].height = 20
-    ws.freeze_panes = "C3"
+    ws.freeze_panes = "D3" if is_indicator else "C3"
 
 
 def build_corp_info(ws):
@@ -296,6 +312,14 @@ def main():
 
     ws_diag_hk = wb.create_sheet("港股_抓取诊断")
     build_diagnostic_sheet(ws_diag_hk, "港股")
+
+    # ---- Phase 4d: 韩股 4 张表 + 韩股_抓取诊断 sheet ----
+    for name in ["韩股_资产负债表", "韩股_利润表", "韩股_现金流量表", "韩股_指标表"]:
+        ws_kr = wb.create_sheet(name)
+        build_wide_table(ws_kr)
+
+    ws_diag_kr = wb.create_sheet("韩股_抓取诊断")
+    build_diagnostic_sheet(ws_diag_kr, "韩股")
 
     # 默认打开时显示样本池
     wb.active = wb.sheetnames.index("样本池")

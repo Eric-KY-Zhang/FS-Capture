@@ -6,7 +6,7 @@ Usage:
 
 Default:
     new      = ../上市公司财务数据查询.xlsm
-    baseline = ../archive/新浪财经行业数据查询V3_稳定版_20260503.xlsm
+    baseline = ../archive/上市公司财务数据查询_4b14a_baseline_20260503.xlsm
 
 Scope:
     Six statement sheets, rows 3+ only:
@@ -32,7 +32,7 @@ from openpyxl.utils import get_column_letter
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_NEW = ROOT / "上市公司财务数据查询.xlsm"
-DEFAULT_BASELINE = ROOT / "archive" / "新浪财经行业数据查询V3_稳定版_20260503.xlsm"
+DEFAULT_BASELINE = ROOT / "archive" / "上市公司财务数据查询_4b14a_baseline_20260503.xlsm"
 
 SHEETS = [
     "A股_资产负债表",

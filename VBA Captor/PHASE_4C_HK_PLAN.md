@@ -1,7 +1,7 @@
 # Phase 4c: 港股 (HK) 重启 — 走雪球 HK API
 
 > **版本**: v2(2026-05-03,Step 1 探查后调整)
-> **状态**: 🚧 Step 5 + Step 6 已实现,等待 Claude Code review
+> **状态**: ✅ Phase 4c 全部完成并通过 Claude Code 闭环 review(2026-05-03)
 > **作者**: Claude(planner)+ Codex(executor)
 > **背景**: Phase 4b-14a 美股已闭环。港股是用户记忆里"A股 / 美股 / 港股 / 韩股"4 市场目标的第三块。早期 Phase 4a 走新浪 HK 失败已废弃,本期改走**雪球 HK API**,复用 Phase 4b-5 起雪球 fallback 的成熟框架。
 
@@ -38,7 +38,7 @@
 
 ## 实施方案(分步,每步建议 Codex 提交一次,我 review 一次)
 
-### Step 1 — 探查雪球 HK API ✅ 已完成(2026-05-03)
+### Step 1 — 探查雪球 HK API ✅ 已闭环(2026-05-03)
 
 **实际执行结果**(`samples/HK_API_PROBE.md`):
 - ✅ 4 endpoint 全部 HTTP 200 + `error_code=0` + `data.list` len 8(`00700` 格式;`700` 不带前导 0 → list 空)
@@ -49,7 +49,7 @@
 
 Step 1 → Step 2 review 通过,Codex 按 v2 修订 + 下面 Step 2 强化指引执行。
 
-### Step 2 — 字段映射 + 主流程模块(v2 调整后) ✅ 已实现(2026-05-03)
+### Step 2 — 字段映射 + 主流程模块(v2 调整后) ✅ 已闭环(2026-05-03)
 
 **新建** `modules/模块_抓港股财报.bas`,核心函数:
 
@@ -132,7 +132,7 @@ End Function
 - 财年差异:阿里 H(03 月)、腾讯/美团/快手(12 月)— canonical 用 `max(end)+min(start)` 自然处理
 - 单位:**不强转**,sheet 数据列 = 原值/1e6,诊断 sheet Unit 列写 `data.currency`
 
-### Step 3 — 4 张 thin wrapper 模块 ✅ 已实现(2026-05-03)
+### Step 3 — 4 张 thin wrapper 模块 ✅ 已闭环(2026-05-03)
 
 ```
 modules/模块_抓港股资产负债表.bas
@@ -143,7 +143,7 @@ modules/模块_抓港股指标表.bas
 
 每个模块的 `Public Sub Main` 调 `RunHKStatement` + 自己的 conceptMap(BS/IS/CF)或 `BuildStandardIndicatorSheet "HK"`(Indicator)。
 
-### Step 4 — 工具函数升级 ✅ 已实现(2026-05-03)
+### Step 4 — 工具函数升级 ✅ 已闭环(2026-05-03)
 
 `modules/模块_工具函数.bas`:
 - `BuildStandardIndicatorSheet` 第二参数 `market` 加分支 `"HK"` — 拷源表头从 `港股_资产负债表` 而非 `美股_资产负债表`
@@ -158,7 +158,7 @@ modules/模块_抓港股指标表.bas
 - Step 2 临时私有 HK 诊断 writer 已删除,HK 诊断写入改走通用 `WriteDiagnosticForKind`。
 - `BuildStandardIndicatorSheet` / `AppendStandardIndicators` / `StandardRowMap` / `StandardTargetPeriodWanted` / `StandardDataStartCol` 已支持 `HK`。
 
-### Step 5 — install_modules.py + build_template.py ✅ 已实现(2026-05-03)
+### Step 5 — install_modules.py + build_template.py ✅ 已闭环(2026-05-03)
 
 `tools/build_template.py`:
 - `main` 加创建 `港股_资产负债表` / `港股_利润表` / `港股_现金流量表` / `港股_指标表` 4 张 sheet(复用 `build_wide_table`)
@@ -171,7 +171,7 @@ modules/模块_抓港股指标表.bas
 - `BUTTONS` 加 4 个港股按钮(`BtnRunHKBalance` / `BtnRunHKProfit` / `BtnRunHKCash` / `BtnRunHKInd`),颜色用第三色(深绿 `#548235` / 白字 / 11pt,与 A 股蓝 + 美股红区分)
 - 「使用说明」refresh 加港股一段
 
-### Step 6 — `模块_总入口.一键全抓` 升到 12 张表 ✅ 已实现(2026-05-03)
+### Step 6 — `模块_总入口.一键全抓` 升到 12 张表 ✅ 已闭环(2026-05-03)
 
 ```vba
 Public Sub 一键全抓(...)
@@ -245,7 +245,7 @@ End Sub
 
 # 零碎事(并行,Codex 在 Phase 4c 主线推进时穿插做)
 
-## Side 1 — 修 CF a(32) ifrs 槽位错配
+## Side 1 — 修 CF a(32) ifrs 槽位错配 ✅ 已闭环(2026-05-03)
 
 **File**: `modules/模块_抓美股现金流量表.bas` 第 95-96 行
 
@@ -267,7 +267,7 @@ a(32) = Array("", "Cash at beginning of period", _
 
 **验收**: AAPL/AMZN cell-level diff = 0(us-gaap 端永远命中占位 → MISSING,行为不变); BABA / 港股暂不受影响(港股不走 EDGAR)
 
-## Side 2 — Test 1 cell-level 严格回归脚本
+## Side 2 — Test 1 cell-level 严格回归脚本 ✅ 已闭环(2026-05-03)
 
 **新建 `tools/diff_xlsm.py`**(Python + openpyxl):
 
@@ -301,7 +301,7 @@ A股_现金流量表: 0 mismatches
 
 **如果出现其它 diff**:列出 sheet / cell / new_val / baseline_val,Codex 排查根因(是预期改进还是回归)
 
-## Side 3 — STATUS.md NONUSD 双行说明
+## Side 3 — STATUS.md NONUSD 双行说明 ✅ 已闭环(2026-05-03)
 
 **位置**: `STATUS.md` §O.3 已知边界,加一段:
 

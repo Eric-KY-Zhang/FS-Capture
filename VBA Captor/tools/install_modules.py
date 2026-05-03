@@ -55,6 +55,8 @@ US_FILL = "C00000"        # 深红 — 美股按钮区分
 US_FG = "FFFFFF"
 HK_FILL = "548235"        # 深绿 — 港股按钮区分
 HK_FG = "FFFFFF"
+KR_FILL = "7030A0"        # 深紫 — 韩股按钮区分
+KR_FG = "FFFFFF"
 
 BUTTONS = [
     ("BtnRunAll",       "一键全抓",            "模块_总入口.一键全抓",            42, PRIMARY_FILL,   PRIMARY_FG,   13, True),
@@ -72,6 +74,11 @@ BUTTONS = [
     ("BtnRunHKProfit",  "更新港股利润表",      "模块_抓港股利润表.Main",         30, HK_FILL,        HK_FG,        11, False),
     ("BtnRunHKCash",    "更新港股现金流量表",  "模块_抓港股现金流量表.Main",     30, HK_FILL,        HK_FG,        11, False),
     ("BtnRunHKInd",     "更新港股指标表",      "模块_抓港股指标表.Main",         30, HK_FILL,        HK_FG,        11, False),
+    # Phase 4d: 韩股 (4 张表)
+    ("BtnRunKRBalance", "更新韩股资产负债表",  "模块_抓韩股资产负债表.Main",     30, KR_FILL,        KR_FG,        11, False),
+    ("BtnRunKRProfit",  "更新韩股利润表",      "模块_抓韩股利润表.Main",         30, KR_FILL,        KR_FG,        11, False),
+    ("BtnRunKRCash",    "更新韩股现金流量表",  "模块_抓韩股现金流量表.Main",     30, KR_FILL,        KR_FG,        11, False),
+    ("BtnRunKRInd",     "更新韩股指标表",      "模块_抓韩股指标表.Main",         30, KR_FILL,        KR_FG,        11, False),
 ]
 
 # 已废弃: install 时从当前 xlsm 主动移除 (即使 modules/ 下仍有遗留也清掉)
@@ -291,7 +298,7 @@ def style_sample_pool_data_area(ws_pool):
     except Exception:
         pass
 
-    # ---- C 列条件格式: A / HK / US 不同底色 ----
+    # ---- C 列条件格式: A / HK / US / KR 不同底色 ----
     XL_CELL_VALUE = 1
     XL_EQUAL = 3
     cf_range = ws_pool.Range("C8:C50")
@@ -299,7 +306,7 @@ def style_sample_pool_data_area(ws_pool):
         cf_range.FormatConditions.Delete()
     except Exception:
         pass
-    for value, color_hex in [("A", "D9E1F2"), ("HK", "FFF2CC"), ("US", "FCE4D6")]:
+    for value, color_hex in [("A", "D9E1F2"), ("HK", "FFF2CC"), ("US", "FCE4D6"), ("KR", "E4DFEC")]:
         try:
             cf = cf_range.FormatConditions.Add(
                 Type=XL_CELL_VALUE, Operator=XL_EQUAL,
@@ -340,6 +347,7 @@ def cleanup_legacy_sample_pool(ws_pool):
         "BtnRunInfo",
         "BtnRunUSBalance", "BtnRunUSProfit", "BtnRunUSCash", "BtnRunUSInd",
         "BtnRunHKBalance", "BtnRunHKProfit", "BtnRunHKCash", "BtnRunHKInd",
+        "BtnRunKRBalance", "BtnRunKRProfit", "BtnRunKRCash", "BtnRunKRInd",
     }
     shape_names_snapshot = [sh.Name for sh in ws_pool.Shapes]
     for n in shape_names_snapshot:
@@ -415,7 +423,7 @@ def _make_wide_table_sheet(wb, name):
     """创建空宽表结构 sheet。指标表使用 A:C 三列静态描述列。"""
     ws = wb.Worksheets.Add(After=wb.Sheets(wb.Sheets.Count))
     ws.Name = name
-    is_indicator = name in ("A股_指标表", "美股_指标表", "港股_指标表")
+    is_indicator = name in ("A股_指标表", "美股_指标表", "港股_指标表", "韩股_指标表")
     ws.Range("A1").Value = "指标类型" if is_indicator else "大类"
     ws.Range("B1").Value = "指标名称"
     header_addrs = ["A1", "B1"]
@@ -524,12 +532,13 @@ def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
 
 
 def ensure_market_sheets(wb):
-    """确保 A股/美股/港股报表 sheet 和诊断 sheet 存在。
+    """确保 A股/美股/港股/韩股报表 sheet 和诊断 sheet 存在。
     """
     wide_targets = [
         "A股_资产负债表", "A股_利润表", "A股_现金流量表", "A股_指标表",
         "美股_资产负债表", "美股_利润表", "美股_现金流量表", "美股_指标表",
         "港股_资产负债表", "港股_利润表", "港股_现金流量表", "港股_指标表",
+        "韩股_资产负债表", "韩股_利润表", "韩股_现金流量表", "韩股_指标表",
     ]
     existing = {sh.Name for sh in wb.Sheets}
     for name in wide_targets:
@@ -539,7 +548,7 @@ def ensure_market_sheets(wb):
             _make_wide_table_sheet(wb, name)
             print(f"  + sheet 新建: {name}")
 
-    for diag_name in ("美股_抓取诊断", "港股_抓取诊断"):
+    for diag_name in ("美股_抓取诊断", "港股_抓取诊断", "韩股_抓取诊断"):
         if diag_name in {sh.Name for sh in wb.Sheets}:
             print(f"  ~ sheet 已存在: {diag_name}")
         else:
@@ -569,7 +578,7 @@ def update_intro_sheet(wb):
     lines = [
         "",
         "用途: 把上市公司财务数据抓成同业对标宽表, 方便横向比较。",
-        "当前支持: A股、美股、港股。后续规划: 韩股。",
+        "当前支持: A股、美股、港股、韩股。后续规划: 更多市场。",
         "作者: Eric Zhang",
         "联系邮箱: 214978902@qq.com",
         "",
@@ -579,32 +588,35 @@ def update_intro_sheet(wb):
         "3. A2 填年份, 例如 2025; A2 留空表示取最新可用期间。",
         "4. A4 选择季度: 全部 / Q1 / Q2 / Q3 / Q4。",
         "5. B5 可填写雪球 xq_a_token cookie; POM、HTT 等 EDGAR 不完整的中概/20-F 公司会自动走雪球 fallback, 港股也使用该 cookie。",
-        "6. 点『一键全抓』会顺序更新 A股、美股、港股 12 张表; 也可以点单张表按钮单独更新。",
+        "6. 点『一键全抓』会顺序更新 A股、美股、港股、韩股 16 张表; 也可以点单张表按钮单独更新。",
         "",
         "输出表",
         "A股: 资产负债表 → 利润表 → 现金流量表 → 指标表。",
         "美股: 资产负债表 → 利润表 → 现金流量表 → 指标表。",
         "港股: 资产负债表 → 利润表 → 现金流量表 → 指标表。",
-        "指标表统一只保留 18 个标准指标, A股、美股和港股口径一致。",
+        "韩股: 资产负债表 → 利润表 → 现金流量表 → 指标表。",
+        "指标表统一只保留 18 个标准指标, A股、美股、港股和韩股口径一致。",
         "",
         "宽表结构",
         "第 1 行: 公司名(代码), 横向合并该公司的报告期列。",
         "第 2 行: 报告期, 降序排列。",
         "A/B列: 大类或指标类型、指标名称; 指标表额外有 C列英文指标名。",
-        "数值列: 单位按表口径输出; 美股三张财报单位为百万美元; 港股为百万(各家公司报告币种, 见 港股_抓取诊断 Unit 列)。",
+        "数值列: 单位按表口径输出; 美股三张财报单位为百万美元; 港股为百万(各家公司报告币种, 见 港股_抓取诊断 Unit 列); 韩股为十亿韩元。",
         "",
         "期间对齐规则",
         "A股宽表使用报告期并集对齐, 便于同行横向比较。",
         "美股宽表按每家公司自身可用期间展开, 不再为其他公司的期间保留空列。",
         "港股宽表同样按每家公司自身可用期间展开, 保留不同公司财年末差异。",
+        "韩股宽表同样按每家公司自身可用期间展开; Q1/Q2/Q3 来自季度页,Q4 来自年度页。",
         "",
         "数据源与限制",
         "A股财报来自新浪财经。",
         "美股优先使用 SEC EDGAR companyfacts; EDGAR 缺失或字段不匹配时, 支持的中概股 fallback 到雪球。",
         "港股来自雪球 HK API; 不做汇率换算, 币种以诊断表 Unit 列为准。",
+        "韩股来自 stockanalysis.com KRX 财报 HTML 表格; 不需要雪球 cookie。",
         "雪球 cookie 过期时, 请重新复制 xq_a_token 到样本池 B5。",
         "诊断 sheet 中同一 (公司, 指标) 先出现 MISSING_NON_USD、随后出现 OK_XUEQIU 属预期行为:表示 ifrs-full 有字段但单位不是 USD,系统改走雪球兜底。",
-        "韩股目前为规划市场, 尚未接入抓数。",
+        "韩股需要在样本池 C 列手填 KR; 6 位纯数字无法自动区分 A 股与韩股。",
     ]
 
     for idx, text in enumerate(lines, start=2):
@@ -623,7 +635,7 @@ def update_intro_sheet(wb):
 
 
 def reorder_report_sheets(wb):
-    """固定工作表 Tab 顺序: 使用说明/样本池, A股四表, 美股四表, 美股诊断, 港股四表, 港股诊断。"""
+    """固定工作表 Tab 顺序: 使用说明/样本池, A股四表, 美股四表, 美股诊断, 港股四表, 港股诊断, 韩股四表, 韩股诊断。"""
     desired_order = [
         "使用说明", "样本池",
         "A股_资产负债表", "A股_利润表", "A股_现金流量表", "A股_指标表",
@@ -631,6 +643,8 @@ def reorder_report_sheets(wb):
         "美股_抓取诊断",
         "港股_资产负债表", "港股_利润表", "港股_现金流量表", "港股_指标表",
         "港股_抓取诊断",
+        "韩股_资产负债表", "韩股_利润表", "韩股_现金流量表", "韩股_指标表",
+        "韩股_抓取诊断",
     ]
     pos = 1
     for name in desired_order:
@@ -650,7 +664,7 @@ def install_buttons(ws_pool):
     """
     Phase 3: 用 Shape (msoShapeRoundedRectangle) 替换老的 Forms 按钮
       - 主按钮『一键全抓』: 深蓝 + 白字 + 大字
-      - A股按钮: 浅蓝 + 深蓝字; 美股按钮: 深红 + 白字; 港股按钮: 深绿 + 白字
+      - A股按钮: 浅蓝 + 深蓝字; 美股按钮: 深红 + 白字; 港股按钮: 深绿 + 白字; 韩股按钮: 深紫 + 白字
       - 都装在样本池 I 列, 绝对垂直坐标, 无可见边框
       - 装前先 Delete 同名旧按钮 (兼容旧 Forms 按钮 / Phase 2 Shape 按钮)
     """

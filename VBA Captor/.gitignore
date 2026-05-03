@@ -1,0 +1,10 @@
+# 生成物 (由 build_template.py + install_modules.py 产出, 非源码)
+新浪财经行业数据查询V3.xlsx
+新浪财经行业数据查询V3.xlsm
+
+# Python 运行产物
+tools/__pycache__/
+*.pyc
+
+# 注: archive/ 下的历史 xlsm 也被父级 .gitignore 的 *.xlsm 排除
+#     如需把 V2_2_宽表版.xlsm (用户参考样例) 也排除, 父级规则已覆盖
