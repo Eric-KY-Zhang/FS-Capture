@@ -1,6 +1,6 @@
 # 上市公司财务数据查询工具 - 项目 STATUS
 
-> 项目状态:**已从 A股工具升级为 A股 + 美股财务数据查询工具; Phase 4b-14a 已由 Codex 端到端验证,等待 Claude Code review**
+> 项目状态:**已扩展为 A股 + 美股 + 港股 + 韩股财务数据查询工具; Phase 4f Step 2 已完成本地代码开发,等待联网验证**
 > 上一轮迭代:从"横向→纵向"格式调整,演进为"完整重写为多公司同业对标工具"
 > 当前工作簿:`上市公司财务数据查询.xlsm`
 > 作者:Eric Zhang;联系邮箱:214978902@qq.com
@@ -8,6 +8,12 @@
 > 工具来源:作者林铖(247650491@qq.com),原工具 V2.2
 
 ---
+
+## 0. 最新进展(2026-05-03)
+
+- Phase 4f Step 2 已完成本地开发:新增『汇率』sheet 模板、样本池 B6『显示币种』toggle、`ReadDisplayCurrency()` / `GetFxRate()` helper,以及独立 `模块_抓汇率.bas`。
+- 离线验证已完成:`tools/build_template.py`、`tools/install_modules.py`、工作簿结构检查、VBA 编译命令均通过。
+- 未跑联网验证、未跑 probe、未跑实际抓数、未跑立即窗口联网实测; 后续由 Claude Code / 用户接手验证雪球 FX 请求与真实写表流程。
 
 ## 1. 项目背景
 

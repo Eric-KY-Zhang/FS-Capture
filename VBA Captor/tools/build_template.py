@@ -71,7 +71,7 @@ def build_intro(ws):
         "  R2: 报告期, 降序排列",
         "  A/B列: 大类或指标类型、指标名称; 指标表额外有 C列英文指标名",
         "  A股: 报告期跨公司取并集对齐; 美股/港股/韩股: 每家公司只展开自己有数据的报告期",
-        "  港股: 单位为百万(各家公司报告币种, 见 港股_抓取诊断 Unit 列), 不做汇率换算",
+        "  港股: 单位为百万(各家公司报告币种, 见 港股_抓取诊断 Unit 列); 默认原币输出",
         "  韩股: 单位为十亿韩元(KRW billions), 数据源表格为百万韩元, 写表时除以 1,000",
         "",
         "【数据源】",
@@ -84,6 +84,12 @@ def build_intro(ws):
         "  - 雪球 cookie 过期时需重新复制 xq_a_token 到 B5",
         "  - 诊断 sheet 中同一 (公司, 指标) 先出现 MISSING_NON_USD、随后出现 OK_XUEQIU 属预期行为:表示 ifrs-full 有字段但单位不是 USD,系统改走雪球兜底",
         "  - 样本池已按市场分栏,韩股代码请填在韩股区,不再需要市场列",
+        "",
+        "【汇率与币种】",
+        "  新增『汇率』sheet 缓存 USDCNY / HKDCNY / KRWCNY 期末与期间平均汇率。",
+        "  数据源: 雪球 K 线 USDCNY.FX / HKDCNY.FX / KRWCNY.FX, 期间平均 = 区间内日 close 算术平均。",
+        "  用户可在 汇率 sheet 手填 cell 覆盖系统拉取值; 备注列可写 override 理由。",
+        "  样本池 B6 切换『显示币种』: 默认『原币』; 选『统一RMB』后 Step 4 跑数会自动 × 汇率写 RMB。",
         "",
         "【来源说明】基于林铖 V2.2 重写并扩展。",
     ]
@@ -117,11 +123,12 @@ def build_sample_pool(ws):
     for col, w in col_widths.items():
         ws.column_dimensions[col].width = w
 
-    # ---- Row 1-5: 全局配置区 ----
+    # ---- Row 1-6: 全局配置区 ----
     for addr, txt in (
         ("A1", "年份 (留空=取最新)"),
         ("A3", "季度 (Q1/Q2/Q3/Q4 或 全部)"),
         ("A5", "雪球 Cookie"),
+        ("A6", "显示币种"),
     ):
         ws[addr] = txt
         ws[addr].font = Font(name="微软雅黑", size=10, bold=True)
@@ -149,7 +156,18 @@ def build_sample_pool(ws):
     ws["B5"].font = Font(name="Consolas", size=9)
     ws["B5"].fill = cookie_fill
     ws["B5"].alignment = LEFT
-    for row in range(1, 6):
+
+    # Phase 4f Step 2: B6 显示币种 toggle (默认 "原币", 下拉 原币/统一RMB)
+    ws["B6"] = "原币"
+    ws["B6"].font = Font(name="微软雅黑", size=11, bold=True)
+    ws["B6"].fill = yellow_fill
+    ws["B6"].alignment = CENTER
+    ws["B6"].border = BORDER
+    dv_currency = DataValidation(type="list", formula1='"原币,统一RMB"', allow_blank=False)
+    dv_currency.add("B6")
+    ws.add_data_validation(dv_currency)
+
+    for row in range(1, 7):
         ws.row_dimensions[row].height = 22
 
     # ---- Row 7: 市场标题 ----
@@ -334,6 +352,40 @@ def build_diagnostic_sheet(ws, market_label="美股"):
     ws.freeze_panes = "A3"
 
 
+def build_fx_sheet(ws):
+    """
+    Phase 4f Step 2: 汇率 sheet 模板
+      Row 1: 8 列表头(深蓝白字)
+      Row 2+: 由 VBA 模块_抓汇率 自动填充, 用户也可手填 override
+      列宽: A=14 报告期 / B-G=14 数值 / H=40 备注
+      冻结 A2; A 列文本格式 (防 yyyy-mm-dd 被 Excel 数字化)
+    """
+    ws.column_dimensions["A"].width = 14
+    for letter in ["B", "C", "D", "E", "F", "G"]:
+        ws.column_dimensions[letter].width = 14
+    ws.column_dimensions["H"].width = 40
+
+    headers = ["报告期", "USDCNY期末", "USDCNY期均",
+               "HKDCNY期末", "HKDCNY期均",
+               "KRWCNY期末", "KRWCNY期均", "备注/override"]
+    fill = PatternFill("solid", fgColor=DARK_BLUE)
+    for j, txt in enumerate(headers, start=1):
+        col = get_column_letter(j)
+        cell = ws[f"{col}1"]
+        cell.value = txt
+        cell.font = HEADER_FONT
+        cell.fill = fill
+        cell.alignment = CENTER
+        cell.border = BORDER
+
+    # A 列文本格式 (防报告期被 Excel 数字化)
+    for r in range(1, 200):
+        ws.cell(row=r, column=1).number_format = "@"
+
+    ws.row_dimensions[1].height = 22
+    ws.freeze_panes = "A2"
+
+
 def main():
     wb = Workbook()
     # Drop the default sheet
@@ -376,6 +428,10 @@ def main():
 
     ws_diag_kr = wb.create_sheet("韩股_抓取诊断")
     build_diagnostic_sheet(ws_diag_kr, "韩股")
+
+    # ---- Phase 4f Step 2: 汇率 sheet (跨市场共享缓存, 排序最末) ----
+    ws_fx = wb.create_sheet("汇率")
+    build_fx_sheet(ws_fx)
 
     # 默认打开时显示样本池
     wb.active = wb.sheetnames.index("样本池")

@@ -48,6 +48,12 @@ Public g_dictTickerToCIK As Object
 
 ' (g_diagnosticAppendOnly 已在上方 line 33 声明 — Codex Layer 1 同步引入, 不重复)
 
+' --------- Phase 4f Step 2: 汇率 sheet 常量 (跨模块共享) ---------
+'   FX_SHEET     : 汇率缓存 sheet 名 (build_template/install_modules 同步)
+'   FX_DATA_ROW  : 数据起始行 (Row 1 是表头)
+Public Const FX_SHEET As String = "汇率"
+Public Const FX_DATA_ROW As Long = 2
+
 
 ' --------- 自动化/一键全抓用: 控制各抓数入口是否弹窗 ---------
 Public Sub SetSilentMode(ByVal blnSilent As Boolean)
@@ -651,6 +657,141 @@ Public Function ReadXueqiuCookie() As String
     End If
     Err.Clear
     On Error GoTo 0
+End Function
+
+
+' --------- Phase 4f Step 2: 读样本池 B6 显示币种切换 ---------
+'   返回 "原币" (默认) 或 "统一RMB"
+'   B6 不存在 / 空 / sheet 不存在 → "原币"; 用户改 B6 立即生效
+Public Function ReadDisplayCurrency() As String
+    On Error Resume Next
+    Dim s As String
+    s = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("B6").Value))
+    If Err.Number <> 0 Or Len(s) = 0 Then s = "原币"
+    Err.Clear
+    On Error GoTo 0
+    ReadDisplayCurrency = s
+End Function
+
+
+' --------- Phase 4f Step 2: 通用汇率查询 (供 Step 4 写表时调用) ---------
+'   curCode   : "RMB" / "CNY" / "USD" / "HKD" / "KRW" (其他返 0)
+'   periodEnd : 报告期 yyyy-mm-dd, 必须与 汇率 sheet A 列文本一致
+'   useEop    : True=期末 (BS 用); False=期间均值 (IS/CF 用)
+'
+'   返回:
+'     RMB / CNY → 1 (不查 sheet, 不抓数)
+'     命中缓存  → 缓存值
+'     未命中    → 调 模块_抓汇率.EnsureFxRateCached 拉数, 写 sheet, 再读
+'     失败      → 0 (Step 4 调用方需 fallback 到 1#)
+'
+'   用户可手填 汇率 sheet 单元格 override 系统值; 只要 IsNumeric And > 0 就保留
+'   注: 参数名避免用 "currency" (与 VBA 数据类型 Currency 冲突可能引起编译歧义)
+Public Function GetFxRate(ByVal curCode As String, ByVal periodEnd As String, ByVal useEop As Boolean) As Double
+    Dim c As String: c = UCase$(Trim$(curCode))
+    If c = "RMB" Or c = "CNY" Then
+        GetFxRate = 1#
+        Exit Function
+    End If
+
+    Dim col As Long: col = LookupFxColForCurrency(c, useEop)
+    If col = 0 Then
+        GetFxRate = 0
+        Exit Function
+    End If
+
+    Dim ws As Object
+    On Error Resume Next
+    Set ws = ThisWorkbook.Sheets(FX_SHEET)
+    On Error GoTo 0
+    If ws Is Nothing Then
+        GetFxRate = 0
+        Exit Function
+    End If
+
+    Dim rowIdx As Long
+    rowIdx = LookupFxRowByPeriod(ws, periodEnd)
+    Dim v As Variant
+    If rowIdx > 0 Then
+        v = ws.Cells(rowIdx, col).Value
+        If IsNumeric(v) Then
+            If CDbl(v) > 0 Then
+                GetFxRate = CDbl(v)
+                Exit Function
+            End If
+        End If
+    End If
+
+    ' Cache miss → 拉数. 跨模块调用走 Application.Run (dot syntax 对中文模块名编译不通)
+    Dim ok As Boolean
+    On Error Resume Next
+    ok = CBool(Application.Run("模块_抓汇率.EnsureFxRateCached", periodEnd, c))
+    If Err.Number <> 0 Then
+        Err.Clear
+        On Error GoTo 0
+        GetFxRate = 0
+        Exit Function
+    End If
+    On Error GoTo 0
+
+    If Not ok Then
+        GetFxRate = 0
+        Exit Function
+    End If
+
+    ' 拉完再读
+    rowIdx = LookupFxRowByPeriod(ws, periodEnd)
+    If rowIdx = 0 Then
+        GetFxRate = 0
+        Exit Function
+    End If
+    v = ws.Cells(rowIdx, col).Value
+    If IsNumeric(v) Then
+        If CDbl(v) > 0 Then
+            GetFxRate = CDbl(v)
+            Exit Function
+        End If
+    End If
+    GetFxRate = 0
+End Function
+
+
+' --------- 汇率 sheet A 列查报告期所在行;0 表示未找到 ---------
+Private Function LookupFxRowByPeriod(ByVal ws As Object, ByVal periodEnd As String) As Long
+    Dim r As Long, lastRow As Long
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(-4162).Row    ' xlUp
+    If lastRow < FX_DATA_ROW Then
+        LookupFxRowByPeriod = 0
+        Exit Function
+    End If
+    Dim target As String: target = Trim$(periodEnd)
+    For r = FX_DATA_ROW To lastRow
+        If Trim$(CStr(ws.Cells(r, 1).Value)) = target Then
+            LookupFxRowByPeriod = r
+            Exit Function
+        End If
+    Next r
+    LookupFxRowByPeriod = 0
+End Function
+
+
+' --------- 汇率 sheet 列号映射 (curCode × eop/avg) ---------
+'   B=USDCNY期末(2)  C=USDCNY期均(3)
+'   D=HKDCNY期末(4)  E=HKDCNY期均(5)
+'   F=KRWCNY期末(6)  G=KRWCNY期均(7)
+'   未知 curCode → 0
+Public Function LookupFxColForCurrency(ByVal curCode As String, ByVal useEop As Boolean) As Long
+    Dim c As String: c = UCase$(Trim$(curCode))
+    Select Case c
+        Case "USD"
+            LookupFxColForCurrency = IIf(useEop, 2, 3)
+        Case "HKD"
+            LookupFxColForCurrency = IIf(useEop, 4, 5)
+        Case "KRW"
+            LookupFxColForCurrency = IIf(useEop, 6, 7)
+        Case Else
+            LookupFxColForCurrency = 0
+    End Select
 End Function
 
 

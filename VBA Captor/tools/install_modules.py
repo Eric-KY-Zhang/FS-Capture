@@ -338,6 +338,8 @@ def layout_sample_pool(ws_pool):
     year_value = ws_pool.Range("A2").Value or 2025
     quarter_value = ws_pool.Range("A4").Value or "全部"
     cookie_value = ws_pool.Range("B5").Value or ""
+    # Phase 4f Step 2: 保留用户已选的 B6 显示币种 (空 → install_currency_toggle_cell 写默认)
+    currency_value = ws_pool.Range("B6").Value or ""
 
     try:
         ws_pool.Range("A1:Q9").UnMerge()
@@ -359,7 +361,12 @@ def layout_sample_pool(ws_pool):
     value_fill = rgb_long("FFE699")
     cookie_fill = rgb_long("FFF2CC")
 
-    for addr, value in (("A1", "年份 (留空=取最新)"), ("A3", "季度 (Q1/Q2/Q3/Q4 或 全部)"), ("A5", "雪球 Cookie")):
+    for addr, value in (
+        ("A1", "年份 (留空=取最新)"),
+        ("A3", "季度 (Q1/Q2/Q3/Q4 或 全部)"),
+        ("A5", "雪球 Cookie"),
+        ("A6", "显示币种"),
+    ):
         cell = ws_pool.Range(addr)
         cell.Value = value
         cell.Font.Name = "微软雅黑"
@@ -415,6 +422,10 @@ def layout_sample_pool(ws_pool):
     except Exception:
         pass
 
+    # Phase 4f Step 2: 恢复 B6 显示币种 (clear A1:Q9 已清掉, 这里写回; 空 → 后续 install_currency_toggle_cell 写默认)
+    if currency_value:
+        ws_pool.Range("B6").Value = currency_value
+
     markets = [
         ("A7:B7", "A 股(新浪)", PRIMARY_FILL),
         ("E7:F7", "美股(EDGAR+雪球)", US_FILL),
@@ -467,7 +478,7 @@ def layout_sample_pool(ws_pool):
     for col in ("A", "E", "I", "M"):
         ws_pool.Range(f"{col}10:{col}1000").NumberFormat = "@"
 
-    for row in range(1, 6):
+    for row in range(1, 7):    # Phase 4f Step 2: 含 row 6 显示币种
         ws_pool.Rows(row).RowHeight = 22
     ws_pool.Rows(7).RowHeight = 24
     ws_pool.Rows(8).RowHeight = 34
@@ -494,6 +505,9 @@ def layout_sample_pool(ws_pool):
         ws_pool.Application.ActiveWindow.FreezePanes = True
     except Exception:
         pass
+
+    # Phase 4f Step 2: 配置 B6 显示币种 toggle (默认 "原币" + 数据验证下拉)
+    install_currency_toggle_cell(ws_pool)
 
     print("  + 样本池 4 市场分栏布局已刷新")
 
@@ -799,6 +813,104 @@ def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
     return ws
 
 
+def _make_fx_sheet(wb, name="汇率"):
+    """Phase 4f Step 2: 汇率 sheet (8 列表头, 跨市场共享缓存)
+      Row 1: 报告期/USDCNY期末/USDCNY期均/HKDCNY期末/HKDCNY期均/KRWCNY期末/KRWCNY期均/备注
+      Row 2+: 由 VBA 模块_抓汇率 自动写; 用户可手填 override
+      A 列文本格式 (防 yyyy-mm-dd 数字化), 冻结 A2
+    """
+    ws = wb.Worksheets.Add(After=wb.Sheets(wb.Sheets.Count))
+    ws.Name = name
+
+    headers = ["报告期", "USDCNY期末", "USDCNY期均",
+               "HKDCNY期末", "HKDCNY期均",
+               "KRWCNY期末", "KRWCNY期均", "备注/override"]
+    widths = [14, 14, 14, 14, 14, 14, 14, 40]
+    for j, (txt, w) in enumerate(zip(headers, widths), start=1):
+        c = ws.Cells(1, j)
+        c.Value = txt
+        c.Font.Name = "微软雅黑"
+        c.Font.Size = 11
+        c.Font.Bold = True
+        c.Font.Color = rgb_long("FFFFFF")
+        c.Interior.Color = rgb_long("4472C4")
+        c.HorizontalAlignment = -4108
+        c.VerticalAlignment = -4108
+        ws.Columns(j).ColumnWidth = w
+
+    ws.Columns("A").NumberFormat = "@"
+    ws.Rows(1).RowHeight = 22
+
+    try:
+        ws.Activate()
+        wb.Application.ActiveWindow.SplitColumn = 0
+        wb.Application.ActiveWindow.SplitRow = 1
+        wb.Application.ActiveWindow.FreezePanes = True
+    except Exception:
+        pass
+    return ws
+
+
+def install_currency_toggle_cell(ws_pool):
+    """
+    Phase 4f Step 2: 样本池 row 6 装『显示币种』toggle
+      A6 = 标签『显示币种』(浅蓝)
+      B6 = 默认 "原币" (浅黄), 数据验证下拉 "原币,统一RMB"; 不覆盖用户已设的值
+    """
+    label_cell = ws_pool.Range("A6")
+    if not label_cell.Value:
+        label_cell.Value = "显示币种"
+    label_cell.Font.Name = "微软雅黑"
+    label_cell.Font.Size = 10
+    label_cell.Font.Bold = True
+    label_cell.Interior.Color = rgb_long("B4C7E7")    # 浅蓝
+    label_cell.HorizontalAlignment = -4108
+    label_cell.VerticalAlignment = -4108
+
+    val_cell = ws_pool.Range("B6")
+    # 不覆盖用户已选的值; 仅在空时写默认
+    if not val_cell.Value:
+        val_cell.Value = "原币"
+    val_cell.Font.Name = "微软雅黑"
+    val_cell.Font.Size = 11
+    val_cell.Font.Bold = True
+    val_cell.Interior.Color = rgb_long("FFE699")    # 浅黄
+    val_cell.HorizontalAlignment = -4108
+    val_cell.VerticalAlignment = -4108
+
+    # 数据验证: 下拉 原币/统一RMB
+    try:
+        val_cell.Validation.Delete()
+    except Exception:
+        pass
+    try:
+        val_cell.Validation.Add(
+            Type=XL_VALIDATE_LIST,
+            AlertStyle=XL_VALID_ALERT_STOP,
+            Operator=1,
+            Formula1="原币,统一RMB",
+        )
+        val_cell.Validation.IgnoreBlank = False
+        val_cell.Validation.InCellDropdown = True
+    except Exception as e:
+        print(f"  ! B6 数据验证添加失败: {e}")
+
+    # 加 comment 解释 toggle 含义
+    try:
+        if val_cell.Comment is None:
+            val_cell.AddComment(
+                "显示币种 toggle (Phase 4f Step 2 起):\n"
+                "  原币   : 美股 USD / 港股 各家公司报告币种 / 韩股 KRW 原值输出 (默认)\n"
+                "  统一RMB: 写表时按汇率换算成人民币; BS 用期末汇率, IS/CF 用期间均值\n\n"
+                "汇率自动拉自雪球 USDCNY.FX / HKDCNY.FX / KRWCNY.FX, 缓存在『汇率』sheet。\n"
+                "汇率 sheet 单元格可手填 override 系统值。"
+            )
+    except Exception:
+        pass
+
+    print("  + A6/B6 显示币种 toggle 已配置 (默认 '原币')")
+
+
 def ensure_market_sheets(wb):
     """确保 A股/美股/港股/韩股报表 sheet 和诊断 sheet 存在。
     """
@@ -830,6 +942,13 @@ def ensure_market_sheets(wb):
             except Exception:
                 pass
             print(f"  + sheet 新建: {diag_name}")
+
+    # ---- Phase 4f Step 2: 汇率 sheet (跨市场共享缓存) ----
+    if "汇率" in {sh.Name for sh in wb.Sheets}:
+        print("  ~ sheet 已存在: 汇率")
+    else:
+        _make_fx_sheet(wb, "汇率")
+        print("  + sheet 新建: 汇率")
 
 
 def update_intro_sheet(wb):
@@ -888,12 +1007,17 @@ def update_intro_sheet(wb):
         "数据源与限制",
         "A股财报来自新浪财经。",
         "美股优先使用 SEC EDGAR companyfacts; EDGAR 缺失或字段不匹配时, 支持的中概股 fallback 到雪球。",
-        "港股来自雪球 HK API; 不做汇率换算, 币种以诊断表 Unit 列为准。",
+        "港股来自雪球 HK API; 默认原币输出, 币种以诊断表 Unit 列为准。",
         "韩股来自 stockanalysis.com KRX 财报 HTML 表格; 不需要雪球 cookie。",
         "雪球 cookie 过期时, 请重新复制 xq_a_token 到样本池 B5。",
         "美股/港股/韩股诊断 sheet 默认隐藏,需要排查时可右键 sheet tab → 取消隐藏。",
         "诊断 sheet 中同一 (公司, 指标) 先出现 MISSING_NON_USD、随后出现 OK_XUEQIU 属预期行为:表示 ifrs-full 有字段但单位不是 USD,系统改走雪球兜底。",
-        "统一 RMB 折算留到后续 Phase: 已锁定 BS 用期末汇率,IS/CF 用期间平均汇率。",
+        "",
+        "汇率与币种 (Phase 4f Step 2 起)",
+        "新增『汇率』sheet 缓存 USDCNY / HKDCNY / KRWCNY 期末与期间平均汇率。",
+        "数据源: 雪球 K 线 USDCNY.FX / HKDCNY.FX / KRWCNY.FX, 期间平均 = 区间内日 close 算术平均。",
+        "用户可在 汇率 sheet 手填 cell 覆盖系统拉取值; 备注列可写 override 理由。",
+        "样本池 B6 切换『显示币种』: 默认『原币』; 选『统一RMB』后 Step 4 跑数会自动 × 汇率写 RMB。",
     ]
 
     for idx, text in enumerate(lines, start=2):
@@ -903,7 +1027,7 @@ def update_intro_sheet(wb):
         cell.Font.Size = 11
         cell.WrapText = True
         cell.VerticalAlignment = -4108
-        if text in ("使用步骤", "输出表", "宽表结构", "期间对齐规则", "数据源与限制"):
+        if text in ("使用步骤", "输出表", "宽表结构", "期间对齐规则", "数据源与限制", "汇率与币种 (Phase 4f Step 2 起)"):
             cell.Font.Bold = True
             cell.Font.Color = rgb_long("1F4E79")
             cell.Interior.Color = rgb_long("EAF2F8")
@@ -922,6 +1046,7 @@ def reorder_report_sheets(wb):
         "港股_抓取诊断",
         "韩股_资产负债表", "韩股_利润表", "韩股_现金流量表", "韩股_指标表",
         "韩股_抓取诊断",
+        "汇率",   # ← Phase 4f Step 2 新增 (跨市场共享 FX 缓存)
     ]
     diagnostic_names = {"美股_抓取诊断", "港股_抓取诊断", "韩股_抓取诊断"}
     for name in diagnostic_names:
