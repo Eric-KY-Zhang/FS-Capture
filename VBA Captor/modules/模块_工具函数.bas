@@ -175,6 +175,7 @@ Public Sub EnsureDiagnosticSheet()
     ws.Columns("H").ColumnWidth = 14
     ws.Columns("I").ColumnWidth = 10
     ws.Columns("J").ColumnWidth = 58
+    ws.Range("A:A").NumberFormat = "@"
     ws.Rows(1).RowHeight = 22
     ws.Rows(2).RowHeight = 20
     Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(2, 10)))

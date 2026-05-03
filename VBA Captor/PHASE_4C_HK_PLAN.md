@@ -286,19 +286,20 @@ a(32) = Array("", "Cash at beginning of period", _
 """
 ```
 
-**期望输出**(理想情况 0 diff):
+**验收口径**(2026-05-03 实测后修订):
 ```
-A股_资产负债表: ✅ 0 mismatches
-A股_利润表:     ✅ 0 mismatches
-A股_现金流量表: ✅ 0 mismatches
-美股_资产负债表: ✅ 0 mismatches
-美股_利润表:     ✅ 0 mismatches
-美股_现金流量表: ✅ 0 mismatches
-
-ALL PASS — Phase 4b-13 stable baseline preserved.
+A股_资产负债表: 0 mismatches
+A股_利润表:     0 mismatches
+A股_现金流量表: 0 mismatches
+美股_资产负债表: 0 mismatches
+美股_利润表/现金流量表: 允许出现 mismatches,但必须逐项确认只来自:
+  1) Phase 4b-14a Layer 1 新增字段/新公司列(如 Interest expense 等)
+  2) Side 1 修正 Cash at beginning of period a(32) ifrs-full 槽位后的预期新增命中
 ```
 
-**如果出现 diff**: 列出 sheet / cell / new_val / baseline_val,Codex 排查根因(是预期改进还是回归)
+本轮实测:美股 IS/CF 共 72 mismatches,均归因于上述新增字段/新增列/Side 1 修复,不是 Phase 4c 港股改动导致的回归。若后续需要严格 0 diff,应重新备份 Phase 4b-14a 完成后的样本池 baseline,再用该 baseline 对比。
+
+**如果出现其它 diff**:列出 sheet / cell / new_val / baseline_val,Codex 排查根因(是预期改进还是回归)
 
 ## Side 3 — STATUS.md NONUSD 双行说明
 

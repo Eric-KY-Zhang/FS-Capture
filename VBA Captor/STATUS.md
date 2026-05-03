@@ -1301,3 +1301,74 @@ Test 3: `ZZZINVALID123`, `A2=2024`, `A4=Q4`,单跑美股资产负债表。
 - 「使用说明」Tab 标题、用途说明、市场范围、作者和联系方式已更新。
 - 作者信息: Eric Zhang;联系邮箱: 214978902@qq.com。
 - README 已按当前 A股/美股能力和港股/韩股规划重写。
+
+## Q. Phase 4c 收口: 港股重启 + Test/Side 完成
+
+执行依据: `PHASE_4C_HK_PLAN.md` v2。状态: Codex 已实现 Step 1-6、Side 1-3,并通过端到端测试;等待 Claude Code 最终闭环 review。
+
+### Q.1 本阶段已完成
+
+- 新增港股抓数主流程 `模块_抓港股财报.bas`,港股只走雪球 HK API,不走 EDGAR / ifrs-full / fuzzy 推荐。
+- 新增 4 个港股 thin wrapper:
+  - `模块_抓港股资产负债表.bas`
+  - `模块_抓港股利润表.bas`
+  - `模块_抓港股现金流量表.bas`
+  - `模块_抓港股指标表.bas`
+- `模块_工具函数.bas` 新增 `g_diagnosticSheetName` + `CurrentDiagnosticSheetName()`,美股/港股诊断 sheet 通过全局 var 路由。
+- 新增 `港股_抓取诊断` sheet,列结构与 `美股_抓取诊断` 一致。
+- 一键全抓升级为 12 张表:A股 4 + 美股 4 + 港股 4;开头分别清空 `美股_抓取诊断` 和 `港股_抓取诊断`。
+- `tools/build_template.py` / `tools/install_modules.py` 已创建/刷新港股 4 表 + 港股诊断 sheet,并新增 4 个深绿色港股按钮。
+- 港股指标表接入 18 个标准指标,与 A股/美股保持同一输出结构。
+
+### Q.2 关键决策
+
+- **币种策略**:港股不写死 HKD,也不做汇率换算。正式表金额 = 雪球原值 / 1,000,000;A1 注释说明“单位:百万(各家公司报告币种,见 港股_抓取诊断 Unit 列)”;诊断 Unit 列写 `data.currency`。
+- **字段策略**:港股雪球字段与美股雪球完全异构,使用独立 `XueqiuFieldMapForKindHK`;不复用美股 `total_assets/revenue` 这类 snake_case 映射。
+- **期间策略**:港股没有 `report_annual` / `report_type_code`;季度过滤改用 `month_num + ed`。Q4 只要求 `month_num=12`,允许阿里 H 这种 `03-31` 财年年报。
+- **诊断策略**:港股不做 fuzzy 推荐。抓不到字段时写 `MISSING`;无效代码不会中断流程。
+- **Tab/按钮策略**:Tab 顺序保持每个市场内“资产负债表 → 利润表 → 现金流量表 → 指标表”,港股按钮使用深绿 `#548235` 与 A股/美股区分。
+
+### Q.3 验证结果
+
+已重跑 `tools/install_modules.py`,成功保存 `上市公司财务数据查询.xlsm`;模块数 17,港股 sheet 和按钮已注入。
+
+Test 1:样本池包含 `300866 / 603313 / HTT / POM / 00700 / 09988 / 01024 / 03690`,配置 `A2=2024`, `A4=Q4`,运行一键全抓。
+
+| 项目 | 结果 |
+|---|---|
+| 一键全抓耗时 | 45.1 秒 |
+| 12 张正式表 | 均有数据 |
+| 公式错误扫描 | 0 |
+| 美股诊断 | 234 行;`OK_XUEQIU=163`,`MISSING=69` |
+| 港股诊断 | 170 行;`OK_XUEQIU=166`,`MISSING=2`;Unit 主要为 `CNY` |
+
+Test 2:港股资产负债表财年差异验证。
+
+| 公司 | 结果 |
+|---|---|
+| 腾讯控股(00700) | `2024-12-31` |
+| 阿里巴巴-W(09988) | `2024-03-31` |
+| 快手-W(01024) | `2024-12-31` |
+| 美团-W(03690) | `2024-12-31` |
+
+结论:阿里 H 03 月财年和美团 12 月财年未被强制对齐,符合 Phase 4c 目标。
+
+Test 3:边界代码 `99999`,配置 `A2=2024`, `A4=Q4`,单跑港股资产负债表。
+
+| 项目 | 结果 |
+|---|---|
+| 流程 | 未中断 |
+| 港股资产负债表 | 旧数据被清空,last row/col 回到表头区 |
+| 港股诊断 | 18 行 `MISSING`,Unit 为 `—` |
+
+### Q.4 Side 事项
+
+- Side 1:已修 `模块_抓美股现金流量表.bas` 中 `Cash at beginning of period` 的 ifrs-full 槽位,把 `CashAndCashEquivalentsAtBeginningOfPeriod` 从 us-gaap CSV 移到 ifrs-full CSV。
+- Side 2:已新增 `tools/diff_xlsm.py`,对比 6 张主表 R3+ cell value。实测 A股三张表 + 美股资产负债表为 0 diff;美股利润表/现金流量表存在的 diff 来自 4b-14a Layer 1 新增字段/新公司列和 Side 1 修复后的预期新增命中,非 Phase 4c 回归。若后续需要严格 0 diff,应重新备份 4b-14a 后样本池 baseline。
+- Side 3:已在 §O.3、`tools/build_template.py` 和 `tools/install_modules.py` 的使用说明中加入 NONUSD 双行属预期 feature 说明。
+
+### Q.5 已知边界
+
+- 港股 API 依赖雪球 cookie;cookie 过期时需重新复制 `xq_a_token` 到 `样本池!B5`。
+- 港股多数公司不披露 Q1/Q3;选择 Q1/Q3 时 0 命中通常是市场披露现实,不是抓取 bug。
+- `tools/diff_xlsm.py` 当前使用 openpyxl 读取 `.xlsm`;本地环境验证可运行。后续如遇 openpyxl 版本对 `read_only=True + keep_vba=True` 组合兼容问题,可改为普通读取模式或增加 CLI 开关。

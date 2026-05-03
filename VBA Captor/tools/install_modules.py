@@ -508,6 +508,7 @@ def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
     widths = [14, 16, 30, 18, 18, 14, 42, 14, 10, 58]
     for j, w in enumerate(widths, start=1):
         ws.Columns(j).ColumnWidth = w
+    ws.Columns("A").NumberFormat = "@"
     ws.Rows(1).RowHeight = 22
     ws.Rows(2).RowHeight = 20
 

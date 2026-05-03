@@ -253,6 +253,8 @@ def build_diagnostic_sheet(ws, market_label="美股"):
     widths = [14, 16, 30, 18, 18, 14, 42, 14, 10, 58]
     for j, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(j)].width = w
+    for row in range(1, 1001):
+        ws.cell(row=row, column=1).number_format = "@"
     ws.row_dimensions[1].height = 22
     ws.row_dimensions[2].height = 20
 
