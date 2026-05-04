@@ -1188,8 +1188,9 @@ Private Sub FetchUSFallbackAfterXueqiu(ByVal strTicker As String, _
     Err.Clear
     On Error GoTo 0
 
-    If ReadStockAnalysisFallbackEnabled() = "开" And StockAnalysisUSSupportsKind(strKind) _
-            And StockAnalysisUSSupportsTicker(strTicker) Then
+    ' Phase 4i.2: fallback 改成无条件触发(雪球失败后自动尝试 stockanalysis)
+    ' 实际请求只对 BABA/JD/PDD 白名单 ticker 发起;其他 ticker 直接 short-circuit 返回 False
+    If StockAnalysisUSSupportsKind(strKind) And StockAnalysisUSSupportsTicker(strTicker) Then
         On Error Resume Next
         Err.Clear
         FetchUSFromStockAnalysis strTicker, strKind, conceptMap, strQuarter, lngYear, _

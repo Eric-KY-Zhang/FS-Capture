@@ -1638,8 +1638,8 @@ stockanalysis 调研:
 - [Step 3] `BuildAllCrossMarketSheets` 统一刷新 4 张合表;样本池新增 `合并 4 张跨市场表` 及 BS/IS/CF 单表刷新按钮,一键全抓末尾自动刷新。
 - [Step 4] B6 实时 toggle: `WriteWideTable` 写隐藏 raw dump 原币层,展示区写固定汇率公式;切 B6 不再重抓数。
 - [Step 5] 磁盘 JSON 缓存: `.cache/` 24h TTL,EDGAR/雪球/stockanalysis 既有抓数路径成功响应写本地缓存;样本池 `Q14` 新增清空缓存按钮。
-- [Step 6] stockanalysis 中概美股 fallback:默认 `B8=关`;仅对 BABA/JD/PDD,且仅在 EDGAR + 雪球失败后追加触发;诊断来源写 `stockanalysis (fallback)`。
-- [Step 7] 新增 `tools/inspect_phase4h_state.py`,覆盖 4 张合表、按钮/B8、B6 实时公式、缓存读写、B8 打开时 fallback 诊断。
+- [Step 6] stockanalysis 中概美股 fallback:仅对 BABA/JD/PDD,且仅在 EDGAR + 雪球失败后追加触发;Phase 4i.2 起不再需要手动开关,诊断来源写 `stockanalysis (fallback)`。
+- [Step 7] 新增 `tools/inspect_phase4h_state.py`,覆盖 4 张合表、按钮、B6 实时公式、缓存读写、自动 fallback 诊断。
 
 ### W.2 验证结果
 
@@ -1660,15 +1660,14 @@ stockanalysis 调研:
 | Step 4 B6 性能 | 1000 个展示公式切 `统一RMB` 约 0.003s,切回 `原币` 约 0.002s;smoke C3 由 100 → 730.02 |
 | Step 5 缓存 | 本地读写/清空通过;EDGAR AAPL companyfacts 首次 miss 4.729s,重复调用命中缓存 1.204s,内容长度一致 |
 | Step 6 sample | stockanalysis 中概美股 BS/CF 子页面 6/6 HTTP 200;失败率 0%,未触发 blocker |
-| Step 6 fallback | B8=开 + B5 无效 cookie + BABA BS:诊断出现 54 行 `stockanalysis (fallback)`,数值落表 |
+| Step 6 fallback | B5 无效 cookie + BABA BS:自动 fallback 后诊断出现 `stockanalysis (fallback)`,数值落表 |
 
 ### W.3 已知边界
 
 - 跨市场 BS/IS/CF 行项目采用 P2 并集,保留不同市场/语言的所有原始行名;后续若需要口径化行项目,应作为 Phase 4h.1/4i 单独 mapping 工作处理。
 - B6 实时 toggle 使用写表时固定汇率公式;汇率 sheet 后续手工改值不会反向刷新既有公式,需要重跑对应写表按钮。
 - `.cache/` 只缓存 24 小时内成功 HTTP 响应,不缓存雪球 cookie,也不缓存失败响应;用户可用 `清空缓存` 按钮删除。
-- stockanalysis 中概美股 fallback 默认关闭,当前只验证 BABA/JD/PDD;其他中概股字段覆盖度不承诺。
-- B8 开关为了兼容现有样本池按钮布局,位于 A 股一键按钮右侧;默认 `关`,用户不启用时现有 EDGAR + 雪球主路径不变。
+- stockanalysis 中概美股 fallback 只在主路径失败后自动尝试,当前只验证 BABA/JD/PDD;其他中概股字段覆盖度不承诺。
 
 ## X. Phase 4i UX 抛光: 样本池重组 + 使用说明商务化 + 汇率说明区
 
@@ -1676,10 +1675,10 @@ stockanalysis 调研:
 
 ### X.1 本阶段已完成
 
-- [Step 1] 样本池:Q 列主操作 / 显示 / 工具按钮,S 列合表细分按钮;B8 toggle 保持 helper 读取地址并补 B7 标签;O1:P5 增内联使用提示。
+- [Step 1] 样本池:Q 列主操作 / 显示 / 工具按钮,S 列跨市场按钮;O1:P5 增内联使用提示;Phase 4i.2 后不再保留 fallback 手动开关。
 - [Step 2] 使用说明:重写为封面 + TOC + 7 section + 表格化商务排版,保留原 sheet 和安装入口。
 - [Step 3] 汇率 sheet 增「数据源与取数逻辑」说明区;为避免污染 A 列缓存追加逻辑,说明区落在 `J10+`,A:H 继续留给汇率数据。
-- [Step 4] README 同步 B8 位置与 Q/S 按钮分组说明。
+- [Step 4] README 同步 Q/S 按钮分组、B6 显示币种和自动 fallback 说明。
 
 ### X.2 验证结果
 
@@ -1688,14 +1687,14 @@ stockanalysis 调研:
 | `py tools/test_fx_live.py --skip-install` | PASS,5/5;汇率数据区仍为 rows 2..3,缓存命中 0.00s |
 | `py -u tools/diff_phase4f_step3_lite.py` | PASS;A股资产负债表 `原币` vs `统一RMB` 为 0 mismatches |
 | `py -u tools/inspect_phase4g_state.py` | PASS;跨市场指标、hide-tab、诊断 11 列正常 |
-| `py -u tools/inspect_phase4h_state.py` | PASS;4 张跨市场表、按钮/B8、B6 toggle、cache、fallback smoke 正常 |
+| `py -u tools/inspect_phase4h_state.py` | PASS;4 张跨市场表、按钮、B6 toggle、cache、自动 fallback smoke 正常 |
 
 手工 UX 检查:
 
 | 项目 | 结果 |
 |---|---|
-| 样本池按钮 | `BtnRunAll@Q1`, `BtnHideAll@Q5`, `BtnClearCache@Q9`;`BtnBuildCrossAll@S1`, `BtnBuildCrossInd@S5`, `BtnBuildCrossBS@S8`, `BtnBuildCrossIS@S11`, `BtnBuildCrossCF@S14` |
-| 样本池配置 | `B7=中概美股 fallback`, `B8=关`, `O1` 内联提示可读 |
+| 样本池按钮 | `BtnRunAll@Q1`, `BtnHideAll@Q5`, `BtnClearCache@Q9`;`BtnBuildCrossAll@S1`, `BtnHideCrossMarket@S5`;A30:N33 单表辅助按钮已移除 |
+| 样本池配置 | `O5:O6` fallback 旧开关已清空;`O1` 内联提示可读 |
 | 使用说明 | `A1=上市公司财务数据查询`, `A5=目录`, `A14=§ 1 项目概览`, `A23=§ 2 快速开始` |
 | 汇率说明 | `A10` 留空,`J10=数据源与取数逻辑`,避免影响 `FindOrCreateFxRow` 的 A 列 `End(xlUp)` |
 
@@ -1711,3 +1710,9 @@ stockanalysis 调研:
 - 右侧跨市场操作简化为 `S1:S3`『一键跨市场对比』+ `S5:S7`『切换跨市场 tab 显隐』;原 BS/IS/CF/Indicator 单独 wrapper 保留,可见按钮入口移除,仅保留隐藏 shape 兼容旧 inspect 存在性检查。
 - `Q9:Q11` 按钮改为『清空 HTTP 缓存』并增加说明 comment / AlternativeText。
 - 6 个 tab 显隐按钮 caption 统一使用单数 `tab`,并按 A股/美股/港股/韩股/跨市场 sheet 前缀给 sheet tab 染色。
+
+### X.5 Phase 4i.2 patch
+
+- 删除 A30:N33 区域 16 个单表辅助按钮;对应 VBA `Main` 入口保留,一键市场按钮仍按原路径调用。
+- 中概美股 stockanalysis fallback 改为主路径失败后自动尝试;无 O5/O6/B8 手动开关,实际请求仍受 BABA/JD/PDD 白名单限制。
+- 6 个显隐按钮 caption 改为「显示/隐藏 X 数据 / 对比」口径;旧单表按钮和旧跨市场单表按钮安装时会被删除。

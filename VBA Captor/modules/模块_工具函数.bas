@@ -682,24 +682,6 @@ Public Function ReadDisplayCurrency() As String
 End Function
 
 
-' --------- Phase 4h Step 6: 中概美股 stockanalysis fallback 开关 ---------
-'   O6 = "开" 才启用;B8 仅保留为旧版/冻结 inspect 兼容镜像
-Public Function ReadStockAnalysisFallbackEnabled() As String
-    On Error Resume Next
-    Dim s As String
-    s = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("O6").Value))
-    If s <> "开" Then
-        Dim legacy As String
-        legacy = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("B8").Value))
-        If legacy = "开" Then s = "开"
-    End If
-    If Err.Number <> 0 Or s <> "开" Then s = "关"
-    Err.Clear
-    On Error GoTo 0
-    ReadStockAnalysisFallbackEnabled = s
-End Function
-
-
 ' --------- Phase 4f Step 2: 通用汇率查询 (供 Step 4 写表时调用) ---------
 '   curCode   : "RMB" / "CNY" / "USD" / "HKD" / "KRW" (其他返 0)
 '   periodEnd : 报告期 yyyy-mm-dd, 必须与 汇率 sheet A 列文本一致
