@@ -69,7 +69,7 @@ def main() -> int:
         print("\n[2] buttons and toggles", flush=True)
         ws_pool = wb.Worksheets("样本池")
         expected_buttons = {
-            "BtnClearCache": ("O11:P12", "清空 HTTP 缓存"),
+            "BtnClearCache": ("N10:Q11", "清空 HTTP 缓存"),
         }
         for name, (addr, caption) in expected_buttons.items():
             try:
