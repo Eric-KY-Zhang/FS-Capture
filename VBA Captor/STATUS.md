@@ -1716,3 +1716,170 @@ stockanalysis 调研:
 - 删除 A30:N33 区域 16 个单表辅助按钮;对应 VBA `Main` 入口保留,一键市场按钮仍按原路径调用。
 - 中概美股 stockanalysis fallback 改为主路径失败后自动尝试;无 O5/O6/B8 手动开关,实际请求仍受 BABA/JD/PDD 白名单限制。
 - 6 个显隐按钮 caption 改为「显示/隐藏 X 数据 / 对比」口径;旧单表按钮和旧跨市场单表按钮安装时会被删除。
+
+---
+
+## Y. Phase 4j 收口: 跨市场字段映射 + 用户视角 doc + 视觉规范 4 张
+
+执行依据: `PHASE_4J_PLAN.md` v1。状态: ⚠️ Codex 已实现并提交(commit `77a121d`),后被 Phase 4j.1 部分回退(用户决定跨市场 BS/IS/CF + 字段映射意义不大)。本节记录 Phase 4j 的中间交付内容,完整最终状态见 §Z。
+
+### Y.1 本阶段已完成(中间交付)
+
+- [Step 1-2] 新增『字段映射』sheet(用户可手改)+ Codex 提案初始 mapping ~75 项(BS / IS / CF 标准字段)
+- [Step 3] `BuildCrossMarketStatementSheet` 改造 P3 分组(上区 mapped + 下区各市场独有,Excel outline 折叠)
+- [Step 4] 用户视角 doc 重写:使用说明 7 section + 汇率说明区 + README 使用方式 — 删掉所有"WinHttp / cache / fuzzy match / FX rate"等技术黑话
+- [Step 5] 视觉规范 design system + apply 7 张重点 sheet(样本池 / 使用说明 / 4 张跨市场对比 / 汇率)
+  - 配色统一:深蓝 #1F3864 / 中蓝 #4472C4 / 浅蓝 #D9E1F2 / 警告浅黄
+  - 字体统一:微软雅黑 24/14/12/11/10 五级
+  - 跨市场对比 brand color:橙 #ED7D31(Phase 4j.1 回退时改回蓝)
+- [Step 5] 样本池布局大改:跨市场对比作为第 5 个 market column 移到 `Q:R`(紧挨韩股),全局按钮挪到 `T:U`
+- [Step 6] tab 显示规则修正:`ToggleMarketTabsVisibility` 加诊断 sheet 排除条件;一键 X 股末尾追加 `UnhideMarketTabs` 自动展开对应市场
+- [Step 7] 新增 `tools/inspect_phase4j_state.py`(Phase 4j.1 删除)+ STATUS §Y(本节)
+
+### Y.2 验证结果
+
+| 项目 | 结果 |
+|---|---|
+| 4 张 frozen 回归 | PASS |
+| `tools/inspect_phase4j_state.py`(后已删) | PASS |
+| Step 2 mapping 命中率 | BS / IS / CF 各市场具体命中数详见 commit `77a121d` |
+
+### Y.3 Phase 4j 局限及回退原因
+
+用户实际使用后发现:
+- 跨市场 BS/IS/CF 3 张表 即使有字段映射 P3 分组,跨市场对比仍意义不大(中美 GAAP / IFRS / K-IFRS 行项目本质差异,1:1 mapping 经常勉强)
+- 跨市场对比作为独立 market column(Q:R)+ 橙色 brand 让样本池视觉更复杂,与"专业、美观"目标背道
+- 字段映射 sheet 的维护成本(用户手改 mapping)超过其展示收益
+
+→ Phase 4j.1 决定:**保留指标表合并(18 项标准指标已在分市场表统一,合表天然可比),删除其他**。
+
+---
+
+## Z. Phase 4j.1 收口: 简化跨市场对比 + 抑制合并弹窗
+
+执行依据: 用户口头反馈 3 项简化需求(2026-05-04)。状态: ✅ Codex 已实现并通过 4 张 frozen 回归(commit `8acbdd4`,净 -1042 行删除)。
+
+### Z.1 本阶段已完成
+
+**#1 — 抑制合并单元格弹窗**:
+- `BuildCrossMarketIndicatorSheet` 入口 `Application.DisplayAlerts = False`,出口恢复 True
+- 跑 `合并跨市场指标表` 不再弹"合并后只保留左上角值"对话框
+
+**#2 — 删除跨市场 BS/IS/CF + 字段映射 + 相关代码**(净 -1042 行):
+- 删除 4 张 sheet:`跨市场_资产负债表 / 跨市场_利润表 / 跨市场_现金流量表 / 字段映射`(装表时主动 cleanup,老 xlsm 升级自动清理)
+- 删除 VBA `BuildCrossMarketStatementSheet` / `BuildCrossMarketStatementSheetP2` / `LoadCrossMarketMapping` / `BuildCrossMarketBalanceSheetWrapper / IncomeWrapper / CashFlowWrapper`
+- 删除 VBA `切换跨市场tabs` Sub
+- `BuildAllCrossMarketSheets` 保留为兼容入口,只调 `BuildCrossMarketIndicatorSheet`
+- 删除 Python `_make_cross_market_statement_sheet` / 字段映射装表函数 / INITIAL_FIELD_MAPPING 数据 / A 列下拉验证
+- 删除按钮 `BtnBuildCrossAll` / `BtnHideCrossMarket`
+- 删除 `tools/inspect_phase4j_state.py`(整文件)
+- README + 使用说明 sheet + 汇率说明区 同步去掉字段映射 / 4 张跨市场表 / 橙色按钮等所有相关文字
+- `tools/inspect_phase4h_state.py` 同步移除已删对象的检查项(顶部加 Phase 4j.1 说明)
+
+**#3 — 跨市场对比 Q:R column 取消 + 跨市场指标表跟随主线 toggle**:
+- 删除 Q7:R7 跨市场 market header cell(原 Phase 4j 引入的橙色第 5 column)
+- 全局按钮挪回 Q 列简单布局:`Q1:Q3` 一键全抓 4 市场 / `Q5:Q7` 显示/隐藏 所有市场数据 / `Q9:Q11` 清空 HTTP 缓存
+- 跨市场指标表 tab color 从 Phase 4j 的橙 `#ED7D31` 改回蓝 `#4472C4`(跟 4 市场 family 视觉融入)
+- `切换所有分市场tabs` 扩展到包含 `跨市场_指标表`(共 17 张:16 正式 + 1 跨市场指标)
+- `UnhideMarketTabs` helper 同样扩展,一键全抓末尾自动展开 16 + 1 = 17 张
+- 单市场 `切换X股tabs` 不动(只控制本市场 4 张,不影响跨市场指标表)
+
+### Z.2 验证结果
+
+| 项目 | 结果 |
+|---|---|
+| `py tools/test_fx_live.py --skip-install` | PASS,5/5 |
+| `py -u tools/diff_phase4f_step3_lite.py` | PASS;A股资产负债表 `原币` vs `统一RMB` 0 mismatches |
+| `py -u tools/inspect_phase4g_state.py` | EXIT_CODE=0;toggle 行为符合 Phase 4j Step 6 新设计(诊断永隐 → 1st toggle 3/19 hidden, 2nd toggle 0/19 visible) |
+| `py -u tools/inspect_phase4h_state.py` | PASS;同步移除已删对象检查项后,B6 toggle / 缓存 / 自动 fallback / 跨市场指标表 全部正常 |
+
+手工独立验证:
+- 4 张旧 sheet absent(BS / IS / CF / 字段映射)
+- 跨市场_指标表 still works:20 行 × 18 列,tab color = `#4472C4` 蓝
+- 样本池 Q 列 3 个全局按钮位置正确(Q1/Q5/Q9)
+- 旧跨市场按钮 absent
+- `BuildCrossMarketIndicatorSheet` 跑宏不再弹合并提示
+- 全局显隐 toggle 控制 17 张 sheet(16 正式 + 1 跨市场指标),诊断 sheet 永隐
+
+### Z.3 已知边界
+
+- 跨市场对比仅保留指标表(18 项标准指标);BS/IS/CF/全字段对标如有需求 留 Phase 4k+
+- `BuildAllCrossMarketSheets` 保留为兼容入口(实际只调指标表),后续可清理为直接 alias
+- Phase 4j 引入的 inspect_phase4j_state.py 已彻底删除,4 张 frozen 回归足以覆盖剩余 state
+
+### Z.4 Plan 教训(planner 反思)
+
+- "frozen" 清单语义需细化:**state-bound inspect**(eg `inspect_phase4g/4h_state.py`)在被检查 state 被明确删除/重命名时**必须同步**,不算违反 frozen
+- 真正 frozen 的只是 fetch / FX / RMB hook 等核心业务逻辑(`test_fx_live.py` / `diff_phase4f_step3_lite.py`)
+- Codex 在 Phase 4j.1 stop-before-commit 等 Planner 决策的行为正确;后续 plan 起草时应预先在 §⚠️ 列出 "state-bound inspect 跟随主线变更同步" 豁免规则,避免类似阻塞
+
+### Z.5 当前 release 候选状态
+
+commit `8acbdd4` 是从 Phase 4f 起累积 8 个 phase / 14 个 commit 的稳定汇总:
+- Phase 4f:RMB 换算 hook + 汇率 sheet + B6 toggle scaffold
+- Phase 4g:跨市场指标合表 + hide-tab 按钮 + POOL_DATA_START_ROW 迁移
+- Phase 4h:B6 实时 toggle + 磁盘 JSON 缓存 + stockanalysis 中概美股 fallback
+- Phase 4i / 4i.1 / 4i.2:UX 抛光(样本池布局 / 使用说明商务化 / 汇率说明区 / 单表按钮删除 / fallback 自动化)
+- Phase 4j / 4j.1:简化跨市场对比策略(只留指标表)+ 抑制合并弹窗
+
+---
+
+## AA. Phase 4j.2-4 收口: 样本池视觉 1:1 还原 + padding 清理(2026-05-05)
+
+执行依据: 用户给出目标 UI 截图 + `C:\Users\kaiyu\.claude\plans\codex-ui-snappy-fox.md` plan v1。状态: ✅ 通过 4 张 frozen 回归 + 用户视觉验收。**核心开发告段落,明日起进入优化工作阶段。**
+
+### AA.1 本阶段已完成
+
+**Phase 4j.2** `cd8f258` — Codex 按 plan 1:1 还原:
+- `tools/install_modules.py` `layout_sample_pool` 函数完全重写
+- 4 张市场卡片视觉重构(每张占 13 行 R7-R19,header / band / 一键大按钮 / 显示隐藏中按钮 / 代码-简称 sub-header / 数据区)
+- 显示/隐藏按钮用 brand 浅色版(浅红 `#FCE4E4` / 浅绿 `#EAF4E3` / 浅紫 `#EEE8F7`)取代统一浅蓝
+- 工具栏(一键全抓 + 全局显示 + 显示/隐藏所有 + 工具 + 清空缓存)垂直堆叠右上 N2:Q11
+- 使用提示 panel 浮右上 S2:V8 + `💡` emoji + 5 条 numbered tips
+- 参数设置 panel 收窄到 A2:M2(原占 A2:N2 整行)
+- 新增 `_apply_card_brand` helper 抽象 4 张卡片重复逻辑
+
+**Phase 4j.3** `ccd9ee7` — Reviewer 修两处视觉 bug:
+- padding cols (C/F/I/L/M) 从 width 4/4/4/4/10 缩到 1/1/1/1/1
+- 卡片 R8 brand-color band 改成白色窄带(原 Codex 实现让 R7 header + R8 band 视觉融成一个色块,用户反馈"没东西但有颜色")
+
+**Phase 4j.4** `67252d2` — Reviewer 进一步彻底隐藏:
+- width=1 仍能看到 1px 空列,改 `Columns(col).Hidden = True` 彻底隐藏
+- 4 张卡片现在视觉上紧贴,数据区 R14+ 不再有空白 padding 单元格
+- 按钮 merge range 不变(eg 一键 A 股 仍 `A9:C10` 但 C 列 hidden,实际只显示 A:B 视觉宽度)
+
+### AA.2 验证结果
+
+| 项目 | 结果 |
+|---|---|
+| `py tools/test_fx_live.py --skip-install` | PASS,5/5 |
+| `py -u tools/diff_phase4f_step3_lite.py` | PASS;A股资产负债表 `原币` vs `统一RMB` 0 mismatches |
+| `py -u tools/inspect_phase4g_state.py` | EXIT_CODE=0;toggle 行为符合 Phase 4j Step 6 设计 |
+| `py -u tools/inspect_phase4h_state.py` | PASS;B6 toggle / 缓存 / 自动 fallback / 跨市场指标表 全部正常 |
+| 用户视觉验收(打开 xlsm 肉眼对比目标截图)| ✅ 通过 |
+
+### AA.3 已知边界
+
+- 样本池 4 张卡片采用 hide column 方案而非完全 restructure,padding cols (C/F/I/L/M) 仍存在于 cell 范围中(只是 Hidden=True 不显示);后续如需清理可作为优化项
+- 按钮 merge range 跨越 hidden col(eg `A9:C10` 含 hidden C),功能正常但内部 cell 引用看起来有点 "hack",纯视觉
+- 配置区 `参数设置 / 一键全抓 / 使用提示` 三大块视觉对齐符合截图;数据录入区 R14+ 也按 4 张卡片视觉紧贴
+- `_apply_card_brand` helper 把 4 张卡片重复逻辑抽出,后续如需调整 card 风格只改一处
+
+### AA.4 当前 release 候选
+
+commit `67252d2` 是从 Phase 4f 起累计 9 phase / 17 commit 的核心开发完整汇总:
+- Phase 4f:RMB 换算 hook + 汇率 sheet + B6 toggle scaffold
+- Phase 4g:跨市场指标合表 + hide-tab 按钮 + POOL_DATA_START_ROW 迁移
+- Phase 4h:B6 实时 toggle + 磁盘 JSON 缓存 + stockanalysis 中概美股 fallback
+- Phase 4i / 4i.1 / 4i.2:UX 抛光(样本池 / 使用说明商务化 / 汇率说明区 / 单表按钮删除 / fallback 自动化)
+- Phase 4j / 4j.1:简化跨市场对比策略(只留指标表)+ 抑制合并弹窗
+- Phase 4j.2 / 4j.3 / 4j.4:**样本池视觉 1:1 还原(本阶段)**
+
+### AA.5 下一阶段(明日起)
+
+**核心功能开发到此告段落**,明日起进入**优化工作**阶段。具体优化方向待 next session 与用户协商,候选 backlog:
+- 抓数性能(`.cache/` 命中率提升 / 并发探索)
+- 数据质量(港股双年 fetch 扩展 / 美股 fallback 白名单扩展 / 韩股字段补齐)
+- 视觉精修(其他 sheet 的 design system apply / 跨市场指标表视觉)
+- 用户体验(B6 toggle 细节 / cookie 失效友好提示 / 错误诊断 UI)
+- 运维(CI 跑 frozen 回归 / release 打包流程 / 老用户升级测试)
