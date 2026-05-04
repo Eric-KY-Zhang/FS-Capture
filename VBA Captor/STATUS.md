@@ -1669,3 +1669,38 @@ stockanalysis 调研:
 - `.cache/` 只缓存 24 小时内成功 HTTP 响应,不缓存雪球 cookie,也不缓存失败响应;用户可用 `清空缓存` 按钮删除。
 - stockanalysis 中概美股 fallback 默认关闭,当前只验证 BABA/JD/PDD;其他中概股字段覆盖度不承诺。
 - B8 开关为了兼容现有样本池按钮布局,位于 A 股一键按钮右侧;默认 `关`,用户不启用时现有 EDGAR + 雪球主路径不变。
+
+## X. Phase 4i UX 抛光: 样本池重组 + 使用说明商务化 + 汇率说明区
+
+执行依据: `PHASE_4I_PLAN.md` v1。状态: ✅ Codex 已实现并通过 4 张 frozen 回归 + 手工 UX 检查。
+
+### X.1 本阶段已完成
+
+- [Step 1] 样本池:Q 列主操作 / 显示 / 工具按钮,S 列合表细分按钮;B8 toggle 保持 helper 读取地址并补 B7 标签;O1:P5 增内联使用提示。
+- [Step 2] 使用说明:重写为封面 + TOC + 7 section + 表格化商务排版,保留原 sheet 和安装入口。
+- [Step 3] 汇率 sheet 增「数据源与取数逻辑」说明区;为避免污染 A 列缓存追加逻辑,说明区落在 `J10+`,A:H 继续留给汇率数据。
+- [Step 4] README 同步 B8 位置与 Q/S 按钮分组说明。
+
+### X.2 验证结果
+
+| 项目 | 结果 |
+|---|---|
+| `py tools/test_fx_live.py --skip-install` | PASS,5/5;汇率数据区仍为 rows 2..3,缓存命中 0.00s |
+| `py -u tools/diff_phase4f_step3_lite.py` | PASS;A股资产负债表 `原币` vs `统一RMB` 为 0 mismatches |
+| `py -u tools/inspect_phase4g_state.py` | PASS;跨市场指标、hide-tab、诊断 11 列正常 |
+| `py -u tools/inspect_phase4h_state.py` | PASS;4 张跨市场表、按钮/B8、B6 toggle、cache、fallback smoke 正常 |
+
+手工 UX 检查:
+
+| 项目 | 结果 |
+|---|---|
+| 样本池按钮 | `BtnRunAll@Q1`, `BtnHideAll@Q5`, `BtnClearCache@Q9`;`BtnBuildCrossAll@S1`, `BtnBuildCrossInd@S5`, `BtnBuildCrossBS@S8`, `BtnBuildCrossIS@S11`, `BtnBuildCrossCF@S14` |
+| 样本池配置 | `B7=中概美股 fallback`, `B8=关`, `O1` 内联提示可读 |
+| 使用说明 | `A1=上市公司财务数据查询`, `A5=目录`, `A14=§ 1 项目概览`, `A23=§ 2 快速开始` |
+| 汇率说明 | `A10` 留空,`J10=数据源与取数逻辑`,避免影响 `FindOrCreateFxRow` 的 A 列 `End(xlUp)` |
+
+### X.3 已知边界
+
+- Phase 4i 纯 UX, 不动业务逻辑;后续如需要继续优化样本池可作为 Phase 4i.1。
+- 使用说明 sheet 内容 hardcode 在 `tools/install_modules.py` 的 `update_intro_sheet`,修改后需要重装。
+- 汇率说明区没有占用 `A10:H` 是有意设计:保持未来新增报告期仍可从 `A4:H` 起自然追加。
