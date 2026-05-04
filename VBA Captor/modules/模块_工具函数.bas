@@ -20,11 +20,12 @@ Option Explicit
 '   Row 1-5: 全局配置区 (A1=年份, A2=year, A3=季度, A4=quarter, B5:F5=雪球 cookie)
 '   Row 7  : 分市场标题
 '   Row 8  : 分市场一键按钮
-'   Row 9  : 各市场数据表头
-'   Row 10+: 股票数据
+'   Row 9  : 分市场 tabs 显隐按钮
+'   Row 10 : 各市场数据表头
+'   Row 11+: 股票数据
 '   列    : A:B=A股, E:F=美股, I:J=港股, M:N=韩股
 '   URL 不再存 sheet, A 股抓数模块内部按代码+年份自拼 URL
-Public Const POOL_DATA_START_ROW As Long = 10
+Public Const POOL_DATA_START_ROW As Long = 11
 Public Const POOL_A_CODE_COL As Long = 1
 Public Const POOL_A_NAME_COL As Long = 2
 Public Const POOL_US_CODE_COL As Long = 5

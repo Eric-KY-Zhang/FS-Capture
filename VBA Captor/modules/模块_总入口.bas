@@ -144,6 +144,64 @@ CleanUp:
 End Sub
 
 
+Public Sub 切换A股tabs()
+    ToggleMarketTabsVisibility "A"
+End Sub
+
+
+Public Sub 切换美股tabs()
+    ToggleMarketTabsVisibility "US"
+End Sub
+
+
+Public Sub 切换港股tabs()
+    ToggleMarketTabsVisibility "HK"
+End Sub
+
+
+Public Sub 切换韩股tabs()
+    ToggleMarketTabsVisibility "KR"
+End Sub
+
+
+Public Sub 切换所有分市场tabs()
+    Dim m As Variant
+    For Each m In Array("A", "US", "HK", "KR")
+        ToggleMarketTabsVisibility CStr(m)
+    Next m
+End Sub
+
+
+Private Sub ToggleMarketTabsVisibility(ByVal market As String)
+    Dim prefix As String
+    Select Case UCase$(Trim$(market))
+        Case "A":  prefix = "A股_"
+        Case "US": prefix = "美股_"
+        Case "HK": prefix = "港股_"
+        Case "KR": prefix = "韩股_"
+        Case Else: Exit Sub
+    End Select
+
+    Dim newVisible As Long: newVisible = -1    ' xlSheetVisible
+    Dim ws As Worksheet
+    For Each ws In ThisWorkbook.Worksheets
+        If Left$(ws.Name, Len(prefix)) = prefix Then
+            If ws.Visible = -1 Then newVisible = 0    ' xlSheetHidden
+            Exit For
+        End If
+    Next ws
+
+    On Error Resume Next
+    For Each ws In ThisWorkbook.Worksheets
+        If Left$(ws.Name, Len(prefix)) = prefix Then
+            ws.Visible = newVisible
+        End If
+    Next ws
+    Err.Clear
+    On Error GoTo 0
+End Sub
+
+
 Private Sub ShowMarketRunSummary(ByVal marketName As String, ByVal dtTime As Double, ByVal runErrDesc As String)
     Dim msg As String
     msg = "一键" & marketName & "完成" & vbCrLf & _

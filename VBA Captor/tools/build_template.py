@@ -28,6 +28,8 @@ from openpyxl.worksheet.datavalidation import DataValidation
 OUT_PATH = Path(__file__).resolve().parent.parent / "上市公司财务数据查询.xlsx"
 
 DARK_BLUE = "FF4472C4"
+SECONDARY_BLUE = "FFD9E1F2"
+SECONDARY_FG = "FF1F4E79"
 LIGHT_GRAY = "FFD9D9D9"
 WHITE = "FFFFFFFF"
 
@@ -56,7 +58,7 @@ def build_intro(ws):
         "【联系邮箱】214978902@qq.com",
         "",
         "【使用步骤】",
-        "1. 在『样本池』Sheet 第 10 行起按市场录入公司:",
+        "1. 在『样本池』Sheet 第 11 行起按市场录入公司:",
         "     A:B=A股, E:F=美股, I:J=港股, M:N=韩股; 每个市场只填代码和简称。",
         "2. A2 填年份 (如 2025), 留空=取最新可用期间。",
         "3. A4 选择季度: 全部 / Q1 / Q2 / Q3 / Q4。",
@@ -109,8 +111,9 @@ def build_sample_pool(ws):
       Row 1-5: 全局配置区
       Row 7: 4 市场标题
       Row 8: 4 市场一键按钮位
-      Row 9: 各市场列头
-      Row 10+: 公司数据
+      Row 9: 4 市场 tabs 显隐按钮位
+      Row 10: 各市场列头
+      Row 11+: 公司数据
     """
     sub_header_fill = PatternFill("solid", fgColor="FFB4C7E7")    # 浅蓝
     yellow_fill = PatternFill("solid", fgColor="FFFFE699")
@@ -190,27 +193,33 @@ def build_sample_pool(ws):
         c.alignment = CENTER
         c.border = BORDER
 
-    # ---- Row 8: 按钮位提示, install_modules.py 会覆盖为 Shape 按钮 ----
+    # ---- Row 8-9 / Q1-Q10: 按钮位提示, install_modules.py 会覆盖为 Shape 按钮 ----
     button_placeholders = [
-        ("A8:B8", "一键 A 股", "FF4472C4"),
-        ("E8:F8", "一键 美股", "FFC00000"),
-        ("I8:J8", "一键 港股", "FF548235"),
-        ("M8:N8", "一键 韩股", "FF7030A0"),
-        ("Q1:Q3", "一键全抓 4 市场", "FF4472C4"),
+        ("A8:B8", "一键 A 股", "FF4472C4", WHITE, 11),
+        ("E8:F8", "一键 美股", "FFC00000", WHITE, 11),
+        ("I8:J8", "一键 港股", "FF548235", WHITE, 11),
+        ("M8:N8", "一键 韩股", "FF7030A0", WHITE, 11),
+        ("Q1:Q3", "一键全抓 4 市场", "FF4472C4", WHITE, 11),
+        ("Q5:Q7", "合并跨市场指标表", "FF4472C4", WHITE, 11),
+        ("A9:B9", "切换 A 股 tabs 显隐", SECONDARY_BLUE, SECONDARY_FG, 9),
+        ("E9:F9", "切换 美股 tabs 显隐", SECONDARY_BLUE, SECONDARY_FG, 9),
+        ("I9:J9", "切换 港股 tabs 显隐", SECONDARY_BLUE, SECONDARY_FG, 9),
+        ("M9:N9", "切换 韩股 tabs 显隐", SECONDARY_BLUE, SECONDARY_FG, 9),
+        ("Q8:Q10", "切换所有分市场 tabs 显隐", SECONDARY_BLUE, SECONDARY_FG, 10),
     ]
-    for rng, title, fill in button_placeholders:
+    for rng, title, fill, font_color, font_size in button_placeholders:
         ws.merge_cells(rng)
         c = ws[rng.split(":")[0]]
         c.value = title
-        c.font = HEADER_FONT
+        c.font = Font(name="微软雅黑", size=font_size, bold=True, color=font_color)
         c.fill = PatternFill("solid", fgColor=fill)
         c.alignment = CENTER
         c.border = BORDER
 
-    # ---- Row 9: 数据表头 ----
+    # ---- Row 10: 数据表头 ----
     for code_col, name_col in (("A", "B"), ("E", "F"), ("I", "J"), ("M", "N")):
         for col, name in ((code_col, "代码"), (name_col, "简称")):
-            cell = ws[f"{col}9"]
+            cell = ws[f"{col}10"]
             cell.value = name
             cell.font = HEADER_FONT
             cell.fill = PatternFill("solid", fgColor=DARK_BLUE)
@@ -220,20 +229,21 @@ def build_sample_pool(ws):
     ws.row_dimensions[7].height = 24
     ws.row_dimensions[8].height = 34
     ws.row_dimensions[9].height = 22
-    ws.freeze_panes = "A10"
+    ws.row_dimensions[10].height = 22
+    ws.freeze_panes = "A11"
 
-    # ---- Row 10: 示例数据 ----
+    # ---- Row 11: 示例数据 ----
     examples = [
-        (10, 1, "300866", "安克创新"),
-        (10, 5, "AAPL", "Apple"),
-        (10, 9, "00700", "腾讯控股"),
-        (10, 13, "005930", "三星电子"),
+        (11, 1, "300866", "安克创新"),
+        (11, 5, "AAPL", "Apple"),
+        (11, 9, "00700", "腾讯控股"),
+        (11, 13, "005930", "三星电子"),
     ]
     for row, code_col, code, name in examples:
         ws.cell(row=row, column=code_col, value=code).alignment = CENTER
         ws.cell(row=row, column=code_col + 1, value=name).alignment = CENTER
 
-    for row in range(10, 31):
+    for row in range(11, 32):
         ws.row_dimensions[row].height = 20
         for col in (1, 2, 5, 6, 9, 10, 13, 14):
             cell = ws.cell(row=row, column=col)

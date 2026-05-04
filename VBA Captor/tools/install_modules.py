@@ -61,10 +61,15 @@ KR_FG = "FFFFFF"
 BUTTONS = [
     ("BtnRunAll",       "一键全抓 4 市场",     "模块_总入口.一键全抓",            "Q1:Q3", PRIMARY_FILL,   PRIMARY_FG,   13, True),
     ("BtnBuildCrossInd", "合并跨市场指标表",   "模块_工具函数.BuildCrossMarketIndicatorSheet", "Q5:Q7", PRIMARY_FILL, PRIMARY_FG, 12, True),
+    ("BtnHideAll",      "切换所有分市场 tabs 显隐", "模块_总入口.切换所有分市场tabs", "Q8:Q10", SECONDARY_FILL, SECONDARY_FG, 11, True),
     ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A8:B8", PRIMARY_FILL,   PRIMARY_FG,   12, True),
     ("BtnRunUS",        "一键 美股",           "模块_总入口.一键美股",            "E8:F8", US_FILL,        US_FG,        12, True),
     ("BtnRunHK",        "一键 港股",           "模块_总入口.一键港股",            "I8:J8", HK_FILL,        HK_FG,        12, True),
     ("BtnRunKR",        "一键 韩股",           "模块_总入口.一键韩股",            "M8:N8", KR_FILL,        KR_FG,        12, True),
+    ("BtnHideA",        "切换 A 股 tabs 显隐",   "模块_总入口.切换A股tabs",          "A9:B9", SECONDARY_FILL, SECONDARY_FG, 9, False),
+    ("BtnHideUS",       "切换 美股 tabs 显隐",   "模块_总入口.切换美股tabs",         "E9:F9", SECONDARY_FILL, SECONDARY_FG, 9, False),
+    ("BtnHideHK",       "切换 港股 tabs 显隐",   "模块_总入口.切换港股tabs",         "I9:J9", SECONDARY_FILL, SECONDARY_FG, 9, False),
+    ("BtnHideKR",       "切换 韩股 tabs 显隐",   "模块_总入口.切换韩股tabs",         "M9:N9", SECONDARY_FILL, SECONDARY_FG, 9, False),
     # 16 个单表按钮折叠到 Row 30+ 辅助区
     ("BtnRunBalance",   "A股资产负债表",       "模块_抓资产负债表.Main",          "A30:B30", SECONDARY_FILL, SECONDARY_FG, 10, False),
     ("BtnRunProfit",    "A股利润表",           "模块_抓利润表.Main",              "A31:B31", SECONDARY_FILL, SECONDARY_FG, 10, False),
@@ -325,7 +330,7 @@ def migrate_old_sample_pool(ws_pool):
     col_map = {"A": (1, 2), "US": (5, 6), "HK": (9, 10), "KR": (13, 14)}
     for market, companies in by_market.items():
         code_col, name_col = col_map[market]
-        for idx, (code, name) in enumerate(companies, start=10):
+        for idx, (code, name) in enumerate(companies, start=11):
             ws_pool.Cells(idx, code_col).NumberFormat = "@"
             ws_pool.Cells(idx, code_col).Value = code
             ws_pool.Cells(idx, name_col).Value = name
@@ -334,19 +339,55 @@ def migrate_old_sample_pool(ws_pool):
     print(f"  + 样本池迁移完成: {summary}")
 
 
+def migrate_phase4g_sample_rows(ws_pool):
+    """
+    Phase 4g: 已经是 4 市场分栏的 Phase 4e/4f 工作簿,公司数据原来从 Row 10 开始。
+    新布局 Row 10 留给表头,因此仅在旧 Row 10 有样本时把 Row 10+ 下移一行。
+    """
+    if _cell_text(ws_pool.Range("A10")) == "代码":
+        print("  ~ 样本池 Row 10 已是新表头,跳过 Phase 4g 数据行迁移")
+        return
+
+    header_addrs = ("A9", "B9", "E9", "F9", "I9", "J9", "M9", "N9")
+    old_headers = [_cell_text(ws_pool.Range(addr)) for addr in header_addrs]
+    if "代码" not in old_headers or "简称" not in old_headers:
+        return
+
+    market_cols = (1, 2, 5, 6, 9, 10, 13, 14)
+    row10_has_data = any(_cell_text(ws_pool.Cells(10, col)) for col in market_cols)
+    if not row10_has_data:
+        print("  ~ 样本池 Row 10 无公司数据,跳过 Phase 4g 数据行迁移")
+        return
+
+    last_row = max(ws_pool.Cells(ws_pool.Rows.Count, col).End(-4162).Row for col in market_cols)
+    if last_row < 10:
+        return
+
+    for row in range(last_row, 9, -1):
+        for col in market_cols:
+            src = ws_pool.Cells(row, col)
+            dst = ws_pool.Cells(row + 1, col)
+            dst.NumberFormat = src.NumberFormat
+            dst.Value = src.Value
+
+    print("  + Phase 4g 样本池数据行已从 Row 10+ 下移到 Row 11+")
+
+
 def layout_sample_pool(ws_pool):
-    """重画 Phase 4e 样本池配置区、市场分栏和数据区格式,不清除 Row 10+ 公司数据。"""
+    """重画 Phase 4g 样本池配置区、市场分栏和数据区格式,不清除 Row 11+ 公司数据。"""
     year_value = ws_pool.Range("A2").Value or 2025
     quarter_value = ws_pool.Range("A4").Value or "全部"
     cookie_value = ws_pool.Range("B5").Value or ""
     # Phase 4f Step 2: 保留用户已选的 B6 显示币种 (空 → install_currency_toggle_cell 写默认)
     currency_value = ws_pool.Range("B6").Value or ""
 
+    migrate_phase4g_sample_rows(ws_pool)
+
     try:
-        ws_pool.Range("A1:Q9").UnMerge()
+        ws_pool.Range("A1:Q10").UnMerge()
     except Exception:
         pass
-    ws_pool.Range("A1:Q9").Clear()
+    ws_pool.Range("A1:Q10").Clear()
 
     widths = {
         "A": 11, "B": 16, "C": 2, "D": 2,
@@ -423,7 +464,7 @@ def layout_sample_pool(ws_pool):
     except Exception:
         pass
 
-    # Phase 4f Step 2: 恢复 B6 显示币种 (clear A1:Q9 已清掉, 这里写回; 空 → 后续 install_currency_toggle_cell 写默认)
+    # Phase 4f Step 2: 恢复 B6 显示币种 (clear A1:Q10 已清掉, 这里写回; 空 → 后续 install_currency_toggle_cell 写默认)
     if currency_value:
         ws_pool.Range("B6").Value = currency_value
 
@@ -446,27 +487,33 @@ def layout_sample_pool(ws_pool):
         rng.VerticalAlignment = -4108
 
     placeholders = [
-        ("A8:B8", "一键 A 股", PRIMARY_FILL),
-        ("E8:F8", "一键 美股", US_FILL),
-        ("I8:J8", "一键 港股", HK_FILL),
-        ("M8:N8", "一键 韩股", KR_FILL),
-        ("Q1:Q3", "一键全抓 4 市场", PRIMARY_FILL),
+        ("A8:B8", "一键 A 股", PRIMARY_FILL, "FFFFFF", 11),
+        ("E8:F8", "一键 美股", US_FILL, "FFFFFF", 11),
+        ("I8:J8", "一键 港股", HK_FILL, "FFFFFF", 11),
+        ("M8:N8", "一键 韩股", KR_FILL, "FFFFFF", 11),
+        ("Q1:Q3", "一键全抓 4 市场", PRIMARY_FILL, "FFFFFF", 11),
+        ("Q5:Q7", "合并跨市场指标表", PRIMARY_FILL, "FFFFFF", 11),
+        ("A9:B9", "切换 A 股 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
+        ("E9:F9", "切换 美股 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
+        ("I9:J9", "切换 港股 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
+        ("M9:N9", "切换 韩股 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
+        ("Q8:Q10", "切换所有分市场 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 10),
     ]
-    for addr, caption, fill_hex in placeholders:
+    for addr, caption, fill_hex, font_color_hex, font_size in placeholders:
         rng = ws_pool.Range(addr)
         rng.Merge()
         rng.Value = caption
         rng.Font.Name = "微软雅黑"
-        rng.Font.Size = 11
+        rng.Font.Size = font_size
         rng.Font.Bold = True
-        rng.Font.Color = rgb_long("FFFFFF")
+        rng.Font.Color = rgb_long(font_color_hex)
         rng.Interior.Color = rgb_long(fill_hex)
         rng.HorizontalAlignment = -4108
         rng.VerticalAlignment = -4108
 
     for code_col, name_col in (("A", "B"), ("E", "F"), ("I", "J"), ("M", "N")):
         for col, caption in ((code_col, "代码"), (name_col, "简称")):
-            cell = ws_pool.Range(f"{col}9")
+            cell = ws_pool.Range(f"{col}10")
             cell.Value = caption
             cell.Font.Name = "微软雅黑"
             cell.Font.Size = 11
@@ -477,17 +524,18 @@ def layout_sample_pool(ws_pool):
             cell.VerticalAlignment = -4108
 
     for col in ("A", "E", "I", "M"):
-        ws_pool.Range(f"{col}10:{col}1000").NumberFormat = "@"
+        ws_pool.Range(f"{col}11:{col}1000").NumberFormat = "@"
 
     for row in range(1, 7):    # Phase 4f Step 2: 含 row 6 显示币种
         ws_pool.Rows(row).RowHeight = 22
     ws_pool.Rows(7).RowHeight = 24
     ws_pool.Rows(8).RowHeight = 34
     ws_pool.Rows(9).RowHeight = 22
-    for row in range(10, 51):
+    ws_pool.Rows(10).RowHeight = 22
+    for row in range(11, 52):
         ws_pool.Rows(row).RowHeight = 20
 
-    data_range = ws_pool.Range("A9:N50")
+    data_range = ws_pool.Range("A10:N51")
     data_range.Font.Name = "微软雅黑"
     data_range.Font.Size = 10
     for border_idx in (7, 8, 9, 10, 11, 12):
@@ -502,7 +550,7 @@ def layout_sample_pool(ws_pool):
     try:
         ws_pool.Activate()
         ws_pool.Application.ActiveWindow.SplitColumn = 0
-        ws_pool.Application.ActiveWindow.SplitRow = 9
+        ws_pool.Application.ActiveWindow.SplitRow = 10
         ws_pool.Application.ActiveWindow.FreezePanes = True
     except Exception:
         pass
@@ -1057,7 +1105,7 @@ def update_intro_sheet(wb):
         "联系邮箱: 214978902@qq.com",
         "",
         "使用步骤",
-        "1. 在『样本池』第 10 行起按市场录入公司: A:B=A股, E:F=美股, I:J=港股, M:N=韩股。",
+        "1. 在『样本池』第 11 行起按市场录入公司: A:B=A股, E:F=美股, I:J=港股, M:N=韩股。",
         "2. 每个市场区只需要填写代码和简称; 不再需要单独填写市场列。",
         "3. A2 填年份, 例如 2025; A2 留空表示取最新可用期间。",
         "4. A4 选择季度: 全部 / Q1 / Q2 / Q3 / Q4。",
