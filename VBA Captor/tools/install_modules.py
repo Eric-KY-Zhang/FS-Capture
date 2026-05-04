@@ -67,6 +67,7 @@ PRIMARY_FILL = "4472C4"   # 深蓝
 PRIMARY_FG = "FFFFFF"     # 白
 SECONDARY_FILL = "D9E1F2" # 浅蓝
 SECONDARY_FG = "1F4E79"   # 深蓝字
+CROSS_FILL = "ED7D31"     # 橙 — 跨市场对比
 
 US_FILL = "C00000"        # 深红 — 美股按钮区分
 US_FG = "FFFFFF"
@@ -76,11 +77,11 @@ KR_FILL = "7030A0"        # 深紫 — 韩股按钮区分
 KR_FG = "FFFFFF"
 
 BUTTONS = [
-    ("BtnRunAll",       "一键全抓 4 市场",     "模块_总入口.一键全抓",            "Q1:Q3", PRIMARY_FILL,   PRIMARY_FG,   13, True),
-    ("BtnHideAll",      "显示/隐藏 所有市场数据", "模块_总入口.切换所有分市场tabs", "Q5:Q7", SECONDARY_FILL, SECONDARY_FG, 11, True),
-    ("BtnClearCache",   "清空 HTTP 缓存",       "模块_工具函数.ClearLocalCache",   "Q9:Q11", SECONDARY_FILL, SECONDARY_FG, 10, True),
-    ("BtnBuildCrossAll", "一键跨市场对比",       "模块_工具函数.BuildAllCrossMarketSheets", "S1:S3", PRIMARY_FILL, PRIMARY_FG, 12, True),
-    ("BtnHideCrossMarket", "显示/隐藏 跨市场对比", "模块_总入口.切换跨市场tabs", "S5:S7", SECONDARY_FILL, SECONDARY_FG, 11, True),
+    ("BtnRunAll",       "一键全抓 4 市场",     "模块_总入口.一键全抓",            "T1:U3", SECONDARY_FILL, SECONDARY_FG, 13, True),
+    ("BtnHideAll",      "显示/隐藏 所有市场数据", "模块_总入口.切换所有分市场tabs", "T5:U7", SECONDARY_FILL, SECONDARY_FG, 11, True),
+    ("BtnClearCache",   "清空 HTTP 缓存",       "模块_工具函数.ClearLocalCache",   "T9:U11", SECONDARY_FILL, SECONDARY_FG, 10, True),
+    ("BtnBuildCrossAll", "一键跨市场对比",       "模块_工具函数.BuildAllCrossMarketSheets", "Q8:R8", CROSS_FILL, PRIMARY_FG, 12, True),
+    ("BtnHideCrossMarket", "显示/隐藏 跨市场对比", "模块_总入口.切换跨市场tabs", "Q9:R9", SECONDARY_FILL, SECONDARY_FG, 11, True),
     ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A8:B8", PRIMARY_FILL,   PRIMARY_FG,   10, True),
     ("BtnRunUS",        "一键 美股",           "模块_总入口.一键美股",            "E8:F8", US_FILL,        US_FG,        12, True),
     ("BtnRunHK",        "一键 港股",           "模块_总入口.一键港股",            "I8:J8", HK_FILL,        HK_FG,        12, True),
@@ -115,6 +116,85 @@ DECOMMISSIONED_BUTTONS = [
     "BtnRunKRProfit",
     "BtnRunKRCash",
     "BtnRunKRInd",
+]
+
+FIELD_MAPPING_HEADERS = ("报表类型", "标准字段名", "A股原名", "美股原名", "港股原名", "韩股原名", "显示顺序", "备注")
+
+INITIAL_FIELD_MAPPING = [
+    ("BS", "货币资金", "货币资金", "Cash & equivalents", "Cash & equivalents", "Cash & equivalents", 1, "包含现金及现金等价物"),
+    ("BS", "交易性金融资产", "交易性金融资产", "Marketable securities (current)", "", "", 2, "美股口径为短期有价证券;[需 reviewer 确认]"),
+    ("BS", "应收账款", "应收账款", "Accounts receivable, net", "Accounts receivable, net", "Accounts receivable, net", 3, "还包含:A股『应收票据及应收账款』"),
+    ("BS", "存货", "存货", "Inventory", "Inventory", "Inventory", 6, ""),
+    ("BS", "其他流动资产", "其他流动资产", "Other current assets", "", "", 7, ""),
+    ("BS", "流动资产合计", "流动资产合计", "Total current assets", "Total current assets", "Total current assets", 8, ""),
+    ("BS", "长期股权投资", "长期股权投资", "", "Investments", "Investments", 9, "港股/韩股 Investments 可能含更宽泛投资;[需 reviewer 确认]"),
+    ("BS", "固定资产", "固定资产净额", "Property, plant & equipment, net", "Property, plant & equipment, net", "Property, plant & equipment, net", 10, ""),
+    ("BS", "无形资产", "无形资产", "", "", "", 13, ""),
+    ("BS", "商誉", "商誉", "", "", "", 14, ""),
+    ("BS", "其他非流动资产", "其他非流动资产", "Other non-current assets", "", "", 17, ""),
+    ("BS", "非流动资产合计", "非流动资产合计", "Total non-current assets", "Total non-current assets", "", 18, ""),
+    ("BS", "资产总计", "资产总计", "Total assets", "Total assets", "Total assets", 19, ""),
+    ("BS", "短期借款", "短期借款", "Short-term debt", "Short-term debt", "Short-term debt", 20, ""),
+    ("BS", "应付账款", "应付账款", "Accounts payable", "Accounts payable", "Accounts payable", 21, "还包含:A股『应付票据及应付账款』"),
+    ("BS", "应付职工薪酬", "应付职工薪酬", "", "", "", 24, ""),
+    ("BS", "应交税费", "应交税费", "", "", "", 25, ""),
+    ("BS", "其他流动负债", "其他流动负债", "Other current liabilities", "", "", 26, ""),
+    ("BS", "流动负债合计", "流动负债合计", "Total current liabilities", "Total current liabilities", "Total current liabilities", 27, ""),
+    ("BS", "长期借款", "长期借款", "Long-term debt", "Long-term debt", "Long-term debt", 28, ""),
+    ("BS", "其他非流动负债", "其他非流动负债", "Other non-current liabilities", "", "", 32, ""),
+    ("BS", "非流动负债合计", "非流动负债合计", "Total non-current liabilities", "Total non-current liabilities", "", 33, ""),
+    ("BS", "负债合计", "负债合计", "Total liabilities", "Total liabilities", "Total liabilities", 34, ""),
+    ("BS", "股本", "实收资本(或股本)", "Common stock", "", "", 35, ""),
+    ("BS", "资本公积", "资本公积", "", "", "", 36, ""),
+    ("BS", "留存收益", "未分配利润", "Retained earnings", "", "", 37, "A股只映射未分配利润;不含盈余公积;[需 reviewer 确认]"),
+    ("BS", "其他综合收益", "其他综合收益", "Accumulated OCI", "", "", 38, ""),
+    ("BS", "少数股东权益", "少数股东权益", "", "Minority interests", "Minority interests", 39, ""),
+    ("BS", "所有者权益合计", "所有者权益(或股东权益)合计", "Total stockholders' equity", "Total equity", "Total equity", 40, ""),
+    ("BS", "负债和所有者权益合计", "负债和所有者权益(或股东权益)总计", "Total liabilities & equity", "Total liabilities & equity", "Total liabilities & equity", 41, ""),
+    ("IS", "营业收入", "营业收入", "Revenue", "Revenue", "Revenue", 2, "美股/港股/韩股与营业总收入共用 Revenue"),
+    ("IS", "营业成本", "营业成本", "Cost of goods & services sold", "Cost of goods & services sold", "Cost of goods & services sold", 3, ""),
+    ("IS", "毛利", "", "Gross profit", "Gross profit", "Gross profit", 4, ""),
+    ("IS", "营业税金及附加", "营业税金及附加", "", "", "", 5, ""),
+    ("IS", "销售费用", "销售费用", "", "Selling expense", "", 6, ""),
+    ("IS", "管理费用", "管理费用", "SG&A expense", "Administrative expense", "SG&A expense", 7, "美股/韩股 SG&A 通常含销售及管理费用;[需 reviewer 确认]"),
+    ("IS", "研发费用", "研发费用", "R&D expense", "", "R&D expense", 8, ""),
+    ("IS", "财务费用", "财务费用", "Interest expense", "", "Interest expense", 9, "Interest expense 不完全等同财务费用;[需 reviewer 确认]"),
+    ("IS", "总营业费用", "", "Total operating expenses", "Total operating expenses", "Total operating expenses", 10, ""),
+    ("IS", "投资收益", "投资收益", "", "", "", 11, ""),
+    ("IS", "公允价值变动收益", "公允价值变动收益", "", "", "", 12, ""),
+    ("IS", "资产减值损失", "资产减值损失", "", "", "", 13, ""),
+    ("IS", "营业利润", "三、营业利润", "Operating income", "Operating income", "Operating income", 14, ""),
+    ("IS", "利润总额", "四、利润总额", "Pre-tax income", "Pre-tax income", "Pre-tax income", 15, ""),
+    ("IS", "所得税费用", "减：所得税费用", "Income tax expense", "Income tax expense", "Income tax expense", 16, ""),
+    ("IS", "净利润", "五、净利润", "Net income", "Net income", "Net income", 17, ""),
+    ("IS", "归母净利润", "归属于母公司所有者的净利润", "", "", "", 18, ""),
+    ("IS", "基本每股收益", "基本每股收益(元/股)", "Basic EPS (USD/share)", "Basic EPS", "Basic EPS", 20, ""),
+    ("IS", "稀释每股收益", "稀释每股收益(元/股)", "Diluted EPS (USD/share)", "Diluted EPS", "Diluted EPS", 21, ""),
+    ("IS", "综合收益总额", "八、综合收益总额", "", "", "", 22, ""),
+    ("CF", "折旧与摊销", "固定资产折旧、油气资产折耗、生产性物资折旧", "Depreciation & amortization", "Depreciation & amortization", "Depreciation & amortization", 2, "A股还包含无形资产摊销;[需 reviewer 确认]"),
+    ("CF", "销售商品提供劳务收到的现金", "销售商品、提供劳务收到的现金", "", "", "", 3, ""),
+    ("CF", "收到的税费返还", "收到的税费返还", "", "", "", 4, ""),
+    ("CF", "收到其他与经营活动有关的现金", "收到的其他与经营活动有关的现金", "", "", "", 5, ""),
+    ("CF", "经营活动现金流入小计", "经营活动现金流入小计", "", "", "", 6, ""),
+    ("CF", "购买商品接受劳务支付的现金", "购买商品、接受劳务支付的现金", "", "", "", 7, ""),
+    ("CF", "支付给职工以及为职工支付的现金", "支付给职工以及为职工支付的现金", "", "", "", 8, ""),
+    ("CF", "支付的各项税费", "支付的各项税费", "", "", "", 9, ""),
+    ("CF", "支付其他与经营活动有关的现金", "支付的其他与经营活动有关的现金", "", "", "", 10, ""),
+    ("CF", "经营活动现金流出小计", "经营活动现金流出小计", "", "", "", 11, ""),
+    ("CF", "经营活动产生的现金流量净额", "经营活动产生的现金流量净额", "Cash from operations", "Cash from operations", "Cash from operations", 12, ""),
+    ("CF", "购建固定资产无形资产支付的现金", "购建固定资产、无形资产和其他长期资产所支付的现金", "Capex", "Capex", "Capex", 13, ""),
+    ("CF", "投资活动现金流入小计", "投资活动现金流入小计", "", "", "", 14, ""),
+    ("CF", "投资活动现金流出小计", "投资活动现金流出小计", "", "", "", 15, ""),
+    ("CF", "投资活动产生的现金流量净额", "投资活动产生的现金流量净额", "Cash from investing", "Cash from investing", "Cash from investing", 16, ""),
+    ("CF", "分配股利利润或偿付利息支付的现金", "分配股利、利润或偿付利息所支付的现金", "Dividends paid", "Dividends paid", "Dividends paid", 17, ""),
+    ("CF", "取得借款收到的现金", "取得借款收到的现金", "Long-term debt issued", "", "", 18, "美股映射为长期债务发行;[需 reviewer 确认]"),
+    ("CF", "偿还债务支付的现金", "偿还债务支付的现金", "Long-term debt repaid", "", "", 19, "美股映射为长期债务偿还;[需 reviewer 确认]"),
+    ("CF", "筹资活动现金流出小计", "筹资活动现金流出小计", "", "", "", 21, ""),
+    ("CF", "筹资活动产生的现金流量净额", "筹资活动产生的现金流量净额", "Cash from financing", "Cash from financing", "Cash from financing", 22, ""),
+    ("CF", "汇率变动对现金的影响", "四、汇率变动对现金及现金等价物的影响", "", "FX effect on cash", "FX effect on cash", 23, ""),
+    ("CF", "现金及现金等价物净增加额", "五、现金及现金等价物净增加额", "Net change in cash (incl FX)", "", "Net cash flow", 24, "韩股 Net cash flow 是否含 FX 需确认;[需 reviewer 确认]"),
+    ("CF", "期初现金及现金等价物余额", "加:期初现金及现金等价物余额", "", "Cash at beginning of period", "", 25, ""),
+    ("CF", "期末现金及现金等价物余额", "六、期末现金及现金等价物余额", "Cash at end of period", "Cash at end of period", "Cash at end of period", 26, ""),
 ]
 
 # Sheet 名迁移 (累积所有迁移规则, install 一次性应用)
@@ -408,19 +488,22 @@ def layout_sample_pool(ws_pool):
     migrate_phase4g_sample_rows(ws_pool)
 
     try:
-        ws_pool.Range("A1:N10").UnMerge()
-        ws_pool.Range("O1:S24").UnMerge()
+        ws_pool.Range("A1:R10").UnMerge()
+        ws_pool.Range("S1:U24").UnMerge()
+        ws_pool.Range("W1:Y5").UnMerge()
     except Exception:
         pass
-    ws_pool.Range("A1:N10").Clear()
-    ws_pool.Range("O1:S24").Clear()
+    ws_pool.Range("A1:R10").Clear()
+    ws_pool.Range("S1:U24").Clear()
+    ws_pool.Range("W1:Y5").Clear()
 
     widths = {
         "A": 11, "B": 16, "C": 2, "D": 2,
         "E": 8, "F": 18, "G": 2, "H": 2,
         "I": 7, "J": 14, "K": 2, "L": 2,
-        "M": 8, "N": 16, "O": 18, "P": 34,
-        "Q": 22, "R": 2, "S": 26,
+        "M": 8, "N": 16, "O": 2, "P": 2,
+        "Q": 13, "R": 16, "S": 2, "T": 13, "U": 18,
+        "V": 2, "W": 18, "X": 18, "Y": 24,
     }
     for col, width in widths.items():
         ws_pool.Columns(col).ColumnWidth = width
@@ -484,8 +567,8 @@ def layout_sample_pool(ws_pool):
     try:
         if val_cell.Comment is None:
             val_cell.AddComment(
-                "雪球 Cookie (美股中概/20-F fallback 与港股抓数使用)\n"
-                "韩股 stockanalysis.com 路径不需要 cookie。"
+                "雪球登录凭证,用于港股和部分中概美股备用数据源。\n"
+                "如果港股或中概美股取数失败,请重新登录雪球后复制新的 xq_a_token。"
             )
     except Exception:
         pass
@@ -499,6 +582,7 @@ def layout_sample_pool(ws_pool):
         ("E7:F7", "美股(EDGAR+雪球)", US_FILL),
         ("I7:J7", "港股(雪球 HK)", HK_FILL),
         ("M7:N7", "韩股(stockanalysis)", KR_FILL),
+        ("Q7:R7", "跨市场对比", CROSS_FILL),
     ]
     for addr, caption, fill_hex in markets:
         rng = ws_pool.Range(addr)
@@ -518,11 +602,11 @@ def layout_sample_pool(ws_pool):
         ("E8:F8", "一键 美股", US_FILL, "FFFFFF", 11),
         ("I8:J8", "一键 港股", HK_FILL, "FFFFFF", 11),
         ("M8:N8", "一键 韩股", KR_FILL, "FFFFFF", 11),
-        ("Q1:Q3", "一键全抓 4 市场", PRIMARY_FILL, "FFFFFF", 11),
-        ("Q5:Q7", "显示/隐藏 所有市场数据", SECONDARY_FILL, SECONDARY_FG, 10),
-        ("Q9:Q11", "清空 HTTP 缓存", SECONDARY_FILL, SECONDARY_FG, 10),
-        ("S1:S3", "一键跨市场对比", PRIMARY_FILL, "FFFFFF", 12),
-        ("S5:S7", "显示/隐藏 跨市场对比", SECONDARY_FILL, SECONDARY_FG, 10),
+        ("Q8:R8", "一键跨市场对比", CROSS_FILL, "FFFFFF", 12),
+        ("Q9:R9", "显示/隐藏 跨市场对比", SECONDARY_FILL, SECONDARY_FG, 10),
+        ("T1:U3", "一键全抓 4 市场", SECONDARY_FILL, SECONDARY_FG, 12),
+        ("T5:U7", "显示/隐藏 所有市场数据", SECONDARY_FILL, SECONDARY_FG, 10),
+        ("T9:U11", "清空 HTTP 缓存", SECONDARY_FILL, SECONDARY_FG, 10),
         ("A9:B9", "显示/隐藏 A 股数据", SECONDARY_FILL, SECONDARY_FG, 9),
         ("E9:F9", "显示/隐藏 美股数据", SECONDARY_FILL, SECONDARY_FG, 9),
         ("I9:J9", "显示/隐藏 港股数据", SECONDARY_FILL, SECONDARY_FG, 9),
@@ -544,9 +628,8 @@ def layout_sample_pool(ws_pool):
         rng.VerticalAlignment = -4108
 
     section_cells = [
-        ("Q4", "显示", "F2F2F2"),
-        ("Q8", "工具", "F2F2F2"),
-        ("S4", "跨市场", "F2F2F2"),
+        ("T4", "全局显示", "F2F2F2"),
+        ("T8", "工具", "F2F2F2"),
     ]
     for addr, caption, fill_hex in section_cells:
         cell = ws_pool.Range(addr)
@@ -561,23 +644,32 @@ def layout_sample_pool(ws_pool):
 
     try:
         set_cell_comment(
-            ws_pool.Range("Q9"),
-            "删除 .cache/ 目录中的 24h 本地 HTTP 响应缓存。\n"
-            "下次抓数会重新发起所有 HTTP 请求,用于强制刷新或排查数据陈旧问题。\n"
-            "日常无需点击。"
+            ws_pool.Range("T9"),
+            "清除本地暂存的抓数结果。\n"
+            "下次抓数会重新从公开数据来源取数,适合强制刷新或排查数据陈旧问题。\n"
+            "日常使用无需点击。"
         )
     except Exception:
         pass
 
-    hint_rng = ws_pool.Range("O1:P4")
+    try:
+        set_cell_comment(
+            ws_pool.Range("Q8"),
+            "读取『字段映射』sheet 后重建 4 张跨市场对比表。\n"
+            "如果你修改了字段映射,请点击这里刷新跨市场结果。"
+        )
+    except Exception:
+        pass
+
+    hint_rng = ws_pool.Range("W1:Y5")
     hint_rng.Merge()
     hint_rng.Value = (
         "【使用提示】\n"
         "1. A2 / A4 选择年度 + 季度\n"
         "2. B5 填雪球 cookie;B6 切原币 / 统一RMB\n"
-        "3. 主路径失败时自动尝试中概美股 fallback\n"
-        "4. 第 11 行起按市场录入公司\n"
-        "5. Q/S 列点对应按钮跑数 + 合表"
+        "3. 第 11 行起按市场录入公司\n"
+        "4. 先点各市场一键按钮抓数\n"
+        "5. 再点橙色跨市场按钮生成对比"
     )
     hint_rng.Font.Name = "微软雅黑"
     hint_rng.Font.Size = 9
@@ -635,10 +727,10 @@ def layout_sample_pool(ws_pool):
     install_currency_toggle_cell(ws_pool)
     try:
         set_cell_comment(
-            ws_pool.Range("Q9"),
-            "删除 .cache/ 目录中的 24h 本地 HTTP 响应缓存。\n"
-            "下次抓数会重新发起所有 HTTP 请求,用于强制刷新或排查数据陈旧问题。\n"
-            "日常无需点击。"
+            ws_pool.Range("T9"),
+            "清除本地暂存的抓数结果。\n"
+            "下次抓数会重新从公开数据来源取数,适合强制刷新或排查数据陈旧问题。\n"
+            "日常使用无需点击。"
         )
     except Exception:
         pass
@@ -1102,7 +1194,7 @@ def _write_fx_legend(ws_fx):
 
     header = ws_fx.Range("J10:Q10")
     header.Merge()
-    header.Value = "数据源与取数逻辑"
+    header.Value = "汇率数据来源与折算说明"
     header.Font.Name = "微软雅黑"
     header.Font.Size = 14
     header.Font.Bold = True
@@ -1112,28 +1204,28 @@ def _write_fx_legend(ws_fx):
     header.VerticalAlignment = -4108
 
     rows = [
-        ("数据源", "雪球 K 线接口, 单线程顺序请求 + 1s 间隔。"),
-        ("  USDCNY", "https://stock.xueqiu.com/v5/stock/chart/kline.json?symbol=USDCNYC ..."),
-        ("  HKDCNY", "https://stock.xueqiu.com/v5/stock/chart/kline.json?symbol=HKDCNYC ..."),
-        ("  KRWCNY", "https://stock.xueqiu.com/v5/stock/chart/kline.json?symbol=KRWCNYC ..."),
+        ("汇率数据来源", "工具会通过本地脚本从公开渠道获取 USD/HKD/KRW 对人民币的历史汇率;首次取数后会本地暂存 24 小时,降低重复抓数的网络消耗。"),
+        ("  USDCNY", "美元兑人民币。"),
+        ("  HKDCNY", "港币兑人民币。"),
+        ("  KRWCNY", "韩元兑人民币。"),
         ("", ""),
         ("字段定义", ""),
-        ("  USDCNY期末", "报告期最后一天的 close 价。资产负债表使用期末汇率,反映时点资产负债。"),
-        ("  USDCNY期均", "报告期内每日 close 的算术平均。利润表 / 现金流量表使用期均汇率,反映期间损益和现金流。"),
+        ("  期末汇率", "用于资产负债表,反映报告期最后一天的折算价值。"),
+        ("  期间均值汇率", "用于利润表 / 现金流量表,反映整个报告期内损益和现金流的平均折算。"),
         ("", ""),
         ("应用规则", ""),
-        ("  B6 = 原币", "非 RMB 报告币种公司直接显示原币数值,不调用汇率。"),
-        ("  B6 = 统一RMB", "按报告币种 + 报表类型查表:资产负债表乘期末汇率,利润表 / 现金流量表乘期间均值。"),
-        ("  reporting currency = RMB / CNY", "短路 = 1.0,跳过查表。"),
-        ("  汇率 sheet override 列", "H 列保留为未来手工备注;手改 B-G 列不会反向刷新既有公式,需要重跑写表按钮。"),
+        ("  B6 = 原币", "各公司按报告币种显示,不做人民币折算。"),
+        ("  B6 = 统一RMB", "非人民币口径会按报告期汇率折算成人民币,便于横向对比。"),
+        ("  RMB / CNY", "本身就是人民币口径,无需折算。"),
+        ("  手工调整汇率", "如需人工修正,可直接改 B-G 列;已生成的报表需要重新抓数或重建跨市场对比后才会反映。"),
         ("", ""),
-        ("缓存策略", ""),
-        ("  .cache/ 24h TTL", "首次抓数落地本地 JSON;24h 内重复跑同公司同期间免 HTTP。"),
-        ("  清空 HTTP 缓存", "样本池 Q9:Q11 按钮;清完后下次跑数会重新拉汇率和财报数据。"),
+        ("本地暂存", ""),
+        ("  24 小时复用", "同一报告期、同一币种在 24 小时内重复使用已取到的汇率,让重复跑数更快。"),
+        ("  清空 HTTP 缓存", "样本池 T9:U11 按钮;清空后下次跑数会重新取汇率和财报数据。"),
         ("", ""),
         ("注意事项", ""),
-        ("  汇率手改不会反向刷新", "写表时 FX 值 baked into 公式;要重新换算需点对应一键市场按钮或一键跨市场对比。"),
-        ("  B5 cookie 失效", "汇率本身不需要 cookie;B5 同时被港股和美股 fallback 使用,失效时这两路可能失败。"),
+        ("  报表已生成后", "如果你改了汇率或字段映射,请重新点击对应市场按钮或橙色跨市场按钮刷新结果。"),
+        ("  B5 登录凭证", "汇率本身不需要 B5;B5 主要影响港股和部分中概美股备用数据源。"),
     ]
 
     for idx, (label, desc) in enumerate(rows, start=start_row + 1):
@@ -1215,11 +1307,9 @@ def install_currency_toggle_cell(ws_pool):
     try:
         if val_cell.Comment is None:
             val_cell.AddComment(
-                "显示币种 toggle (Phase 4f Step 2 起):\n"
-                "  原币   : 美股 USD / 港股 各家公司报告币种 / 韩股 KRW 原值输出 (默认)\n"
-                "  统一RMB: 展示区公式按汇率换算成人民币; BS 用期末汇率, IS/CF 用期间均值\n\n"
-                "汇率自动拉自雪球 USDCNY.FX / HKDCNY.FX / KRWCNY.FX, 缓存在『汇率』sheet。\n"
-                "汇率 sheet 单元格可手填 override 系统值。"
+                "原币:按各公司报告币种显示。\n"
+                "统一RMB:把非人民币口径折算成人民币,便于跨市场横向比较。\n"
+                "资产负债表使用期末汇率;利润表和现金流量表使用期间平均汇率。"
             )
     except Exception:
         pass
@@ -1283,6 +1373,76 @@ def ensure_market_sheets(wb):
     else:
         _make_fx_sheet(wb, "汇率")
         print("  + sheet 新建: 汇率")
+
+
+def ensure_field_mapping_sheet(wb):
+    """Phase 4j: 新增用户可编辑的『字段映射』sheet;已有时保留用户数据。"""
+    existing = {sh.Name for sh in wb.Sheets}
+    if "字段映射" in existing:
+        ws = wb.Sheets("字段映射")
+        print("  ~ sheet 已存在: 字段映射 (保留用户映射)")
+    else:
+        ws = wb.Worksheets.Add(After=wb.Sheets("样本池") if "样本池" in existing else wb.Sheets(1))
+        ws.Name = "字段映射"
+        for row_idx, record in enumerate(INITIAL_FIELD_MAPPING, start=2):
+            for col_idx, value in enumerate(record, start=1):
+                ws.Cells(row_idx, col_idx).Value = value
+        print(f"  + sheet 新建: 字段映射 ({len(INITIAL_FIELD_MAPPING)} 行初始 mapping)")
+
+    for col_idx, header in enumerate(FIELD_MAPPING_HEADERS, start=1):
+        cell = ws.Cells(1, col_idx)
+        if not cell.Value:
+            cell.Value = header
+        cell.Font.Name = "微软雅黑"
+        cell.Font.Size = 11
+        cell.Font.Bold = True
+        cell.Font.Color = rgb_long("FFFFFF")
+        cell.Interior.Color = rgb_long("1F3864")
+        cell.HorizontalAlignment = -4108
+        cell.VerticalAlignment = -4108
+
+    last_row = max(2, ws.Cells(ws.Rows.Count, 2).End(-4162).Row)
+    rng = ws.Range(ws.Cells(1, 1), ws.Cells(last_row, 8))
+    rng.Font.Name = "微软雅黑"
+    rng.WrapText = True
+    for r in range(2, last_row + 1):
+        ws.Rows(r).RowHeight = 20
+        ws.Cells(r, 7).NumberFormat = "0"
+    widths = {"A": 8, "B": 22, "C": 22, "D": 28, "E": 22, "F": 22, "G": 8, "H": 30}
+    for col, width in widths.items():
+        ws.Columns(col).ColumnWidth = width
+    ws.Rows(1).RowHeight = 24
+
+    try:
+        ws.Range("A2:A500").Validation.Delete()
+        ws.Range("A2:A500").Validation.Add(
+            Type=XL_VALIDATE_LIST,
+            AlertStyle=XL_VALID_ALERT_STOP,
+            Operator=1,
+            Formula1="BS,IS,CF",
+        )
+        ws.Range("A2:A500").Validation.IgnoreBlank = False
+        ws.Range("A2:A500").Validation.InCellDropdown = True
+    except Exception as e:
+        print(f"  ! 字段映射 A 列数据验证添加失败: {e}")
+
+    for border_idx in (7, 8, 9, 10, 11, 12):
+        try:
+            b = rng.Borders(border_idx)
+            b.LineStyle = 1
+            b.Weight = 2
+            b.Color = rgb_long("BFBFBF")
+        except Exception:
+            pass
+
+    try:
+        ws.Activate()
+        wb.Application.ActiveWindow.SplitColumn = 0
+        wb.Application.ActiveWindow.SplitRow = 1
+        wb.Application.ActiveWindow.FreezePanes = True
+    except Exception:
+        pass
+    return ws
 
 
 def update_intro_sheet(wb):
@@ -1373,7 +1533,7 @@ def update_intro_sheet(wb):
     # Cover
     merge_write("A1:H1", "上市公司财务数据查询", size=24, bold=True, font_hex=white, fill_hex=deep_blue, align=-4108)
     merge_write("A2:E2", "Multi-Market Financial Data Tool", size=14, bold=False, font_hex=white, fill_hex=deep_blue, align=-4108)
-    merge_write("F2:H2", "Phase 4i UX polish", size=10, bold=True, font_hex=white, fill_hex=deep_blue, align=-4108)
+    merge_write("F2:H2", "Phase 4j", size=10, bold=True, font_hex=white, fill_hex=deep_blue, align=-4108)
     merge_write("A3:E3", "面向财务 / 审计专业人士的本地 Excel 同业对标工具", size=10, font_hex=white, fill_hex=deep_blue, align=-4108)
     merge_write("F3:H3", "修订日期: 2026-05-04", size=10, font_hex=white, fill_hex=deep_blue, align=-4108)
     ws.Rows(1).RowHeight = 36
@@ -1402,7 +1562,7 @@ def update_intro_sheet(wb):
     row = section(row, "§ 1 项目概览")
     row = paragraph(
         row,
-        "本工具把 4 个市场上市公司的资产负债表、利润表、现金流量表和标准财务指标整理到 Excel 宽表,并提供跨市场合并视图与 RMB 本地换算,用于同业对标和初步分析。",
+        "本工具用于对比 A 股、港股、美股、韩股上市公司的财务表现。用户在样本池录入公司后,工作簿会自动整理资产负债表、利润表、现金流量表和关键指标,并按字段映射表生成跨市场对比视图。它适合做同业初筛、审计分析底稿准备、跨市场口径差异识别和管理层问询前的数据准备。",
         height=42,
     )
     row = table(
@@ -1410,60 +1570,62 @@ def update_intro_sheet(wb):
         ("市场", "状态", "数据源"),
         [
             ("A股", "已支持", "新浪财经"),
-            ("美股", "已支持", "SEC EDGAR companyfacts;必要时雪球 / stockanalysis 备用路径"),
-            ("港股", "已支持", "雪球 HK API"),
-            ("韩股", "已支持", "stockanalysis.com KRX 财报 HTML"),
+            ("美股", "已支持", "美国上市公司披露数据;必要时使用中概股备用数据源"),
+            ("港股", "已支持", "雪球港股财务数据"),
+            ("韩股", "已支持", "公开韩股财务报表页面"),
         ],
     )
 
     row = section(row, "§ 2 快速开始")
     quick_steps = [
-        ("1", "在『样本池』A2 选择年度,A4 选择季度。"),
-        ("2", "B5 填雪球 xq_a_token cookie;B6 选择原币或统一RMB。"),
-        ("3", "中概美股主路径失败时自动尝试 stockanalysis fallback,仅覆盖 BABA / JD / PDD 测试集。"),
-        ("4", "第 11 行起按市场录入公司:A:B=A股,E:F=美股,I:J=港股,M:N=韩股。"),
-        ("5", "点击 Q 列一键抓数按钮,或点击单个市场一键按钮。"),
-        ("6", "跑数后使用 S 列合表按钮刷新 4 张跨市场对标视图。"),
+        ("1", "在『样本池』A2 选择年度,A4 选择季度。年度留空时,工具尽量使用可取得的最新报告期。"),
+        ("2", "如需港股或部分中概美股,在 B5 填入雪球登录凭证;B6 选择『原币』或『统一RMB』。"),
+        ("3", "第 11 行起按市场录入公司:A:B=A股,E:F=美股,I:J=港股,M:N=韩股。"),
+        ("4", "点击对应市场的一键按钮。抓数完成后,对应市场的 4 张正式报表会自动显示。"),
+        ("5", "点击橙色『一键跨市场对比』,生成 4 张跨市场对比表。"),
+        ("6", "如需调整字段口径,编辑『字段映射』sheet 后再次点击橙色按钮重建。"),
     ]
     row = table(row, ("步骤", "操作"), quick_steps, widths_override={"C": 58})
 
     row = section(row, "§ 3 输出 sheet 说明")
     output_rows = [
-        ("跨市场_资产负债表 / 利润表 / 现金流量表", "4 市场分表的公式合并视图,横向铺公司 × 报告期。"),
-        ("跨市场_指标表", "18 项标准指标的跨市场合并视图,用于快速比较盈利、周转、现金流和增长指标。"),
-        ("A股 / 美股 / 港股 / 韩股 16 张分市场表", "各市场原始写表结果,保留市场口径和诊断所需结构。"),
-        ("美股 / 港股 / 韩股抓取诊断", "默认隐藏;用于排查字段命中、单位、币种、FX_Rate 和 fallback 状态。"),
-        ("样本池 / 汇率", "样本池负责输入和按钮;汇率 sheet 缓存 USDCNY / HKDCNY / KRWCNY。"),
+        ("样本池", "录入公司、选择年度和显示币种,并通过按钮完成抓数和跨市场对比。"),
+        ("字段映射", "定义跨市场报表的统一行项目。用户可按审计口径调整映射后重建对比表。"),
+        ("跨市场_资产负债表 / 利润表 / 现金流量表", "把 4 市场分表按统一字段映射横向合并,上区为已映射字段,下区保留各市场独有字段。"),
+        ("跨市场_指标表", "18 项标准指标的跨市场合并视图,用于快速比较盈利、周转、现金流和增长。"),
+        ("A股 / 美股 / 港股 / 韩股 16 张分市场表", "各市场原始写表结果,保留市场披露口径。"),
+        ("抓取诊断", "默认隐藏;仅排查数据来源、单位或字段缺口时使用。日常分析无需打开。"),
+        ("汇率", "记录外币报表折算成人民币时使用的报告期汇率。"),
     ]
     row = table(row, ("Tab", "用途"), output_rows, widths_override={"B": 30, "C": 64})
 
     row = section(row, "§ 4 数据源声明")
     source_rows = [
-        ("A股", "新浪财经财报接口。"),
-        ("美股", "SEC EDGAR companyfacts 主路径;中概/20-F 缺口按既有规则 fallback。"),
-        ("港股", "雪球 HK API;需要有效 xq_a_token cookie。"),
-        ("韩股", "stockanalysis.com KRX 财报 HTML;不需要雪球 cookie。"),
-        ("汇率", "雪球 K 线 USDCNY / HKDCNY / KRWCNY,本地写入『汇率』sheet。"),
+        ("A股", "新浪财经公开财报数据。"),
+        ("美股", "美国上市公司披露数据为主;中概股缺口按既有规则使用备用数据源。"),
+        ("港股", "雪球港股财务数据;通常需要有效登录凭证。"),
+        ("韩股", "公开韩股财务报表页面;不需要雪球登录凭证。"),
+        ("汇率", "公开历史汇率数据,本地记录到『汇率』sheet。"),
     ]
     row = table(row, ("对象", "说明"), source_rows, widths_override={"B": 18, "C": 70})
-    row = paragraph(row, "Cookie 只保存在本地工作簿中,不会提交到 git;过期后请重新复制到样本池 B5。", height=24)
+    row = paragraph(row, "登录凭证只保存在本地工作簿中。过期后请重新复制到样本池 B5。", height=24)
 
     row = section(row, "§ 5 汇率换算说明")
     fx_rows = [
         ("B6 = 原币", "各市场按报告币种或市场默认单位显示,不做 RMB 换算。"),
-        ("B6 = 统一RMB", "非 RMB 报告币种按本地缓存汇率换算:资产负债表用期末汇率,利润表 / 现金流量表用期间均值。"),
-        ("RMB / CNY", "报告币种为 RMB 或 CNY 时短路为 1.0,不查汇率表。"),
+        ("B6 = 统一RMB", "非人民币报告币种按报告期汇率折算:资产负债表用期末汇率,利润表 / 现金流量表用期间均值。"),
+        ("RMB / CNY", "报告币种为人民币时无需折算。"),
         ("手工改汇率", "已写表公式不会自动反向刷新;需要重跑对应写表或合表按钮。"),
     ]
     row = table(row, ("规则", "说明"), fx_rows, widths_override={"B": 20, "C": 68})
 
     row = section(row, "§ 6 常见问题")
     faq_rows = [
-        ("Q1: cookie 失效怎么办?", "重新登录雪球后复制新的 xq_a_token 到样本池 B5,再重跑对应市场。"),
-        ("Q2: 切换 B6 后数据变了一半?", "这是预期行为:分市场表使用公式实时切换显示,不需要重新抓数。"),
-        ("Q3: stockanalysis fallback 什么时候触发?", "中概美股 EDGAR + 雪球失败时自动尝试,仅对 BABA / JD / PDD 测试集生效。"),
-        ("Q4: 老版样本池升级会丢数据吗?", "Row 11+ 公司数据保留;安装脚本只重画配置区和右侧按钮区。"),
-        ("Q5: 跨市场行项目对不齐?", "BS/IS/CF 合表保留 4 市场行项目并集,避免跨语言字段名差异造成数据丢失。"),
+        ("Q1: 港股或中概美股取数失败怎么办?", "先检查 B5 登录凭证是否过期。重新登录后复制新的 xq_a_token,再重跑对应市场。"),
+        ("Q2: 切换 B6 后数字变了是否正常?", "正常。『统一RMB』会把外币报告币种折算成人民币,用于跨市场可比。"),
+        ("Q3: 为什么跨市场表下方有隐藏分组?", "上区是已映射字段,下方保留各市场独有字段。需要审计追溯时可以展开。"),
+        ("Q4: 如何调整跨市场字段口径?", "编辑『字段映射』sheet 中的标准字段名和各市场原名,再点击橙色『一键跨市场对比』。"),
+        ("Q5: 老版样本池升级会丢数据吗?", "不会。第 11 行起的公司代码和简称会保留;安装脚本只重画上方配置区和按钮区。"),
     ]
     row = table(row, ("问题", "处理建议"), faq_rows, widths_override={"B": 30, "C": 64})
 
@@ -1473,8 +1635,9 @@ def update_intro_sheet(wb):
         ("Phase 4c-4d", "2026-05", "扩展美股、港股、韩股数据源。"),
         ("Phase 4f", "2026-05", "RMB toggle 与本地汇率缓存。"),
         ("Phase 4g", "2026-05", "跨市场指标合表与分市场 tab 显隐。"),
-        ("Phase 4h", "2026-05", "跨市场 BS/IS/CF 合表、实时 toggle、磁盘缓存、stockanalysis 中概 fallback。"),
+        ("Phase 4h", "2026-05", "跨市场 BS/IS/CF 合表、实时币种切换、本地暂存和中概备用数据源。"),
         ("Phase 4i", "2026-05", "样本池布局、使用说明和汇率说明区 UX 抛光。"),
+        ("Phase 4j", "2026-05", "跨市场字段映射、审计视角说明和重点 sheet 视觉标准化。"),
     ]
     row = table(row, ("版本", "日期", "主线交付"), history_rows, widths_override={"B": 16, "C": 14, "D": 72})
 
@@ -1493,7 +1656,9 @@ def update_intro_sheet(wb):
 def reorder_report_sheets(wb):
     """固定工作表 Tab 顺序;诊断 sheet 排序后保持 xlSheetHidden。"""
     desired_order = [
-        "使用说明", "样本池",
+        "使用说明", "样本池", "字段映射",
+        "跨市场_资产负债表", "跨市场_利润表", "跨市场_现金流量表",
+        "跨市场_指标表",
         "A股_资产负债表", "A股_利润表", "A股_现金流量表", "A股_指标表",
         "美股_资产负债表", "美股_利润表", "美股_现金流量表", "美股_指标表",
         "美股_抓取诊断",
@@ -1501,8 +1666,6 @@ def reorder_report_sheets(wb):
         "港股_抓取诊断",
         "韩股_资产负债表", "韩股_利润表", "韩股_现金流量表", "韩股_指标表",
         "韩股_抓取诊断",
-        "跨市场_资产负债表", "跨市场_利润表", "跨市场_现金流量表",
-        "跨市场_指标表",
         "汇率",   # ← Phase 4f Step 2 新增 (跨市场共享 FX 缓存)
     ]
     diagnostic_names = {"美股_抓取诊断", "港股_抓取诊断", "韩股_抓取诊断"}
@@ -1540,7 +1703,7 @@ def colorize_sheet_tabs(wb):
         ("美股_", US_FILL),
         ("港股_", HK_FILL),
         ("韩股_", KR_FILL),
-        ("跨市场_", PRIMARY_FILL),
+        ("跨市场_", CROSS_FILL),
     ]
     for ws in wb.Worksheets:
         matched = False
@@ -1618,8 +1781,8 @@ def install_buttons(ws_pool):
         if name == "BtnClearCache":
             try:
                 shape.AlternativeText = (
-                    "删除 .cache/ 目录中的 24h 本地 HTTP 响应缓存。"
-                    "下次抓数会重新发起所有 HTTP 请求,用于强制刷新或排查数据陈旧问题。日常无需点击。"
+                    "清除本地暂存的抓数结果。"
+                    "下次抓数会重新从公开数据来源取数,适合强制刷新或排查数据陈旧问题。日常无需点击。"
                 )
             except Exception:
                 pass
@@ -1778,6 +1941,7 @@ def main():
                 migrate_old_sample_pool(ws_pool)       # 旧 A:C 混合布局 → 4 市场分栏
                 layout_sample_pool(ws_pool)            # Phase 4e 样本池布局
                 ensure_market_sheets(wb)
+                ensure_field_mapping_sheet(wb)
                 update_intro_sheet(wb)
                 reorder_report_sheets(wb)
                 colorize_sheet_tabs(wb)

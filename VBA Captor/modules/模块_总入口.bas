@@ -24,6 +24,7 @@ Public Sub 一键A股(Optional ByVal blnSilent As Boolean = False)
     模块_抓现金流量表.Main
     Application.StatusBar = "[A股 4/4] 生成指标表..."
     模块_抓指标表.Main
+    UnhideMarketTabs "A"
 
 CleanUp:
     If Err.Number <> 0 Then
@@ -59,6 +60,7 @@ Public Sub 一键美股(Optional ByVal blnSilent As Boolean = False)
     模块_抓美股现金流量表.Main
     Application.StatusBar = "[美股 4/4] 生成指标表..."
     模块_抓美股指标表.Main
+    UnhideMarketTabs "US"
 
 CleanUp:
     If Err.Number <> 0 Then
@@ -94,6 +96,7 @@ Public Sub 一键港股(Optional ByVal blnSilent As Boolean = False)
     模块_抓港股现金流量表.Main
     Application.StatusBar = "[港股 4/4] 生成指标表..."
     模块_抓港股指标表.Main
+    UnhideMarketTabs "HK"
 
 CleanUp:
     If Err.Number <> 0 Then
@@ -129,6 +132,7 @@ Public Sub 一键韩股(Optional ByVal blnSilent As Boolean = False)
     模块_抓韩股现金流量表.Main
     Application.StatusBar = "[韩股 4/4] 生成指标表..."
     模块_抓韩股指标表.Main
+    UnhideMarketTabs "KR"
 
 CleanUp:
     If Err.Number <> 0 Then
@@ -206,7 +210,8 @@ Private Sub ToggleMarketTabsVisibility(ByVal market As String)
     Dim newVisible As Long: newVisible = -1    ' xlSheetVisible
     Dim ws As Worksheet
     For Each ws In ThisWorkbook.Worksheets
-        If Left$(ws.Name, Len(prefix)) = prefix Then
+        If Left$(ws.Name, Len(prefix)) = prefix _
+           And InStr(ws.Name, "抓取诊断") = 0 Then
             If ws.Visible = -1 Then newVisible = 0    ' xlSheetHidden
             Exit For
         End If
@@ -214,8 +219,32 @@ Private Sub ToggleMarketTabsVisibility(ByVal market As String)
 
     On Error Resume Next
     For Each ws In ThisWorkbook.Worksheets
-        If Left$(ws.Name, Len(prefix)) = prefix Then
+        If Left$(ws.Name, Len(prefix)) = prefix _
+           And InStr(ws.Name, "抓取诊断") = 0 Then
             ws.Visible = newVisible
+        End If
+    Next ws
+    Err.Clear
+    On Error GoTo 0
+End Sub
+
+
+Public Sub UnhideMarketTabs(ByVal market As String)
+    Dim prefix As String
+    Select Case UCase$(Trim$(market))
+        Case "A":  prefix = "A股_"
+        Case "US": prefix = "美股_"
+        Case "HK": prefix = "港股_"
+        Case "KR": prefix = "韩股_"
+        Case Else: Exit Sub
+    End Select
+
+    On Error Resume Next
+    Dim ws As Worksheet
+    For Each ws In ThisWorkbook.Worksheets
+        If Left$(ws.Name, Len(prefix)) = prefix _
+           And InStr(ws.Name, "抓取诊断") = 0 Then
+            ws.Visible = -1
         End If
     Next ws
     Err.Clear
@@ -337,6 +366,11 @@ Public Sub 一键全抓(Optional ByVal blnSilent As Boolean = False)
     Application.StatusBar = "[16/16] 生成韩股指标表..."
     DoEvents
     模块_抓韩股指标表.Main
+
+    UnhideMarketTabs "A"
+    UnhideMarketTabs "US"
+    UnhideMarketTabs "HK"
+    UnhideMarketTabs "KR"
 
     ' Phase 4g Step 2 / Phase 4h Step 3: 一键全抓后自动刷新 4 张跨市场表
     On Error Resume Next
