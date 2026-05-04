@@ -64,6 +64,10 @@ Public Sub RunHKStatement(ByVal strKind As String, ByVal targetSheet As String, 
 
     Dim strQuarter As String: strQuarter = ReadQuarterSelection()
     Dim lngYear As Long: lngYear = ReadYearSelection()
+    Dim collFetchYears As Collection: Set collFetchYears = New Collection
+    collFetchYears.Add lngYear
+    If lngYear > 0 And (strKind = "BalanceSheet" Or strKind = "Income") Then _
+        collFetchYears.Add lngYear - 1
 
     For i = 1 To numCompanies
         strCodeRaw = Trim$(CStr(arrPool(i, 1)))
@@ -79,23 +83,41 @@ Public Sub RunHKStatement(ByVal strKind As String, ByVal targetSheet As String, 
         Dim tempIndicatorSet As Object: Set tempIndicatorSet = CreateObject("Scripting.Dictionary")
         Dim tempCategoryMap As Object: Set tempCategoryMap = CreateObject("Scripting.Dictionary")
 
-        On Error Resume Next
-        Err.Clear
-        FetchHKFromXueqiu strCode, strKind, conceptMap, strQuarter, lngYear, maxPeriods, _
-                          tempData, tempPeriodSet, tempIndicatorSet, tempCategoryMap, collDiagRows, _
-                          dictReportingCurrency
-        Dim fetchErrNum As Long: fetchErrNum = Err.Number
-        Dim fetchErrSource As String: fetchErrSource = Err.Source
-        Dim fetchErrDesc As String: fetchErrDesc = Err.Description
-        Err.Clear
-        On Error GoTo CleanUp
+        Dim fetchYear As Variant
+        Dim mainYearOk As Boolean: mainYearOk = False
+        Dim anyYearOk As Boolean: anyYearOk = False
+        Dim mainErrNum As Long: mainErrNum = 0
+        Dim mainErrSource As String: mainErrSource = ""
+        Dim mainErrDesc As String: mainErrDesc = ""
 
-        If fetchErrNum <> 0 Then
+        For Each fetchYear In collFetchYears
+            On Error Resume Next
+            Err.Clear
+            FetchHKFromXueqiu strCode, strKind, conceptMap, strQuarter, CLng(fetchYear), maxPeriods, _
+                              tempData, tempPeriodSet, tempIndicatorSet, tempCategoryMap, collDiagRows, _
+                              dictReportingCurrency
+            If Err.Number <> 0 Then
+                If CLng(fetchYear) = lngYear Then
+                    mainErrNum = Err.Number
+                    mainErrSource = Err.Source
+                    mainErrDesc = Err.Description
+                End If
+                Err.Clear
+            Else
+                anyYearOk = True
+                If CLng(fetchYear) = lngYear Then mainYearOk = True
+            End If
+            On Error GoTo CleanUp
+
+            Application.Wait Now + TimeSerial(0, 0, 1)
+        Next fetchYear
+
+        If (lngYear = 0 And Not anyYearOk) Or (lngYear > 0 And Not mainYearOk) Then
             intFailCnt = intFailCnt + 1
             strErrLog = strErrLog & vbCrLf & strCode & " " & strName & ": " & _
-                        "错误号=" & fetchErrNum & "; 来源=" & fetchErrSource & "; " & fetchErrDesc
+                        "错误号=" & mainErrNum & "; 来源=" & mainErrSource & "; " & mainErrDesc
             AddMissingDiagnosticsForCompany strCode, strKind, conceptMap, collDiagRows, _
-                                            "fetch_failed: " & fetchErrDesc
+                                            "fetch_failed: " & mainErrDesc
         ElseIf Not HasAnyCoreLabelHK(tempData, strCode, CoreLabelsForKind(strKind)) Then
             intFailCnt = intFailCnt + 1
             strErrLog = strErrLog & vbCrLf & strCode & " " & strName & ": 核心字段未命中"
@@ -105,8 +127,6 @@ Public Sub RunHKStatement(ByVal strKind As String, ByVal targetSheet As String, 
             If Not dictCompanyName.Exists(strCode) Then dictCompanyName.Add strCode, strName
             collCodes.Add strCode
         End If
-
-        Application.Wait Now + TimeSerial(0, 0, 1)
 
 NextRow:
     Next i

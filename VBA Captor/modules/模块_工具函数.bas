@@ -1982,6 +1982,25 @@ Private Function FindPriorSamePeriodStatementColumn(ByVal sheetName As String, _
         End If
     Next c
 
+    ' 美股/港股 fiscal period end 可能因周末或公司财年口径相差几天
+    ' 例如 AAPL FY2025 = 2025-09-27, FY2024 = 2024-09-28。
+    Dim bestCol As Long, bestDelta As Long: bestDelta = 9999
+    Dim pKey As String, deltaDays As Long
+    For c = dataStartCol To lastCol
+        pKey = StandardPeriodKey(ws.Cells(2, c).Value)
+        If StandardHeaderTextAt(ws, c) = companyHeader _
+           And IsDate(pKey) _
+           And pKey < currentKey _
+           And Year(CDate(pKey)) <= Year(CDate(currentKey)) - 1 Then
+            deltaDays = Abs(DateDiff("d", CDate(targetKey), CDate(pKey)))
+            If deltaDays <= 31 And deltaDays < bestDelta Then
+                bestDelta = deltaDays
+                bestCol = c
+            End If
+        End If
+    Next c
+    FindPriorSamePeriodStatementColumn = bestCol
+
 CleanExit:
     Err.Clear
     On Error GoTo 0
