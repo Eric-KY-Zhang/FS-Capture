@@ -1,3 +1,8 @@
+"""Phase 4h workbook state inspector.
+
+# Phase 4j.1: 移除已删除的跨市场 BS/IS/CF sheet + 跨市场对比按钮检查
+"""
+
 from __future__ import annotations
 
 import sys
@@ -24,23 +29,20 @@ def main() -> int:
     failures: list[str] = []
 
     try:
-        print("\n[0] stockanalysis fallback whitelist", flush=True)
+        print("\n[0] stockanalysis fallback auto path", flush=True)
         us_code = US_MODULE.read_text(encoding="utf-8")
         for ticker in ("BABA", "JD", "PDD"):
             if f'"{ticker}"' not in us_code:
                 failures.append(f"stockanalysis fallback whitelist missing {ticker}")
         if "ReadStockAnalysisFallbackEnabled" in us_code:
             failures.append("US fallback still depends on manual toggle helper")
-        print("stockanalysis fallback auto path whitelist includes BABA/JD/PDD")
+        print("stockanalysis fallback auto path whitelist includes BABA/JD/PDD; EDGAR/雪球 failure should auto fallback")
 
         wb = excel.Workbooks.Open(str(BOOK))
         excel.Run("模块_工具函数.SetSilentMode", True)
 
         print("\n[1] cross-market sheets", flush=True)
         sheet_specs = [
-            ("跨市场_资产负债表", 3),
-            ("跨市场_利润表", 3),
-            ("跨市场_现金流量表", 3),
             ("跨市场_指标表", 4),
         ]
         for sheet_name, data_col in sheet_specs:
@@ -67,8 +69,6 @@ def main() -> int:
         print("\n[2] buttons and toggles", flush=True)
         ws_pool = wb.Worksheets("样本池")
         expected_buttons = {
-            "BtnBuildCrossAll": ("S1:S3", "一键跨市场对比"),
-            "BtnHideCrossMarket": ("S5:S7", "显示/隐藏 跨市场对比"),
             "BtnClearCache": ("Q9:Q11", "清空 HTTP 缓存"),
         }
         for name, (addr, caption) in expected_buttons.items():
@@ -82,6 +82,7 @@ def main() -> int:
             except Exception as exc:
                 failures.append(f"missing button {name}: {exc}")
         removed_buttons = {
+            "BtnBuildCrossAll", "BtnHideCrossMarket",
             "BtnBuildCrossInd", "BtnBuildCrossBS", "BtnBuildCrossIS", "BtnBuildCrossCF",
             "BtnRunBalance", "BtnRunProfit", "BtnRunCash", "BtnRunInd",
             "BtnRunUSBalance", "BtnRunUSProfit", "BtnRunUSCash", "BtnRunUSInd",
@@ -94,7 +95,7 @@ def main() -> int:
                 failures.append(f"removed button still present: {name}")
             except Exception:
                 pass
-        print("manual fallback toggle removed; old single-table buttons absent")
+        print("manual fallback toggle removed; old cross-market and single-table buttons absent")
 
         print("\n[3] B6 realtime toggle smoke", flush=True)
         saved_b6 = ws_pool.Range("B6").Value

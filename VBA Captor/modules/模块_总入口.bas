@@ -169,18 +169,10 @@ End Sub
 
 
 Public Sub 切换所有分市场tabs()
-    Dim m As Variant
-    For Each m In Array("A", "US", "HK", "KR")
-        ToggleMarketTabsVisibility CStr(m)
-    Next m
-End Sub
-
-
-Public Sub 切换跨市场tabs()
     Dim newVisible As Long: newVisible = -1    ' xlSheetVisible
     Dim ws As Worksheet
     For Each ws In ThisWorkbook.Worksheets
-        If Left$(ws.Name, Len("跨市场_")) = "跨市场_" Then
+        If IsOfficialMarketSheet(ws) Or ws.Name = "跨市场_指标表" Then
             If ws.Visible = -1 Then newVisible = 0    ' xlSheetHidden
             Exit For
         End If
@@ -188,13 +180,26 @@ Public Sub 切换跨市场tabs()
 
     On Error Resume Next
     For Each ws In ThisWorkbook.Worksheets
-        If Left$(ws.Name, Len("跨市场_")) = "跨市场_" Then
+        If IsOfficialMarketSheet(ws) Or ws.Name = "跨市场_指标表" Then
             ws.Visible = newVisible
         End If
     Next ws
     Err.Clear
     On Error GoTo 0
 End Sub
+
+
+Private Function IsOfficialMarketSheet(ByVal ws As Worksheet) As Boolean
+    Dim prefixes As Variant: prefixes = Array("A股_", "美股_", "港股_", "韩股_")
+    Dim p As Variant
+    For Each p In prefixes
+        If Left$(ws.Name, Len(CStr(p))) = CStr(p) _
+           And InStr(ws.Name, "抓取诊断") = 0 Then
+            IsOfficialMarketSheet = True
+            Exit Function
+        End If
+    Next p
+End Function
 
 
 Private Sub ToggleMarketTabsVisibility(ByVal market As String)
@@ -247,6 +252,14 @@ Public Sub UnhideMarketTabs(ByVal market As String)
             ws.Visible = -1
         End If
     Next ws
+    Err.Clear
+    On Error GoTo 0
+End Sub
+
+
+Public Sub UnhideCrossMarketIndicator()
+    On Error Resume Next
+    ThisWorkbook.Sheets("跨市场_指标表").Visible = -1
     Err.Clear
     On Error GoTo 0
 End Sub
@@ -372,9 +385,10 @@ Public Sub 一键全抓(Optional ByVal blnSilent As Boolean = False)
     UnhideMarketTabs "HK"
     UnhideMarketTabs "KR"
 
-    ' Phase 4g Step 2 / Phase 4h Step 3: 一键全抓后自动刷新 4 张跨市场表
+    ' Phase 4j.1: 一键全抓后只刷新跨市场指标表
     On Error Resume Next
-    BuildAllCrossMarketSheets
+    BuildCrossMarketIndicatorSheet
+    UnhideCrossMarketIndicator
     Err.Clear
     On Error GoTo CleanUp
 
