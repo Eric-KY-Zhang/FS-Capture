@@ -67,7 +67,7 @@ BUTTONS = [
     ("BtnBuildCrossBS",  "合并跨市场资产负债表",  "模块_工具函数.BuildCrossMarketBalanceSheetWrapper", "S5:S7", PRIMARY_FILL, PRIMARY_FG, 11, True),
     ("BtnBuildCrossIS",  "合并跨市场利润表",      "模块_工具函数.BuildCrossMarketIncomeWrapper", "S8:S10", PRIMARY_FILL, PRIMARY_FG, 11, True),
     ("BtnBuildCrossCF",  "合并跨市场现金流量表",  "模块_工具函数.BuildCrossMarketCashFlowWrapper", "S11:S13", PRIMARY_FILL, PRIMARY_FG, 11, True),
-    ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A8:B8", PRIMARY_FILL,   PRIMARY_FG,   12, True),
+    ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A8:A8", PRIMARY_FILL,   PRIMARY_FG,   10, True),
     ("BtnRunUS",        "一键 美股",           "模块_总入口.一键美股",            "E8:F8", US_FILL,        US_FG,        12, True),
     ("BtnRunHK",        "一键 港股",           "模块_总入口.一键港股",            "I8:J8", HK_FILL,        HK_FG,        12, True),
     ("BtnRunKR",        "一键 韩股",           "模块_总入口.一键韩股",            "M8:N8", KR_FILL,        KR_FG,        12, True),
@@ -385,6 +385,10 @@ def layout_sample_pool(ws_pool):
     cookie_value = ws_pool.Range("B5").Value or ""
     # Phase 4f Step 2: 保留用户已选的 B6 显示币种 (空 → install_currency_toggle_cell 写默认)
     currency_value = ws_pool.Range("B6").Value or ""
+    # Phase 4h Step 6: 保留用户已选的 B8 stockanalysis fallback 开关
+    fallback_value = str(ws_pool.Range("B8").Value or "").strip()
+    if fallback_value not in {"开", "关"}:
+        fallback_value = "关"
 
     migrate_phase4g_sample_rows(ws_pool)
 
@@ -494,7 +498,7 @@ def layout_sample_pool(ws_pool):
         rng.VerticalAlignment = -4108
 
     placeholders = [
-        ("A8:B8", "一键 A 股", PRIMARY_FILL, "FFFFFF", 11),
+        ("A8:A8", "一键 A 股", PRIMARY_FILL, "FFFFFF", 10),
         ("E8:F8", "一键 美股", US_FILL, "FFFFFF", 11),
         ("I8:J8", "一键 港股", HK_FILL, "FFFFFF", 11),
         ("M8:N8", "一键 韩股", KR_FILL, "FFFFFF", 11),
@@ -513,7 +517,8 @@ def layout_sample_pool(ws_pool):
     ]
     for addr, caption, fill_hex, font_color_hex, font_size in placeholders:
         rng = ws_pool.Range(addr)
-        rng.Merge()
+        if addr.split(":")[0] != addr.split(":")[-1]:
+            rng.Merge()
         rng.Value = caption
         rng.Font.Name = "微软雅黑"
         rng.Font.Size = font_size
@@ -522,6 +527,8 @@ def layout_sample_pool(ws_pool):
         rng.Interior.Color = rgb_long(fill_hex)
         rng.HorizontalAlignment = -4108
         rng.VerticalAlignment = -4108
+
+    install_stockanalysis_fallback_toggle_cell(ws_pool, fallback_value)
 
     for code_col, name_col in (("A", "B"), ("E", "F"), ("I", "J"), ("M", "N")):
         for col, caption in ((code_col, "代码"), (name_col, "简称")):
@@ -1061,7 +1068,7 @@ def install_currency_toggle_cell(ws_pool):
             val_cell.AddComment(
                 "显示币种 toggle (Phase 4f Step 2 起):\n"
                 "  原币   : 美股 USD / 港股 各家公司报告币种 / 韩股 KRW 原值输出 (默认)\n"
-                "  统一RMB: 写表时按汇率换算成人民币; BS 用期末汇率, IS/CF 用期间均值\n\n"
+                "  统一RMB: 展示区公式按汇率换算成人民币; BS 用期末汇率, IS/CF 用期间均值\n\n"
                 "汇率自动拉自雪球 USDCNY.FX / HKDCNY.FX / KRWCNY.FX, 缓存在『汇率』sheet。\n"
                 "汇率 sheet 单元格可手填 override 系统值。"
             )
@@ -1069,6 +1076,50 @@ def install_currency_toggle_cell(ws_pool):
         pass
 
     print("  + A6/B6 显示币种 toggle 已配置 (默认 '原币')")
+
+
+def install_stockanalysis_fallback_toggle_cell(ws_pool, fallback_value="关"):
+    """
+    Phase 4h Step 6: 样本池 B8 装『中概美股 stockanalysis fallback』开关。
+    默认关;只在用户显式选「开」时作为 EDGAR+雪球失败后的备用路径。
+    """
+    val_cell = ws_pool.Range("B8")
+    val_cell.Value = fallback_value if fallback_value in {"开", "关"} else "关"
+    val_cell.Font.Name = "微软雅黑"
+    val_cell.Font.Size = 9
+    val_cell.Font.Bold = True
+    val_cell.Interior.Color = rgb_long("FFE699")
+    val_cell.HorizontalAlignment = -4108
+    val_cell.VerticalAlignment = -4108
+    val_cell.WrapText = True
+
+    try:
+        val_cell.Validation.Delete()
+    except Exception:
+        pass
+    try:
+        val_cell.Validation.Add(
+            Type=XL_VALIDATE_LIST,
+            AlertStyle=XL_VALID_ALERT_STOP,
+            Operator=1,
+            Formula1="关,开",
+        )
+        val_cell.Validation.IgnoreBlank = False
+        val_cell.Validation.InCellDropdown = True
+    except Exception as e:
+        print(f"  ! B8 数据验证添加失败: {e}")
+
+    try:
+        if val_cell.Comment is None:
+            val_cell.AddComment(
+                "中概美股 stockanalysis fallback 开关 (Phase 4h Step 6):\n"
+                "  关: 默认, 美股仍按 EDGAR + 雪球 fallback 主路径\n"
+                "  开: EDGAR 与雪球都失败时, 对 BABA/JD/PDD 追加 stockanalysis 备用路径"
+            )
+    except Exception:
+        pass
+
+    print("  + B8 中概美股 fallback 开关已配置 (默认 '关')")
 
 
 def ensure_market_sheets(wb):
@@ -1196,9 +1247,10 @@ def update_intro_sheet(wb):
         "  1. 在样本池 A 列填代码、B 列填简称 (各市场分栏)。",
         "  2. B5 填雪球 xq_a_token cookie (港股抓数 / 美股雪球 fallback 使用; 汇率缓存可自动 warmup)。",
         "  3. B6 选 '原币' (默认) 或 '统一RMB' (4 市场全部按当期汇率换算成 RMB 显示)。",
-        "  4. 点 '一键全抓 4 市场', 等候 ~3 分钟。",
-        "  5. 切换 B6 后需要重新点抓数按钮, 数值才会重算 (本期不做实时 toggle)。",
-        "汇率值在『汇率』sheet 缓存; 用户可手填 cell override 系统拉取值, 备注列写理由。",
+        "  4. B8 默认 '关';仅当 EDGAR + 雪球均失败时,可手动设 '开' 启用 BABA/JD/PDD stockanalysis 备用路径。",
+        "  5. 点 '一键全抓 4 市场', 等候 ~3 分钟。",
+        "  6. 切换 B6 后已写表数值会立即按公式切换显示,无需重新抓数。",
+        "汇率值在『汇率』sheet 缓存;HTTP 响应缓存写入 .cache/ 24 小时;均可本地清理或手动 override。",
     ]
 
     for idx, text in enumerate(lines, start=2):

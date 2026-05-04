@@ -1625,3 +1625,47 @@ stockanalysis 调研:
 - [bug] AAPL fiscal year 漂移导致指标增长率公式找不到 prior period。已在 `db500e5` commit 给 `FindPriorSamePeriodStatementColumn` 加 ±31 天 fuzzy match。
 - [enhance] 港股 BS/IS 增长率公式因为只拉当年没有可比期。已在 `db500e5` commit 加双年 fetch loop。
 - [note] `tools/inspect_phase4g_state.py` 作为 Phase 4g frozen 回归驱动保持不改;上述附带修复通过现有指标公式输出和 Phase 4g inspect 间接覆盖。
+
+## W. Phase 4h 收口: 跨市场全合表 + 实时 toggle + 缓存 + fallback + 4g 收账
+
+执行依据: `PHASE_4H_PLAN.md` v1。状态: ✅ Codex 已实现 5 件主线 + 1 件文档,通过本地回归 + 既有数据源 smoke;Phase 4h 全期闭环。
+
+### W.1 本阶段已完成
+
+- [Step 1] Phase 4g 小尾巴文档化:README + STATUS §V.4 记录 AAPL fiscal year fuzzy match、港股双年 fetch、statement kind 修复。
+- [Step 2] 新增 `BuildCrossMarketStatementSheet`,落地 `跨市场_资产负债表` / `跨市场_利润表` / `跨市场_现金流量表` 3 张合表。
+- [Step 2 mapping] 行项目对齐选择 P2 并集方案;实测 4 市场原始行标签精确交集 BS/IS/CF 均为 0,强行 P1 会丢数据,并集规模可控(BS 117 行、IS 49 行、CF 107 行)。
+- [Step 3] `BuildAllCrossMarketSheets` 统一刷新 4 张合表;样本池新增 `合并 4 张跨市场表` 及 BS/IS/CF 单表刷新按钮,一键全抓末尾自动刷新。
+- [Step 4] B6 实时 toggle: `WriteWideTable` 写隐藏 raw dump 原币层,展示区写固定汇率公式;切 B6 不再重抓数。
+- [Step 5] 磁盘 JSON 缓存: `.cache/` 24h TTL,EDGAR/雪球/stockanalysis 既有抓数路径成功响应写本地缓存;样本池 `Q14` 新增清空缓存按钮。
+- [Step 6] stockanalysis 中概美股 fallback:默认 `B8=关`;仅对 BABA/JD/PDD,且仅在 EDGAR + 雪球失败后追加触发;诊断来源写 `stockanalysis (fallback)`。
+- [Step 7] 新增 `tools/inspect_phase4h_state.py`,覆盖 4 张合表、按钮/B8、B6 实时公式、缓存读写、B8 打开时 fallback 诊断。
+
+### W.2 验证结果
+
+常规回归:
+
+| 项目 | 结果 |
+|---|---|
+| `py tools/test_fx_live.py --skip-install` | PASS,5/5;USD/HKD/KRW 2024-12-31 与 USD/HKD 2023-12-31 缓存命中 0.00s |
+| `py -u tools/diff_phase4f_step3_lite.py` | PASS;A股资产负债表 `原币` vs `统一RMB` 为 0 mismatches |
+| `py -u tools/inspect_phase4g_state.py` | PASS;Phase 4g 指标合表、hide-tab、诊断 11 列均正常 |
+| `py -u tools/inspect_phase4h_state.py` | PASS;Phase 4h 新增 5 类检查均正常 |
+
+专项 smoke:
+
+| 项目 | 结果 |
+|---|---|
+| Step 2-3 合表 | `跨市场_资产负债表` 117 行 × 34 列;`跨市场_利润表` 49 行 × 34 列;`跨市场_现金流量表` 107 行 × 18 列;数据 cell 为分市场表引用公式 |
+| Step 4 B6 性能 | 1000 个展示公式切 `统一RMB` 约 0.003s,切回 `原币` 约 0.002s;smoke C3 由 100 → 730.02 |
+| Step 5 缓存 | 本地读写/清空通过;EDGAR AAPL companyfacts 首次 miss 4.729s,重复调用命中缓存 1.204s,内容长度一致 |
+| Step 6 sample | stockanalysis 中概美股 BS/CF 子页面 6/6 HTTP 200;失败率 0%,未触发 blocker |
+| Step 6 fallback | B8=开 + B5 无效 cookie + BABA BS:诊断出现 54 行 `stockanalysis (fallback)`,数值落表 |
+
+### W.3 已知边界
+
+- 跨市场 BS/IS/CF 行项目采用 P2 并集,保留不同市场/语言的所有原始行名;后续若需要口径化行项目,应作为 Phase 4h.1/4i 单独 mapping 工作处理。
+- B6 实时 toggle 使用写表时固定汇率公式;汇率 sheet 后续手工改值不会反向刷新既有公式,需要重跑对应写表按钮。
+- `.cache/` 只缓存 24 小时内成功 HTTP 响应,不缓存雪球 cookie,也不缓存失败响应;用户可用 `清空缓存` 按钮删除。
+- stockanalysis 中概美股 fallback 默认关闭,当前只验证 BABA/JD/PDD;其他中概股字段覆盖度不承诺。
+- B8 开关为了兼容现有样本池按钮布局,位于 A 股一键按钮右侧;默认 `关`,用户不启用时现有 EDGAR + 雪球主路径不变。

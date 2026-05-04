@@ -133,6 +133,49 @@ Public Sub TestStep45Smoke()
 End Sub
 
 
+Public Sub TestPhase4hToggleSmoke()
+    Dim wsPool As Worksheet
+    Set wsPool = ThisWorkbook.Worksheets("样本池")
+
+    Dim savedB6 As Variant
+    savedB6 = wsPool.Range("B6").Value
+
+    Dim wsSmoke As Worksheet
+    Set wsSmoke = GetOrClearSmokeSheet("_phase4h_toggle_smoke")
+
+    Dim arrCodes(1 To 1) As String
+    arrCodes(1) = "AAPL"
+
+    Dim arrPeriods(1 To 1) As String
+    arrPeriods(1) = "2024-12-31"
+
+    Dim arrIndicators(1 To 1) As String
+    arrIndicators(1) = "Total assets"
+
+    Dim dictCompanyName As Object: Set dictCompanyName = CreateObject("Scripting.Dictionary")
+    dictCompanyName.Add "AAPL", "Apple"
+
+    Dim dictCategory As Object: Set dictCategory = CreateObject("Scripting.Dictionary")
+    dictCategory.Add "Total assets", "Assets"
+
+    Dim dictData As Object: Set dictData = CreateObject("Scripting.Dictionary")
+    Dim dictCompany As Object: Set dictCompany = CreateObject("Scripting.Dictionary")
+    Dim dictPer As Object: Set dictPer = CreateObject("Scripting.Dictionary")
+    dictPer.Add "Total assets", 100#
+    dictCompany.Add "2024-12-31", dictPer
+    dictData.Add "AAPL", dictCompany
+
+    Dim dictCurrency As Object: Set dictCurrency = CreateObject("Scripting.Dictionary")
+    dictCurrency.Add "AAPL", "USD"
+
+    wsPool.Range("B6").Value = "原币"
+    WriteWideTable wsSmoke, arrCodes, dictCompanyName, dictData, arrPeriods, arrIndicators, dictCategory, _
+                   perCompanyPeriods:=False, dictReportingCurrency:=dictCurrency, statementKind:="BalanceSheet"
+
+    wsPool.Range("B6").Value = savedB6
+End Sub
+
+
 Private Function GetOrClearSmokeSheet(ByVal sheetName As String) As Worksheet
     Dim ws As Worksheet
     On Error Resume Next

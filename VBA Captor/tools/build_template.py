@@ -93,9 +93,10 @@ def build_intro(ws):
         "  1. 在样本池 A 列填代码、B 列填简称 (各市场分栏)。",
         "  2. B5 填雪球 xq_a_token cookie (港股抓数 / 美股雪球 fallback 使用; 汇率缓存可自动 warmup)。",
         "  3. B6 选 '原币' (默认) 或 '统一RMB' (4 市场全部按当期汇率换算成 RMB 显示)。",
-        "  4. 点 '一键全抓 4 市场', 等候 ~3 分钟。",
-        "  5. 切换 B6 后需要重新点抓数按钮, 数值才会重算 (本期不做实时 toggle)。",
-        "  汇率值在『汇率』sheet 缓存; 用户可手填 cell override 系统拉取值, 备注列写理由。",
+        "  4. B8 默认 '关';仅当 EDGAR + 雪球均失败时,可手动设 '开' 启用 BABA/JD/PDD stockanalysis 备用路径。",
+        "  5. 点 '一键全抓 4 市场', 等候 ~3 分钟。",
+        "  6. 切换 B6 后已写表数值会立即按公式切换显示,无需重新抓数。",
+        "  汇率值在『汇率』sheet 缓存;HTTP 响应缓存写入 .cache/ 24 小时;均可本地清理或手动 override。",
         "",
         "【来源说明】基于林铖 V2.2 重写并扩展。",
     ]
@@ -193,9 +194,18 @@ def build_sample_pool(ws):
         c.alignment = CENTER
         c.border = BORDER
 
+    ws["B8"] = "关"
+    ws["B8"].font = Font(name="微软雅黑", size=9, bold=True)
+    ws["B8"].fill = yellow_fill
+    ws["B8"].alignment = CENTER
+    ws["B8"].border = BORDER
+    dv_sa = DataValidation(type="list", formula1='"关,开"', allow_blank=False)
+    dv_sa.add("B8")
+    ws.add_data_validation(dv_sa)
+
     # ---- Row 8-9 / Q1-Q10: 按钮位提示, install_modules.py 会覆盖为 Shape 按钮 ----
     button_placeholders = [
-        ("A8:B8", "一键 A 股", "FF4472C4", WHITE, 11),
+        ("A8:A8", "一键 A 股", "FF4472C4", WHITE, 10),
         ("E8:F8", "一键 美股", "FFC00000", WHITE, 11),
         ("I8:J8", "一键 港股", "FF548235", WHITE, 11),
         ("M8:N8", "一键 韩股", "FF7030A0", WHITE, 11),
@@ -213,7 +223,8 @@ def build_sample_pool(ws):
         ("Q8:Q10", "切换所有分市场 tabs 显隐", SECONDARY_BLUE, SECONDARY_FG, 10),
     ]
     for rng, title, fill, font_color, font_size in button_placeholders:
-        ws.merge_cells(rng)
+        if rng.split(":")[0] != rng.split(":")[-1]:
+            ws.merge_cells(rng)
         c = ws[rng.split(":")[0]]
         c.value = title
         c.font = Font(name="微软雅黑", size=font_size, bold=True, color=font_color)

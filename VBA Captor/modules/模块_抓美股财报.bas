@@ -35,6 +35,7 @@ Public Sub RunUSStatement(ByVal strKind As String, ByVal targetSheet As String, 
     Dim dictIndicatorSet As Object: Set dictIndicatorSet = CreateObject("Scripting.Dictionary")
     Dim dictCategoryMap As Object: Set dictCategoryMap = CreateObject("Scripting.Dictionary")
     Dim dictCompanyName As Object: Set dictCompanyName = CreateObject("Scripting.Dictionary")
+    Dim dictReportingCurrency As Object: Set dictReportingCurrency = CreateObject("Scripting.Dictionary")
     Dim collCodes As New Collection
     Dim collDiagRows As New Collection
 
@@ -95,7 +96,7 @@ Public Sub RunUSStatement(ByVal strKind As String, ByVal targetSheet As String, 
             Err.Clear
             Call FetchAndAccumulateUSCompany(strCode, conceptMap, strQuarter, CLng(fetchYear), _
                                               dictData, dictPeriodSet, dictIndicatorSet, dictCategoryMap, _
-                                              strKind, collDiagRows)
+                                              strKind, collDiagRows, dictReportingCurrency)
             If Err.Number <> 0 Then
                 If CLng(fetchYear) = lngYear Then
                     mainErrNum = Err.Number
@@ -167,10 +168,9 @@ NextRow:
 
     Application.StatusBar = "写入: " & targetSheet
     DoEvents
-    Dim dictReportingCurrency As Object: Set dictReportingCurrency = CreateObject("Scripting.Dictionary")
     Dim usCode As Variant
     For Each usCode In arrCodes
-        dictReportingCurrency(CStr(usCode)) = "USD"
+        If Not dictReportingCurrency.Exists(CStr(usCode)) Then dictReportingCurrency(CStr(usCode)) = "USD"
     Next usCode
 
     Dim hookKind As String
@@ -265,7 +265,8 @@ Private Sub FetchAndAccumulateUSCompany(ByVal strTicker As String, _
                                          ByRef dictIndicatorSet As Object, _
                                          ByRef dictCategoryMap As Object, _
                                          Optional ByVal strKind As String = "BalanceSheet", _
-                                         Optional ByVal collDiagRows As Collection = Nothing)
+                                         Optional ByVal collDiagRows As Collection = Nothing, _
+                                         Optional ByRef dictReportingCurrency As Object = Nothing)
     Dim strCIK As String, strUrl As String, strJson As String
 
     ' Phase 4b-14a: EDGAR 先写临时字典; 只有确认不用雪球 fallback 后才合并到正式输出。
@@ -281,8 +282,9 @@ Private Sub FetchAndAccumulateUSCompany(ByVal strTicker As String, _
 
     If edgarErrNum <> 0 Then
         If XueqiuSupportsKind(strKind) Then
-            FetchUSFromXueqiu strTicker, strKind, conceptMap, strQuarter, lngYear, _
-                              dictData, dictPeriodSet, dictIndicatorSet, dictCategoryMap, collDiagRows
+            FetchUSFallbackAfterXueqiu strTicker, strKind, conceptMap, strQuarter, lngYear, _
+                                       dictData, dictPeriodSet, dictIndicatorSet, dictCategoryMap, _
+                                       collDiagRows, dictReportingCurrency, edgarErrDesc
             Exit Sub
         Else
             Err.Raise vbObjectError + 526, "FetchUS", edgarErrDesc
@@ -294,8 +296,9 @@ Private Sub FetchAndAccumulateUSCompany(ByVal strTicker As String, _
 
     If Not parsed.Exists("facts") Then
         If XueqiuSupportsKind(strKind) Then
-            FetchUSFromXueqiu strTicker, strKind, conceptMap, strQuarter, lngYear, _
-                              dictData, dictPeriodSet, dictIndicatorSet, dictCategoryMap, collDiagRows
+            FetchUSFallbackAfterXueqiu strTicker, strKind, conceptMap, strQuarter, lngYear, _
+                                       dictData, dictPeriodSet, dictIndicatorSet, dictCategoryMap, _
+                                       collDiagRows, dictReportingCurrency, "JSON 缺少 facts"
             Exit Sub
         Else
             Err.Raise vbObjectError + 530, "FetchUS", "JSON 缺少 facts: " & strTicker
@@ -322,6 +325,7 @@ Private Sub FetchAndAccumulateUSCompany(ByVal strTicker As String, _
     If HasAnyCoreLabel(tempData, strTicker, CoreLabelsForKind(strKind)) Then
         CommitTempUSData strTicker, tempData, tempPeriodSet, tempIndicatorSet, tempCategoryMap, _
                          dictData, dictPeriodSet, dictIndicatorSet, dictCategoryMap
+        If Not dictReportingCurrency Is Nothing Then dictReportingCurrency(strTicker) = "USD"
         AppendDiagnosticsForConceptMap strTicker, strKind, conceptMap, dictMatchInfo, _
                                        fuzzyTaxonomy, fuzzyTaxonomyName, collDiagRows
         Exit Sub
@@ -339,6 +343,7 @@ Private Sub FetchAndAccumulateUSCompany(ByVal strTicker As String, _
     If HasAnyCoreLabel(tempData, strTicker, CoreLabelsForKind(strKind)) Then
         CommitTempUSData strTicker, tempData, tempPeriodSet, tempIndicatorSet, tempCategoryMap, _
                          dictData, dictPeriodSet, dictIndicatorSet, dictCategoryMap
+        If Not dictReportingCurrency Is Nothing Then dictReportingCurrency(strTicker) = "USD"
         AppendDiagnosticsForConceptMap strTicker, strKind, conceptMap, dictMatchInfo, _
                                        fuzzyTaxonomy, fuzzyTaxonomyName, collDiagRows
         Exit Sub
@@ -346,8 +351,9 @@ Private Sub FetchAndAccumulateUSCompany(ByVal strTicker As String, _
 
     AppendNonUsdDiagnostics strTicker, strKind, conceptMap, dictMatchInfo, collDiagRows
     If XueqiuSupportsKind(strKind) Then
-        FetchUSFromXueqiu strTicker, strKind, conceptMap, strQuarter, lngYear, _
-                          dictData, dictPeriodSet, dictIndicatorSet, dictCategoryMap, collDiagRows
+        FetchUSFallbackAfterXueqiu strTicker, strKind, conceptMap, strQuarter, lngYear, _
+                                   dictData, dictPeriodSet, dictIndicatorSet, dictCategoryMap, _
+                                   collDiagRows, dictReportingCurrency, "no core EDGAR fields matched"
     Else
         AddMissingDiagnosticsForCompany strTicker, strKind, conceptMap, collDiagRows, _
                                         "no core EDGAR fields matched"
@@ -1152,6 +1158,526 @@ XqErr:
         "[stage=" & stage & "] 原始错误号=" & origNum & _
         "; 原始来源=" & origSource & "; " & origDesc
 End Sub
+
+
+Private Sub FetchUSFallbackAfterXueqiu(ByVal strTicker As String, _
+                                       ByVal strKind As String, _
+                                       ByVal conceptMap As Variant, _
+                                       ByVal strQuarter As String, _
+                                       ByVal lngYear As Long, _
+                                       ByRef dictData As Object, _
+                                       ByRef dictPeriodSet As Object, _
+                                       ByRef dictIndicatorSet As Object, _
+                                       ByRef dictCategoryMap As Object, _
+                                       Optional ByVal collDiagRows As Collection = Nothing, _
+                                       Optional ByRef dictReportingCurrency As Object = Nothing, _
+                                       Optional ByVal triggerReason As String = "")
+    On Error Resume Next
+    Err.Clear
+    FetchUSFromXueqiu strTicker, strKind, conceptMap, strQuarter, lngYear, _
+                      dictData, dictPeriodSet, dictIndicatorSet, dictCategoryMap, collDiagRows
+    If Err.Number = 0 Then
+        If Not dictReportingCurrency Is Nothing Then dictReportingCurrency(strTicker) = "USD"
+        On Error GoTo 0
+        Exit Sub
+    End If
+
+    Dim xqErrNum As Long: xqErrNum = Err.Number
+    Dim xqErrSource As String: xqErrSource = Err.Source
+    Dim xqErrDesc As String: xqErrDesc = Err.Description
+    Err.Clear
+    On Error GoTo 0
+
+    If ReadStockAnalysisFallbackEnabled() = "开" And StockAnalysisUSSupportsKind(strKind) _
+            And StockAnalysisUSSupportsTicker(strTicker) Then
+        On Error Resume Next
+        Err.Clear
+        FetchUSFromStockAnalysis strTicker, strKind, conceptMap, strQuarter, lngYear, _
+                                 dictData, dictPeriodSet, dictIndicatorSet, dictCategoryMap, _
+                                 collDiagRows, dictReportingCurrency, triggerReason & "; xueqiu_failed=" & xqErrDesc
+        If Err.Number = 0 Then
+            On Error GoTo 0
+            Exit Sub
+        End If
+
+        Dim saErrDesc As String: saErrDesc = Err.Description
+        Err.Clear
+        On Error GoTo 0
+        Err.Raise vbObjectError + 592, "FetchUSFallbackAfterXueqiu", _
+            "雪球 fallback 失败: " & xqErrDesc & "; stockanalysis fallback 失败: " & saErrDesc
+    Else
+        Err.Raise xqErrNum, xqErrSource, xqErrDesc
+    End If
+End Sub
+
+
+Private Sub FetchUSFromStockAnalysis(ByVal strTicker As String, _
+                                     ByVal strKind As String, _
+                                     ByVal conceptMap As Variant, _
+                                     ByVal strQuarter As String, _
+                                     ByVal lngYear As Long, _
+                                     ByRef dictData As Object, _
+                                     ByRef dictPeriodSet As Object, _
+                                     ByRef dictIndicatorSet As Object, _
+                                     ByRef dictCategoryMap As Object, _
+                                     Optional ByVal collDiagRows As Collection = Nothing, _
+                                     Optional ByRef dictReportingCurrency As Object = Nothing, _
+                                     Optional ByVal triggerReason As String = "")
+    Dim stage As String: stage = "init"
+    On Error GoTo SaErr
+
+    stage = "BuildUrl"
+    Dim strUrl As String: strUrl = StockAnalysisUSUrl(strTicker, strKind)
+    Dim cacheKey As String
+    cacheKey = "stockanalysis_US_" & UCase$(strTicker) & "_" & strKind & "_annual"
+
+    stage = "HttpGet"
+    Dim strHtml As String: strHtml = StockAnalysisUSHttpGet(strUrl, cacheKey)
+    Dim reportingCurrency As String: reportingCurrency = StockAnalysisUSFinancialCurrency(strHtml)
+    If Len(reportingCurrency) = 0 Then reportingCurrency = "USD"
+    If reportingCurrency = "CNY" Then reportingCurrency = "RMB"
+
+    stage = "ParseHtml"
+    Dim objHtml As Object: Set objHtml = CreateObject("htmlfile")
+    objHtml.Open
+    objHtml.Write strHtml
+    objHtml.Close
+
+    Dim tables As Object: Set tables = objHtml.getElementsByTagName("table")
+    If tables Is Nothing Or tables.Length = 0 Then
+        Err.Raise vbObjectError + 593, "FetchUSFromStockAnalysis", _
+            "stockanalysis 页面未找到 HTML table: " & strUrl
+    End If
+
+    Dim objTb As Object: Set objTb = tables.Item(0)
+    If objTb.Rows.Length < 2 Then
+        Err.Raise vbObjectError + 594, "FetchUSFromStockAnalysis", _
+            "stockanalysis table 行数不足: " & strUrl
+    End If
+
+    Dim periods As Object: Set periods = CreateObject("Scripting.Dictionary")
+    Dim headerYearRow As Object: Set headerYearRow = objTb.Rows.Item(0)
+    Dim headerDateRow As Object: Set headerDateRow = headerYearRow
+    Dim dataStartRow As Long: dataStartRow = 1
+    If objTb.Rows.Length > 1 Then
+        If InStr(1, StockAnalysisUSCellText(objTb.Rows.Item(1), 0), "Period Ending", vbTextCompare) > 0 Then
+            Set headerDateRow = objTb.Rows.Item(1)
+            dataStartRow = 2
+        End If
+    End If
+    Dim j As Long, headerText As String, periodEnd As String
+    For j = 1 To headerDateRow.Cells.Length - 1
+        headerText = StockAnalysisUSCellText(headerYearRow, j) & " " & StockAnalysisUSCellText(headerDateRow, j)
+        periodEnd = StockAnalysisUSPeriodFromHeader(headerText)
+        If Len(periodEnd) > 0 Then
+            If StockAnalysisUSMatchPeriod(periodEnd, strQuarter, lngYear, headerText) Then _
+                periods.Item(CStr(j)) = periodEnd
+        End If
+    Next j
+    If periods.Count = 0 Then
+        Err.Raise vbObjectError + 595, "FetchUSFromStockAnalysis", _
+            "stockanalysis 无匹配期间: " & strTicker & " / " & strQuarter & " / " & lngYear
+    End If
+
+    Dim dictRows As Object: Set dictRows = CreateObject("Scripting.Dictionary")
+    dictRows.CompareMode = vbTextCompare
+    Dim r As Long, rowLabel As String
+    For r = dataStartRow To objTb.Rows.Length - 1
+        rowLabel = StockAnalysisUSCellText(objTb.Rows.Item(r), 0)
+        If Len(rowLabel) > 0 Then
+            If Not dictRows.Exists(rowLabel) Then dictRows.Add rowLabel, objTb.Rows.Item(r)
+        End If
+    Next r
+
+    Dim mapSA As Object: Set mapSA = StockAnalysisUSFieldMap(strKind)
+    Dim dictMatchInfo As Object: Set dictMatchInfo = CreateObject("Scripting.Dictionary")
+    dictMatchInfo.CompareMode = vbTextCompare
+
+    Dim dictCompany As Object
+    If dictData.Exists(strTicker) Then
+        Set dictCompany = dictData.Item(strTicker)
+    Else
+        Set dictCompany = CreateObject("Scripting.Dictionary")
+        dictData.Add strTicker, dictCompany
+    End If
+
+    Dim ci As Long, mapEntry As Variant, strCat As String, strLabel As String
+    Dim candidates As Variant, cand As Variant, candIdx As Long, totalCand As Long
+    Dim objRow As Object, key As Variant, rawValue As String, scaledValue As Double
+    Dim dictPer As Object, matchPeriodEnd As String
+
+    For ci = LBound(conceptMap) To UBound(conceptMap)
+        mapEntry = conceptMap(ci)
+        strCat = CStr(mapEntry(0))
+        strLabel = CStr(mapEntry(1))
+        If Not mapSA.Exists(strLabel) Then GoTo NextSaConcept
+
+        candidates = mapSA.Item(strLabel)
+        totalCand = UBound(candidates) - LBound(candidates) + 1
+        candIdx = 0
+        For Each cand In candidates
+            candIdx = candIdx + 1
+            If dictRows.Exists(CStr(cand)) Then
+                Set objRow = dictRows.Item(CStr(cand))
+                matchPeriodEnd = ""
+
+                For Each key In periods.Keys
+                    j = CLng(key)
+                    If j < objRow.Cells.Length Then
+                        rawValue = StockAnalysisUSCellText(objRow, j)
+                        If StockAnalysisUSTryValue(rawValue, scaledValue) Then
+                            periodEnd = CStr(periods.Item(key))
+                            If periodEnd > matchPeriodEnd Then matchPeriodEnd = periodEnd
+                            If Not dictPeriodSet.Exists(periodEnd) Then dictPeriodSet.Add periodEnd, True
+                            If Not dictIndicatorSet.Exists(strLabel) Then
+                                dictIndicatorSet.Add strLabel, dictIndicatorSet.Count
+                                If Not dictCategoryMap.Exists(strLabel) Then dictCategoryMap.Add strLabel, strCat
+                            End If
+                            If dictCompany.Exists(periodEnd) Then
+                                Set dictPer = dictCompany.Item(periodEnd)
+                            Else
+                                Set dictPer = CreateObject("Scripting.Dictionary")
+                                dictCompany.Add periodEnd, dictPer
+                            End If
+                            dictPer(strLabel) = scaledValue
+                        End If
+                    End If
+                Next key
+
+                If Len(matchPeriodEnd) > 0 Then
+                    dictMatchInfo(strLabel) = Array(CStr(cand), candIdx, totalCand, matchPeriodEnd)
+                    Exit For
+                End If
+            End If
+        Next cand
+NextSaConcept:
+    Next ci
+
+    If Not HasAnyCoreLabel(dictData, strTicker, CoreLabelsForKind(strKind)) Then
+        Err.Raise vbObjectError + 596, "FetchUSFromStockAnalysis", _
+            "stockanalysis 未匹配核心字段: " & strTicker & " / " & strKind
+    End If
+
+    AppendStockAnalysisUSDiagnostics strTicker, strKind, conceptMap, dictMatchInfo, _
+                                     reportingCurrency, triggerReason, collDiagRows
+    If Not dictReportingCurrency Is Nothing Then dictReportingCurrency(strTicker) = reportingCurrency
+    Application.Wait Now + TimeSerial(0, 0, 2)
+    Exit Sub
+
+SaErr:
+    Dim origNum As Long: origNum = Err.Number
+    Dim origSource As String: origSource = Err.Source
+    Dim origDesc As String: origDesc = Err.Description
+    Err.Clear
+    Err.Raise vbObjectError + 597, "FetchUSFromStockAnalysis", _
+        "[stage=" & stage & "] 原始错误号=" & origNum & _
+        "; 原始来源=" & origSource & "; " & origDesc
+End Sub
+
+
+Private Sub AppendStockAnalysisUSDiagnostics(ByVal strTicker As String, _
+                                             ByVal strKind As String, _
+                                             ByVal conceptMap As Variant, _
+                                             ByVal dictMatchInfo As Object, _
+                                             ByVal reportingCurrency As String, _
+                                             ByVal triggerReason As String, _
+                                             ByVal collDiagRows As Collection)
+    If collDiagRows Is Nothing Then Exit Sub
+    Dim i As Long, strLabel As String, info As Variant, noteText As String
+    For i = LBound(conceptMap) To UBound(conceptMap)
+        strLabel = CStr(conceptMap(i)(1))
+        If dictMatchInfo.Exists(strLabel) Then
+            info = dictMatchInfo.Item(strLabel)
+            If CLng(info(1)) = 1 Then
+                noteText = "stockanalysis_primary"
+            Else
+                noteText = "stockanalysis_alt[" & CStr(info(1)) & "/" & CStr(info(2)) & "]"
+            End If
+            If Len(triggerReason) > 0 Then noteText = noteText & "; trigger=" & triggerReason
+            AddDiagnosticRow collDiagRows, strTicker, strKind, strLabel, "OK_STOCKANALYSIS", _
+                             "stockanalysis (fallback)", "stockanalysis", CStr(info(0)), _
+                             reportingCurrency, "90", noteText, _
+                             FxRateTextForDiagnostic(reportingCurrency, CStr(info(3)), strKind)
+        Else
+            AddDiagnosticRow collDiagRows, strTicker, strKind, strLabel, "MISSING", _
+                             "stockanalysis (fallback)", "stockanalysis", "—", _
+                             reportingCurrency, "—", "stockanalysis field not mapped"
+        End If
+    Next i
+End Sub
+
+
+Private Function StockAnalysisUSSupportsKind(ByVal strKind As String) As Boolean
+    Select Case strKind
+        Case "BalanceSheet", "Income", "CashFlow"
+            StockAnalysisUSSupportsKind = True
+        Case Else
+            StockAnalysisUSSupportsKind = False
+    End Select
+End Function
+
+
+Private Function StockAnalysisUSSupportsTicker(ByVal strTicker As String) As Boolean
+    Select Case UCase$(Trim$(strTicker))
+        Case "BABA", "JD", "PDD"
+            StockAnalysisUSSupportsTicker = True
+        Case Else
+            StockAnalysisUSSupportsTicker = False
+    End Select
+End Function
+
+
+Private Function StockAnalysisUSUrl(ByVal strTicker As String, ByVal strKind As String) As String
+    Dim pathPart As String
+    Select Case strKind
+        Case "BalanceSheet": pathPart = "financials/balance-sheet/"
+        Case "Income":       pathPart = "financials/"
+        Case "CashFlow":     pathPart = "financials/cash-flow-statement/"
+        Case Else
+            Err.Raise vbObjectError + 598, "StockAnalysisUSUrl", _
+                "stockanalysis US 不支持报表类型: " & strKind
+    End Select
+    StockAnalysisUSUrl = "https://stockanalysis.com/stocks/" & LCase$(Trim$(strTicker)) & "/" & pathPart
+End Function
+
+
+Private Function StockAnalysisUSHttpGet(ByVal strUrl As String, ByVal cacheKey As String) As String
+    Dim cached As String: cached = ReadLocalHttpCache(cacheKey)
+    If Len(cached) > 0 Then
+        StockAnalysisUSHttpGet = cached
+        Exit Function
+    End If
+
+    Dim objWinHttp As Object, arrByte() As Byte
+    Set objWinHttp = CreateObject("WinHttp.WinHttpRequest.5.1")
+    With objWinHttp
+        .SetTimeouts 30000, 60000, 60000, 60000
+        .Open "GET", strUrl, False
+        .SetRequestHeader "User-Agent", _
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " & _
+            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        .SetRequestHeader "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        .SetRequestHeader "Accept-Language", "en-US,en;q=0.9,zh-CN;q=0.8"
+        .SetRequestHeader "Accept-Encoding", "identity"
+        .Send
+        .WaitForResponse 60
+        If .Status < 200 Or .Status >= 300 Then
+            Err.Raise vbObjectError + 599, "StockAnalysisUSHttpGet", _
+                "HTTP " & .Status & " for " & strUrl
+        End If
+        arrByte = .ResponseBody
+    End With
+    StockAnalysisUSHttpGet = USByteToStr(arrByte, "utf-8")
+    WriteLocalHttpCache cacheKey, StockAnalysisUSHttpGet
+End Function
+
+
+Private Function StockAnalysisUSFieldMap(ByVal strKind As String) As Object
+    Dim mapSA As Object: Set mapSA = CreateObject("Scripting.Dictionary")
+    mapSA.CompareMode = vbTextCompare
+
+    Select Case strKind
+        Case "BalanceSheet"
+            mapSA.Add "Cash & equivalents", Array("Cash & Equivalents")
+            mapSA.Add "Marketable securities (current)", Array("Short-Term Investments")
+            mapSA.Add "Accounts receivable, net", Array("Accounts Receivable", "Total Trade Receivables", "Other Receivables")
+            mapSA.Add "Inventory", Array("Inventory")
+            mapSA.Add "Other current assets", Array("Other Current Assets")
+            mapSA.Add "Total current assets", Array("Total Current Assets")
+            mapSA.Add "Property, plant & equipment, net", Array("Net Property, Plant & Equipment")
+            mapSA.Add "Goodwill", Array("Goodwill")
+            mapSA.Add "Intangible assets", Array("Other Intangible Assets")
+            mapSA.Add "Other non-current assets", Array("Other Long-Term Assets")
+            mapSA.Add "Total assets", Array("Total Assets")
+            mapSA.Add "Accounts payable", Array("Accounts Payable")
+            mapSA.Add "Short-term debt", Array("Short-Term Debt", "Current Portion of Long-Term Debt")
+            mapSA.Add "Other current liabilities", Array("Other Current Liabilities", "Accrued Expenses")
+            mapSA.Add "Total current liabilities", Array("Total Current Liabilities")
+            mapSA.Add "Long-term debt", Array("Long-Term Debt")
+            mapSA.Add "Other non-current liabilities", Array("Other Long-Term Liabilities")
+            mapSA.Add "Total non-current liabilities", Array("Total Long-Term Liabilities")
+            mapSA.Add "Total liabilities", Array("Total Liabilities")
+            mapSA.Add "Common stock", Array("Common Stock", "Additional Paid-in Capital")
+            mapSA.Add "Retained earnings", Array("Retained Earnings")
+            mapSA.Add "Accumulated OCI", Array("Accumulated Other Comprehensive Income")
+            mapSA.Add "Total stockholders' equity", Array("Total Common Shareholders' Equity", "Shareholders' Equity")
+            mapSA.Add "Total liabilities & equity", Array("Total Liabilities & Equity")
+        Case "Income"
+            mapSA.Add "Revenue", Array("Revenue")
+            mapSA.Add "Cost of goods & services sold", Array("Cost of Revenue")
+            mapSA.Add "Gross profit", Array("Gross Profit")
+            mapSA.Add "R&D expense", Array("Research & Development")
+            mapSA.Add "SG&A expense", Array("Selling, General & Admin")
+            mapSA.Add "Total operating expenses", Array("Total Operating Expenses")
+            mapSA.Add "Operating income", Array("Operating Income")
+            mapSA.Add "Non-operating income / (expense)", Array("Other Non-Operating Income (Expense)", "Total Non-Operating Income (Expense)")
+            mapSA.Add "Interest expense", Array("Interest Expense")
+            mapSA.Add "Pre-tax income", Array("Pretax Income")
+            mapSA.Add "Income tax expense", Array("Provision for Income Taxes")
+            mapSA.Add "Net income", Array("Net Income", "Net Income to Common")
+            mapSA.Add "Basic EPS (USD/share)", Array("EPS (Basic)")
+            mapSA.Add "Diluted EPS (USD/share)", Array("EPS (Diluted)")
+        Case "CashFlow"
+            mapSA.Add "Net income", Array("Net Income")
+            mapSA.Add "Depreciation & amortization", Array("Depreciation & Amortization")
+            mapSA.Add "Stock-based compensation", Array("Stock-Based Compensation")
+            mapSA.Add "Other non-cash items", Array("Other Adjustments")
+            mapSA.Add "Change in AR", Array("Change in Receivables")
+            mapSA.Add "Change in inventory", Array("Changes in Inventories")
+            mapSA.Add "Change in AP", Array("Changes in Accounts Payable")
+            mapSA.Add "Change in deferred revenue", Array("Changes in Unearned Revenue")
+            mapSA.Add "Change in other operating liabilities", Array("Changes in Other Operating Activities")
+            mapSA.Add "Cash from operations", Array("Operating Cash Flow")
+            mapSA.Add "Capex", Array("Capital Expenditures")
+            mapSA.Add "Business acquisitions", Array("Payments for Business Acquisitions")
+            mapSA.Add "Proceeds from sale of PP&E", Array("Sale of Property, Plant & Equipment")
+            mapSA.Add "Other investing", Array("Other Investing Activities")
+            mapSA.Add "Cash from investing", Array("Investing Cash Flow")
+            mapSA.Add "Dividends paid", Array("Common Dividends Paid")
+            mapSA.Add "Stock repurchases", Array("Repurchase of Common Stock")
+            mapSA.Add "Stock issuance", Array("Issuance of Common Stock")
+            mapSA.Add "Long-term debt issued", Array("Long-Term Debt Issued")
+            mapSA.Add "Long-term debt repaid", Array("Long-Term Debt Repaid")
+            mapSA.Add "Other financing", Array("Other Financing Activities")
+            mapSA.Add "Cash from financing", Array("Financing Cash Flow")
+            mapSA.Add "FX effect on cash", Array("Effect of Exchange Rate Changes on Cash and Cash Equivalents")
+            mapSA.Add "Net change in cash (incl FX)", Array("Net Cash Flow")
+            mapSA.Add "Cash at end of period", Array("Cash & Equivalents")
+        Case Else
+            Err.Raise vbObjectError + 600, "StockAnalysisUSFieldMap", _
+                "stockanalysis US 不支持报表类型: " & strKind
+    End Select
+
+    Set StockAnalysisUSFieldMap = mapSA
+End Function
+
+
+Private Function StockAnalysisUSFinancialCurrency(ByVal strHtml As String) As String
+    Dim re As Object: Set re = CreateObject("VBScript.RegExp")
+    re.Pattern = "financial:""([A-Z]{3})"""
+    re.IgnoreCase = True
+    If re.Test(strHtml) Then
+        StockAnalysisUSFinancialCurrency = UCase$(re.Execute(strHtml)(0).SubMatches(0))
+    Else
+        StockAnalysisUSFinancialCurrency = "USD"
+    End If
+End Function
+
+
+Private Function StockAnalysisUSPeriodFromHeader(ByVal headerText As String) As String
+    Dim s As String: s = UCase$(StockAnalysisUSCleanText(headerText))
+    If Len(s) = 0 Or Left$(s, 3) = "TTM" Then Exit Function
+
+    Dim re As Object: Set re = CreateObject("VBScript.RegExp")
+    re.Pattern = "(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(\d{1,2}),\s+(\d{4})"
+    re.Global = True
+    If Not re.Test(s) Then Exit Function
+
+    Dim matches As Object: Set matches = re.Execute(s)
+    Dim m As Object: Set m = matches.Item(matches.Count - 1)
+    Dim monthNum As Long: monthNum = StockAnalysisUSMonthNumber(CStr(m.SubMatches(0)))
+    If monthNum = 0 Then Exit Function
+    StockAnalysisUSPeriodFromHeader = Format$(DateSerial(CLng(m.SubMatches(2)), monthNum, CLng(m.SubMatches(1))), "yyyy-mm-dd")
+End Function
+
+
+Private Function StockAnalysisUSMatchPeriod(ByVal periodEnd As String, _
+                                            ByVal strQuarter As String, _
+                                            ByVal lngYear As Long, _
+                                            ByVal headerText As String) As Boolean
+    If Len(periodEnd) < 10 Then Exit Function
+    If lngYear > 0 Then
+        If CLng(Left$(periodEnd, 4)) <> lngYear Then Exit Function
+    End If
+
+    Select Case UCase$(Trim$(strQuarter))
+        Case "全部", ""
+            StockAnalysisUSMatchPeriod = True
+        Case "Q1"
+            StockAnalysisUSMatchPeriod = (Right$(periodEnd, 5) = "03-31")
+        Case "Q2"
+            StockAnalysisUSMatchPeriod = (Right$(periodEnd, 5) = "06-30")
+        Case "Q3"
+            StockAnalysisUSMatchPeriod = (Right$(periodEnd, 5) = "09-30")
+        Case "Q4"
+            StockAnalysisUSMatchPeriod = (Left$(UCase$(Trim$(headerText)), 2) = "FY")
+        Case Else
+            StockAnalysisUSMatchPeriod = True
+    End Select
+End Function
+
+
+Private Function StockAnalysisUSCellText(ByVal objRow As Object, ByVal colIndex As Long) As String
+    On Error Resume Next
+    StockAnalysisUSCellText = StockAnalysisUSCleanText(CStr(objRow.Cells.Item(colIndex).innerText))
+    Err.Clear
+    On Error GoTo 0
+End Function
+
+
+Private Function StockAnalysisUSCleanText(ByVal rawText As String) As String
+    Dim s As String: s = CStr(rawText)
+    s = Replace(s, Chr$(160), " ")
+    s = Replace(s, vbCr, " ")
+    s = Replace(s, vbLf, " ")
+    s = Replace(s, vbTab, " ")
+    Do While InStr(1, s, "  ", vbBinaryCompare) > 0
+        s = Replace(s, "  ", " ")
+    Loop
+    StockAnalysisUSCleanText = Trim$(s)
+End Function
+
+
+Private Function StockAnalysisUSTryValue(ByVal rawValue As String, ByRef scaledValue As Double) As Boolean
+    Dim s As String: s = StockAnalysisUSCleanText(rawValue)
+    If Len(s) = 0 Or s = "-" Or s = "--" Then Exit Function
+    s = Replace(s, ",", "")
+    s = Replace(s, "−", "-")
+    If Left$(s, 1) = "(" And Right$(s, 1) = ")" Then s = "-" & Mid$(s, 2, Len(s) - 2)
+
+    Dim isPct As Boolean
+    If Right$(s, 1) = "%" Then
+        isPct = True
+        s = Left$(s, Len(s) - 1)
+    End If
+    If Not IsNumeric(s) Then Exit Function
+
+    scaledValue = CDbl(s)
+    If isPct Then scaledValue = scaledValue / 100#
+    StockAnalysisUSTryValue = True
+End Function
+
+
+Private Function StockAnalysisUSMonthNumber(ByVal mon As String) As Long
+    Select Case UCase$(mon)
+        Case "JAN": StockAnalysisUSMonthNumber = 1
+        Case "FEB": StockAnalysisUSMonthNumber = 2
+        Case "MAR": StockAnalysisUSMonthNumber = 3
+        Case "APR": StockAnalysisUSMonthNumber = 4
+        Case "MAY": StockAnalysisUSMonthNumber = 5
+        Case "JUN": StockAnalysisUSMonthNumber = 6
+        Case "JUL": StockAnalysisUSMonthNumber = 7
+        Case "AUG": StockAnalysisUSMonthNumber = 8
+        Case "SEP": StockAnalysisUSMonthNumber = 9
+        Case "OCT": StockAnalysisUSMonthNumber = 10
+        Case "NOV": StockAnalysisUSMonthNumber = 11
+        Case "DEC": StockAnalysisUSMonthNumber = 12
+    End Select
+End Function
+
+
+Private Function USByteToStr(arrByte, ByVal strCharSet As String) As String
+    With CreateObject("Adodb.Stream")
+        .Type = 1
+        .Open
+        .Write arrByte
+        .Position = 0
+        .Type = 2
+        .Charset = strCharSet
+        USByteToStr = .ReadText
+        .Close
+    End With
+End Function
 
 
 ' --------- 雪球 fallback 支持的美股报表类型 ---------
