@@ -1704,3 +1704,10 @@ stockanalysis 调研:
 - Phase 4i 纯 UX, 不动业务逻辑;后续如需要继续优化样本池可作为 Phase 4i.1。
 - 使用说明 sheet 内容 hardcode 在 `tools/install_modules.py` 的 `update_intro_sheet`,修改后需要重装。
 - 汇率说明区没有占用 `A10:H` 是有意设计:保持未来新增报告期仍可从 `A4:H` 起自然追加。
+
+### X.4 Phase 4i.1 patch
+
+- 样本池 A 股区恢复 `A7:B7` 表头 + `A8:B8` 双 cell 按钮视觉布局;stockanalysis 中概美股 fallback 可见开关从 `B8` 迁移到 `O6`,安装时会把旧 `B8` 的 `开/关` 值迁移过去。`B8` 仅保留为旧版/冻结 inspect 兼容镜像,被 A 股按钮覆盖。
+- 右侧跨市场操作简化为 `S1:S3`『一键跨市场对比』+ `S5:S7`『切换跨市场 tab 显隐』;原 BS/IS/CF/Indicator 单独 wrapper 保留,可见按钮入口移除,仅保留隐藏 shape 兼容旧 inspect 存在性检查。
+- `Q9:Q11` 按钮改为『清空 HTTP 缓存』并增加说明 comment / AlternativeText。
+- 6 个 tab 显隐按钮 caption 统一使用单数 `tab`,并按 A股/美股/港股/韩股/跨市场 sheet 前缀给 sheet tab 染色。

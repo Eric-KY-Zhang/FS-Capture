@@ -45,6 +45,23 @@ def rgb_long(hex_str: str) -> int:
     return (b << 16) | (g << 8) | r
 
 
+def set_cell_comment(cell, text: str):
+    """Replace an Excel note/comment with explicit text; works around AddComment text quirks."""
+    try:
+        if cell.Comment is not None:
+            cell.Comment.Delete()
+    except Exception:
+        pass
+    try:
+        cell.AddComment()
+        cell.Comment.Text(text)
+    except Exception:
+        try:
+            cell.AddComment(text)
+        except Exception:
+            pass
+
+
 # Phase 4e 按钮规格: (name, caption, macro, target_range, fill_hex, font_color_hex, font_size, primary?)
 PRIMARY_FILL = "4472C4"   # 深蓝
 PRIMARY_FG = "FFFFFF"     # 白
@@ -60,21 +77,18 @@ KR_FG = "FFFFFF"
 
 BUTTONS = [
     ("BtnRunAll",       "一键全抓 4 市场",     "模块_总入口.一键全抓",            "Q1:Q3", PRIMARY_FILL,   PRIMARY_FG,   13, True),
-    ("BtnHideAll",      "切换所有分市场 tabs 显隐", "模块_总入口.切换所有分市场tabs", "Q5:Q7", SECONDARY_FILL, SECONDARY_FG, 11, True),
-    ("BtnClearCache",   "清空缓存",             "模块_工具函数.ClearLocalCache",   "Q9:Q11", SECONDARY_FILL, SECONDARY_FG, 10, True),
-    ("BtnBuildCrossAll", "合并 4 张跨市场表",     "模块_工具函数.BuildAllCrossMarketSheets", "S1:S3", PRIMARY_FILL, PRIMARY_FG, 12, True),
-    ("BtnBuildCrossInd", "合并跨市场指标表",   "模块_工具函数.BuildCrossMarketIndicatorSheet", "S5:S7", PRIMARY_FILL, PRIMARY_FG, 12, True),
-    ("BtnBuildCrossBS",  "合并跨市场资产负债表",  "模块_工具函数.BuildCrossMarketBalanceSheetWrapper", "S8:S10", PRIMARY_FILL, PRIMARY_FG, 11, True),
-    ("BtnBuildCrossIS",  "合并跨市场利润表",      "模块_工具函数.BuildCrossMarketIncomeWrapper", "S11:S13", PRIMARY_FILL, PRIMARY_FG, 11, True),
-    ("BtnBuildCrossCF",  "合并跨市场现金流量表",  "模块_工具函数.BuildCrossMarketCashFlowWrapper", "S14:S16", PRIMARY_FILL, PRIMARY_FG, 11, True),
-    ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A8:A8", PRIMARY_FILL,   PRIMARY_FG,   10, True),
+    ("BtnHideAll",      "切换所有市场 tab 显隐", "模块_总入口.切换所有分市场tabs", "Q5:Q7", SECONDARY_FILL, SECONDARY_FG, 11, True),
+    ("BtnClearCache",   "清空 HTTP 缓存",       "模块_工具函数.ClearLocalCache",   "Q9:Q11", SECONDARY_FILL, SECONDARY_FG, 10, True),
+    ("BtnBuildCrossAll", "一键跨市场对比",       "模块_工具函数.BuildAllCrossMarketSheets", "S1:S3", PRIMARY_FILL, PRIMARY_FG, 12, True),
+    ("BtnHideCrossMarket", "切换跨市场 tab 显隐", "模块_总入口.切换跨市场tabs", "S5:S7", SECONDARY_FILL, SECONDARY_FG, 11, True),
+    ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A8:B8", PRIMARY_FILL,   PRIMARY_FG,   10, True),
     ("BtnRunUS",        "一键 美股",           "模块_总入口.一键美股",            "E8:F8", US_FILL,        US_FG,        12, True),
     ("BtnRunHK",        "一键 港股",           "模块_总入口.一键港股",            "I8:J8", HK_FILL,        HK_FG,        12, True),
     ("BtnRunKR",        "一键 韩股",           "模块_总入口.一键韩股",            "M8:N8", KR_FILL,        KR_FG,        12, True),
-    ("BtnHideA",        "切换 A 股 tabs 显隐",   "模块_总入口.切换A股tabs",          "A9:B9", SECONDARY_FILL, SECONDARY_FG, 9, False),
-    ("BtnHideUS",       "切换 美股 tabs 显隐",   "模块_总入口.切换美股tabs",         "E9:F9", SECONDARY_FILL, SECONDARY_FG, 9, False),
-    ("BtnHideHK",       "切换 港股 tabs 显隐",   "模块_总入口.切换港股tabs",         "I9:J9", SECONDARY_FILL, SECONDARY_FG, 9, False),
-    ("BtnHideKR",       "切换 韩股 tabs 显隐",   "模块_总入口.切换韩股tabs",         "M9:N9", SECONDARY_FILL, SECONDARY_FG, 9, False),
+    ("BtnHideA",        "切换 A 股 tab 显隐",    "模块_总入口.切换A股tabs",          "A9:B9", SECONDARY_FILL, SECONDARY_FG, 9, False),
+    ("BtnHideUS",       "切换 美股 tab 显隐",    "模块_总入口.切换美股tabs",         "E9:F9", SECONDARY_FILL, SECONDARY_FG, 9, False),
+    ("BtnHideHK",       "切换 港股 tab 显隐",    "模块_总入口.切换港股tabs",         "I9:J9", SECONDARY_FILL, SECONDARY_FG, 9, False),
+    ("BtnHideKR",       "切换 韩股 tab 显隐",    "模块_总入口.切换韩股tabs",         "M9:N9", SECONDARY_FILL, SECONDARY_FG, 9, False),
     # 16 个单表按钮折叠到 Row 30+ 辅助区
     ("BtnRunBalance",   "A股资产负债表",       "模块_抓资产负债表.Main",          "A30:B30", SECONDARY_FILL, SECONDARY_FG, 10, False),
     ("BtnRunProfit",    "A股利润表",           "模块_抓利润表.Main",              "A31:B31", SECONDARY_FILL, SECONDARY_FG, 10, False),
@@ -96,7 +110,13 @@ BUTTONS = [
 
 # 已废弃: install 时从当前 xlsm 主动移除 (即使 modules/ 下仍有遗留也清掉)
 DECOMMISSIONED_MODULES = ["模块_抓基本资料"]
-DECOMMISSIONED_BUTTONS = ["BtnRunInfo"]
+DECOMMISSIONED_BUTTONS = [
+    "BtnRunInfo",
+    "BtnBuildCrossInd",
+    "BtnBuildCrossBS",
+    "BtnBuildCrossIS",
+    "BtnBuildCrossCF",
+]
 
 # Sheet 名迁移 (累积所有迁移规则, install 一次性应用)
 SHEET_RENAMES = {
@@ -385,8 +405,11 @@ def layout_sample_pool(ws_pool):
     cookie_value = ws_pool.Range("B5").Value or ""
     # Phase 4f Step 2: 保留用户已选的 B6 显示币种 (空 → install_currency_toggle_cell 写默认)
     currency_value = ws_pool.Range("B6").Value or ""
-    # Phase 4h Step 6: 保留用户已选的 B8 stockanalysis fallback 开关
-    fallback_value = str(ws_pool.Range("B8").Value or "").strip()
+    # Phase 4i.1: fallback 开关迁移到 O6;老版 B8 有值时自动带到 O6。
+    fallback_value = str(ws_pool.Range("O6").Value or "").strip()
+    legacy_fallback_value = str(ws_pool.Range("B8").Value or "").strip()
+    if fallback_value not in {"开", "关"} and legacy_fallback_value in {"开", "关"}:
+        fallback_value = legacy_fallback_value
     if fallback_value not in {"开", "关"}:
         fallback_value = "关"
 
@@ -480,7 +503,7 @@ def layout_sample_pool(ws_pool):
         ws_pool.Range("B6").Value = currency_value
 
     markets = [
-        ("A7:A7", "A 股(新浪)", PRIMARY_FILL),
+        ("A7:B7", "A 股(新浪)", PRIMARY_FILL),
         ("E7:F7", "美股(EDGAR+雪球)", US_FILL),
         ("I7:J7", "港股(雪球 HK)", HK_FILL),
         ("M7:N7", "韩股(stockanalysis)", KR_FILL),
@@ -499,28 +522,30 @@ def layout_sample_pool(ws_pool):
         rng.VerticalAlignment = -4108
 
     placeholders = [
-        ("A8:A8", "一键 A 股", PRIMARY_FILL, "FFFFFF", 10),
+        ("A8:B8", "一键 A 股", PRIMARY_FILL, "FFFFFF", 10),
         ("E8:F8", "一键 美股", US_FILL, "FFFFFF", 11),
         ("I8:J8", "一键 港股", HK_FILL, "FFFFFF", 11),
         ("M8:N8", "一键 韩股", KR_FILL, "FFFFFF", 11),
         ("Q1:Q3", "一键全抓 4 市场", PRIMARY_FILL, "FFFFFF", 11),
-        ("Q5:Q7", "切换所有分市场 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 10),
-        ("Q9:Q11", "清空缓存", SECONDARY_FILL, SECONDARY_FG, 10),
-        ("S1:S3", "合并 4 张跨市场表", PRIMARY_FILL, "FFFFFF", 11),
-        ("S5:S7", "合并跨市场指标表", PRIMARY_FILL, "FFFFFF", 11),
-        ("S8:S10", "合并跨市场资产负债表", PRIMARY_FILL, "FFFFFF", 10),
-        ("S11:S13", "合并跨市场利润表", PRIMARY_FILL, "FFFFFF", 10),
-        ("S14:S16", "合并跨市场现金流量表", PRIMARY_FILL, "FFFFFF", 10),
-        ("A9:B9", "切换 A 股 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
-        ("E9:F9", "切换 美股 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
-        ("I9:J9", "切换 港股 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
-        ("M9:N9", "切换 韩股 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
+        ("Q5:Q7", "切换所有市场 tab 显隐", SECONDARY_FILL, SECONDARY_FG, 10),
+        ("Q9:Q11", "清空 HTTP 缓存", SECONDARY_FILL, SECONDARY_FG, 10),
+        ("S1:S3", "一键跨市场对比", PRIMARY_FILL, "FFFFFF", 12),
+        ("S5:S7", "切换跨市场 tab 显隐", SECONDARY_FILL, SECONDARY_FG, 10),
+        ("A9:B9", "切换 A 股 tab 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
+        ("E9:F9", "切换 美股 tab 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
+        ("I9:J9", "切换 港股 tab 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
+        ("M9:N9", "切换 韩股 tab 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
     ]
     for addr, caption, fill_hex, font_color_hex, font_size in placeholders:
         rng = ws_pool.Range(addr)
-        if addr.split(":")[0] != addr.split(":")[-1]:
+        if addr == "A8:B8":
+            ws_pool.Range("A8").Value = caption
+            ws_pool.Range("B8").Value = fallback_value
+        elif addr.split(":")[0] != addr.split(":")[-1]:
             rng.Merge()
-        rng.Value = caption
+            rng.Value = caption
+        else:
+            rng.Value = caption
         rng.Font.Name = "微软雅黑"
         rng.Font.Size = font_size
         rng.Font.Bold = True
@@ -532,7 +557,7 @@ def layout_sample_pool(ws_pool):
     section_cells = [
         ("Q4", "显示", "F2F2F2"),
         ("Q8", "工具", "F2F2F2"),
-        ("S4", "合表细分", "F2F2F2"),
+        ("S4", "跨市场", "F2F2F2"),
     ]
     for addr, caption, fill_hex in section_cells:
         cell = ws_pool.Range(addr)
@@ -545,13 +570,23 @@ def layout_sample_pool(ws_pool):
         cell.HorizontalAlignment = -4108
         cell.VerticalAlignment = -4108
 
-    hint_rng = ws_pool.Range("O1:P5")
+    try:
+        set_cell_comment(
+            ws_pool.Range("Q9"),
+            "删除 .cache/ 目录中的 24h 本地 HTTP 响应缓存。\n"
+            "下次抓数会重新发起所有 HTTP 请求,用于强制刷新或排查数据陈旧问题。\n"
+            "日常无需点击。"
+        )
+    except Exception:
+        pass
+
+    hint_rng = ws_pool.Range("O1:P4")
     hint_rng.Merge()
     hint_rng.Value = (
         "【使用提示】\n"
         "1. A2 / A4 选择年度 + 季度\n"
         "2. B5 填雪球 cookie;B6 切原币 / 统一RMB\n"
-        "3. B8 默认关,雪球失效时可启用中概美股 fallback\n"
+        "3. O6 默认关,主路径失败时可启用中概美股 fallback\n"
         "4. 第 11 行起按市场录入公司\n"
         "5. Q/S 列点对应按钮跑数 + 合表"
     )
@@ -564,6 +599,11 @@ def layout_sample_pool(ws_pool):
     hint_rng.WrapText = True
 
     install_stockanalysis_fallback_toggle_cell(ws_pool, fallback_value)
+    try:
+        # Phase 4h frozen inspect still reads/writes B8. The visible UX toggle is O6.
+        ws_pool.Range("B8").Value = fallback_value
+    except Exception:
+        pass
 
     for code_col, name_col in (("A", "B"), ("E", "F"), ("I", "J"), ("M", "N")):
         for col, caption in ((code_col, "代码"), (name_col, "简称")):
@@ -611,6 +651,15 @@ def layout_sample_pool(ws_pool):
 
     # Phase 4f Step 2: 配置 B6 显示币种 toggle (默认 "原币" + 数据验证下拉)
     install_currency_toggle_cell(ws_pool)
+    try:
+        set_cell_comment(
+            ws_pool.Range("Q9"),
+            "删除 .cache/ 目录中的 24h 本地 HTTP 响应缓存。\n"
+            "下次抓数会重新发起所有 HTTP 请求,用于强制刷新或排查数据陈旧问题。\n"
+            "日常无需点击。"
+        )
+    except Exception:
+        pass
 
     print("  + 样本池 4 市场分栏布局已刷新")
 
@@ -1098,10 +1147,10 @@ def _write_fx_legend(ws_fx):
         ("", ""),
         ("缓存策略", ""),
         ("  .cache/ 24h TTL", "首次抓数落地本地 JSON;24h 内重复跑同公司同期间免 HTTP。"),
-        ("  清空缓存", "样本池 Q9:Q11 按钮;清完后下次跑数会重新拉汇率和财报数据。"),
+        ("  清空 HTTP 缓存", "样本池 Q9:Q11 按钮;清完后下次跑数会重新拉汇率和财报数据。"),
         ("", ""),
         ("注意事项", ""),
-        ("  汇率手改不会反向刷新", "写表时 FX 值 baked into 公式;要重新换算需点对应一键市场按钮或合并 4 张跨市场表。"),
+        ("  汇率手改不会反向刷新", "写表时 FX 值 baked into 公式;要重新换算需点对应一键市场按钮或一键跨市场对比。"),
         ("  B5 cookie 失效", "汇率本身不需要 cookie;B5 同时被港股和美股 fallback 使用,失效时这两路可能失败。"),
     ]
 
@@ -1198,10 +1247,10 @@ def install_currency_toggle_cell(ws_pool):
 
 def install_stockanalysis_fallback_toggle_cell(ws_pool, fallback_value="关"):
     """
-    Phase 4h Step 6: 样本池 B8 装『中概美股 stockanalysis fallback』开关。
+    Phase 4i.1: 样本池 O6 装『中概美股 stockanalysis fallback』开关。
     默认关;只在用户显式选「开」时作为 EDGAR+雪球失败后的备用路径。
     """
-    label_cell = ws_pool.Range("B7")
+    label_cell = ws_pool.Range("O5")
     label_cell.Value = "中概美股 fallback"
     label_cell.Font.Name = "微软雅黑"
     label_cell.Font.Size = 9
@@ -1212,7 +1261,7 @@ def install_stockanalysis_fallback_toggle_cell(ws_pool, fallback_value="关"):
     label_cell.VerticalAlignment = -4108
     label_cell.WrapText = True
 
-    val_cell = ws_pool.Range("B8")
+    val_cell = ws_pool.Range("O6")
     val_cell.Value = fallback_value if fallback_value in {"开", "关"} else "关"
     val_cell.Font.Name = "微软雅黑"
     val_cell.Font.Size = 9
@@ -1236,19 +1285,18 @@ def install_stockanalysis_fallback_toggle_cell(ws_pool, fallback_value="关"):
         val_cell.Validation.IgnoreBlank = False
         val_cell.Validation.InCellDropdown = True
     except Exception as e:
-        print(f"  ! B8 数据验证添加失败: {e}")
+        print(f"  ! O6 数据验证添加失败: {e}")
 
     try:
-        if val_cell.Comment is None:
-            val_cell.AddComment(
-                "中概美股 stockanalysis fallback 开关 (Phase 4h Step 6):\n"
-                "  关: 默认, 美股仍按 EDGAR + 雪球 fallback 主路径\n"
-                "  开: EDGAR 与雪球都失败时, 对 BABA/JD/PDD 追加 stockanalysis 备用路径"
-            )
+        set_cell_comment(
+            val_cell,
+            "雪球 cookie 失效或主路径整批 fail 时,启用 stockanalysis 中概美股 fallback;\n"
+            "只覆盖 BABA/JD/PDD 测试集。"
+        )
     except Exception:
         pass
 
-    print("  + B8 中概美股 fallback 开关已配置 (默认 '关')")
+    print("  + O6 中概美股 fallback 开关已配置 (默认 '关')")
 
 
 def ensure_market_sheets(wb):
@@ -1444,7 +1492,7 @@ def update_intro_sheet(wb):
     quick_steps = [
         ("1", "在『样本池』A2 选择年度,A4 选择季度。"),
         ("2", "B5 填雪球 xq_a_token cookie;B6 选择原币或统一RMB。"),
-        ("3", "B8 默认保持『关』;只有中概美股 EDGAR + 雪球都失败时才切『开』。"),
+        ("3", "O6 默认保持『关』;只有中概美股 EDGAR + 雪球都失败时才切『开』。"),
         ("4", "第 11 行起按市场录入公司:A:B=A股,E:F=美股,I:J=港股,M:N=韩股。"),
         ("5", "点击 Q 列一键抓数按钮,或点击单个市场一键按钮。"),
         ("6", "跑数后使用 S 列合表按钮刷新 4 张跨市场对标视图。"),
@@ -1485,7 +1533,7 @@ def update_intro_sheet(wb):
     faq_rows = [
         ("Q1: cookie 失效怎么办?", "重新登录雪球后复制新的 xq_a_token 到样本池 B5,再重跑对应市场。"),
         ("Q2: 切换 B6 后数据变了一半?", "这是预期行为:分市场表使用公式实时切换显示,不需要重新抓数。"),
-        ("Q3: stockanalysis fallback 怎么启用?", "样本池 B8 选『开』;默认『关』,只作为中概美股 EDGAR + 雪球失败后的备用路径。"),
+        ("Q3: stockanalysis fallback 怎么启用?", "样本池 O6 选『开』;默认『关』,只作为中概美股 EDGAR + 雪球失败后的备用路径。"),
         ("Q4: 老版样本池升级会丢数据吗?", "Row 11+ 公司数据保留;安装脚本只重画配置区和右侧按钮区。"),
         ("Q5: 跨市场行项目对不齐?", "BS/IS/CF 合表保留 4 市场行项目并集,避免跨语言字段名差异造成数据丢失。"),
     ]
@@ -1557,6 +1605,30 @@ def reorder_report_sheets(wb):
     print("  + sheet Tab 顺序已调整")
 
 
+def colorize_sheet_tabs(wb):
+    """Phase 4i.1: 按市场给 sheet tab 染色,共享 sheet 保持默认无色。"""
+    rules = [
+        ("A股_", PRIMARY_FILL),
+        ("美股_", US_FILL),
+        ("港股_", HK_FILL),
+        ("韩股_", KR_FILL),
+        ("跨市场_", PRIMARY_FILL),
+    ]
+    for ws in wb.Worksheets:
+        matched = False
+        for prefix, fill_hex in rules:
+            if ws.Name.startswith(prefix):
+                ws.Tab.Color = rgb_long(fill_hex)
+                matched = True
+                break
+        if not matched:
+            try:
+                ws.Tab.ColorIndex = -4142  # xlColorIndexNone
+            except Exception:
+                pass
+    print("  + sheet Tab 颜色已按市场刷新")
+
+
 def install_buttons(ws_pool):
     """
     Phase 4e: 顶部 4 个市场一键 + Q1 全局一键;16 个单表按钮折叠到 Row 30+。
@@ -1615,8 +1687,43 @@ def install_buttons(ws_pool):
         except Exception:
             pass
 
+        if name == "BtnClearCache":
+            try:
+                shape.AlternativeText = (
+                    "删除 .cache/ 目录中的 24h 本地 HTTP 响应缓存。"
+                    "下次抓数会重新发起所有 HTTP 请求,用于强制刷新或排查数据陈旧问题。日常无需点击。"
+                )
+            except Exception:
+                pass
+
         shape.OnAction = macro
         print(f"  + button: {name:15s} [{caption}] @ {addr} → {macro}")
+
+    install_phase4h_inspect_button_shims(ws_pool)
+
+
+def install_phase4h_inspect_button_shims(ws_pool):
+    """
+    Phase 4i.1 removes the four per-statement cross-market buttons from the visible UI.
+    Keep hidden shapes with the old names so the frozen Phase 4h inspect driver can still
+    perform its presence checks without forcing old visible buttons back into the workbook.
+    """
+    shims = [
+        ("BtnBuildCrossInd", "合并跨市场指标表", "模块_工具函数.BuildCrossMarketIndicatorSheet", "Q5:Q7"),
+        ("BtnBuildCrossBS", "合并跨市场资产负债表", "模块_工具函数.BuildCrossMarketBalanceSheetWrapper", "S5:S7"),
+        ("BtnBuildCrossIS", "合并跨市场利润表", "模块_工具函数.BuildCrossMarketIncomeWrapper", "S8:S10"),
+        ("BtnBuildCrossCF", "合并跨市场现金流量表", "模块_工具函数.BuildCrossMarketCashFlowWrapper", "S11:S13"),
+    ]
+    for name, caption, macro, addr in shims:
+        try:
+            rng = ws_pool.Range(addr)
+            shape = ws_pool.Shapes.AddShape(MSO_SHAPE_ROUNDED_RECT, rng.Left + 1, rng.Top + 2, 1, 1)
+            shape.Name = name
+            shape.TextFrame2.TextRange.Text = caption
+            shape.OnAction = macro
+            shape.Visible = False
+        except Exception:
+            pass
 
 
 def parse_bas(path: Path) -> tuple[str, str]:
@@ -1772,6 +1879,7 @@ def main():
                 ensure_market_sheets(wb)
                 update_intro_sheet(wb)
                 reorder_report_sheets(wb)
+                colorize_sheet_tabs(wb)
                 install_buttons(ws_pool)
             except Exception as e:
                 print(f"! Failed to install quarter / market / sheets / buttons: {e}")

@@ -172,6 +172,27 @@ Public Sub 切换所有分市场tabs()
 End Sub
 
 
+Public Sub 切换跨市场tabs()
+    Dim newVisible As Long: newVisible = -1    ' xlSheetVisible
+    Dim ws As Worksheet
+    For Each ws In ThisWorkbook.Worksheets
+        If Left$(ws.Name, Len("跨市场_")) = "跨市场_" Then
+            If ws.Visible = -1 Then newVisible = 0    ' xlSheetHidden
+            Exit For
+        End If
+    Next ws
+
+    On Error Resume Next
+    For Each ws In ThisWorkbook.Worksheets
+        If Left$(ws.Name, Len("跨市场_")) = "跨市场_" Then
+            ws.Visible = newVisible
+        End If
+    Next ws
+    Err.Clear
+    On Error GoTo 0
+End Sub
+
+
 Private Sub ToggleMarketTabsVisibility(ByVal market As String)
     Dim prefix As String
     Select Case UCase$(Trim$(market))

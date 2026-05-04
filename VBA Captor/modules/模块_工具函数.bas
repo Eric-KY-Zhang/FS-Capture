@@ -683,11 +683,16 @@ End Function
 
 
 ' --------- Phase 4h Step 6: 中概美股 stockanalysis fallback 开关 ---------
-'   B8 = "开" 才启用; 空 / 关 / 单元格不存在 -> "关"
+'   O6 = "开" 才启用;B8 仅保留为旧版/冻结 inspect 兼容镜像
 Public Function ReadStockAnalysisFallbackEnabled() As String
     On Error Resume Next
     Dim s As String
-    s = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("B8").Value))
+    s = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("O6").Value))
+    If s <> "开" Then
+        Dim legacy As String
+        legacy = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("B8").Value))
+        If legacy = "开" Then s = "开"
+    End If
     If Err.Number <> 0 Or s <> "开" Then s = "关"
     Err.Clear
     On Error GoTo 0
