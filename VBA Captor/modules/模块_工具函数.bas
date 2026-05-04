@@ -2343,13 +2343,21 @@ NextRow:
     arrPeriods = SortPeriodsDesc(dictPeriodSet)
     arrIndicators = IndicatorsByInsertion(dictIndicatorSet)
 
+    Dim hookKind As String
+    Select Case LCase$(Trim$(strType))
+        Case "balance":   hookKind = "BalanceSheet"
+        Case "profit":    hookKind = "Income"
+        Case "cash":      hookKind = "CashFlow"
+        Case Else:        hookKind = ""
+    End Select
+
     Application.StatusBar = "写入: " & targetSheet
     DoEvents
     WriteWideTable wsTarget, arrCodes, dictCompanyName, dictData, _
                     arrPeriods, arrIndicators, dictCategoryMap, _
                     perCompanyPeriods:=False, _
                     dictReportingCurrency:=Nothing, _
-                    statementKind:=strKind
+                    statementKind:=hookKind
     RefreshA1CurrencyComment wsTarget, targetSheet
 
 CleanUp:
