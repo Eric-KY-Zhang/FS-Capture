@@ -286,6 +286,27 @@ def build_wide_table(ws):
     ws.freeze_panes = "D3" if is_indicator else "C3"
 
 
+def build_cross_market_indicator_sheet(ws):
+    """Phase 4g Step 2: 跨市场_指标表模板。"""
+    ws.column_dimensions["A"].width = 18
+    ws.column_dimensions["B"].width = 28
+    ws.column_dimensions["C"].width = 34
+    ws.sheet_format.defaultColWidth = 15.875
+
+    fill = PatternFill("solid", fgColor=DARK_BLUE)
+    for cell_addr, txt in (("A1", "指标类型"), ("B1", "指标名称"), ("C1", "英文指标名")):
+        cell = ws[cell_addr]
+        cell.value = txt
+        cell.font = HEADER_FONT
+        cell.fill = fill
+        cell.alignment = CENTER
+        cell.border = BORDER
+
+    ws.row_dimensions[1].height = 22
+    ws.row_dimensions[2].height = 20
+    ws.freeze_panes = "D3"
+
+
 def build_corp_info(ws):
     headers = [
         ("A", "股票代码", 12),
@@ -432,6 +453,10 @@ def main():
 
     ws_diag_kr = wb.create_sheet("韩股_抓取诊断")
     build_diagnostic_sheet(ws_diag_kr, "韩股")
+
+    # ---- Phase 4g Step 2: 跨市场指标合并视图 ----
+    ws_cross = wb.create_sheet("跨市场_指标表")
+    build_cross_market_indicator_sheet(ws_cross)
 
     # ---- Phase 4f Step 2: 汇率 sheet (跨市场共享缓存, 排序最末) ----
     ws_fx = wb.create_sheet("汇率")

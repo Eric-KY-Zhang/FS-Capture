@@ -1479,6 +1479,218 @@ Public Sub BuildStandardIndicatorSheet(ByVal market As String)
 End Sub
 
 
+' --------- Phase 4g Step 2: 把 4 张分市场指标表合并展示到『跨市场_指标表』 ---------
+'   - 复用 18 项标准指标 (StandardIndicatorDefs)
+'   - 横向铺 公司×报告期, perCompanyPeriods=True
+'   - 每个 cell 是 formula, 引到分市场指标表对应 cell
+'   - 自动跳过空的分市场表
+Public Sub BuildCrossMarketIndicatorSheet()
+    Const TARGET_SHEET As String = "跨市场_指标表"
+    Dim wsTarget As Worksheet
+    On Error Resume Next
+    Set wsTarget = ThisWorkbook.Sheets(TARGET_SHEET)
+    On Error GoTo 0
+    If wsTarget Is Nothing Then
+        Err.Raise vbObjectError + 580, "BuildCrossMarketIndicatorSheet", _
+            TARGET_SHEET & " sheet 不存在, 请重装模板"
+    End If
+
+    Application.ScreenUpdating = False
+    On Error Resume Next
+    wsTarget.UsedRange.UnMerge
+    On Error GoTo 0
+    wsTarget.Cells.Clear
+
+    wsTarget.Range("A1").Value = "指标类型"
+    wsTarget.Range("B1").Value = "指标名称"
+    wsTarget.Range("C1").Value = "英文指标名"
+    With wsTarget.Range("A1:C1")
+        .Font.Name = "微软雅黑": .Font.Size = 11: .Font.Bold = True
+        .Font.Color = RGB(255, 255, 255): .Interior.Color = RGB(68, 114, 196)
+        .HorizontalAlignment = xlCenter: .VerticalAlignment = xlCenter
+    End With
+
+    Dim collCompanies As Collection: Set collCompanies = New Collection
+    Dim markets As Variant: markets = Array("A", "US", "HK", "KR")
+    Dim m As Variant
+    For Each m In markets
+        Dim sourceSheet As String: sourceSheet = MarketIndicatorSheetName(CStr(m))
+        If WorksheetExists(sourceSheet) Then
+            CollectCompaniesFromIndicatorSheet ThisWorkbook.Sheets(sourceSheet), CStr(m), collCompanies
+        End If
+    Next m
+
+    If collCompanies.Count = 0 Then
+        wsTarget.Range("A3").Value = "(还没有任何分市场指标表数据, 请先点 一键X股 跑数后再合并)"
+        Application.ScreenUpdating = True
+        Exit Sub
+    End If
+
+    Dim targetCol As Long: targetCol = 4
+    Dim i As Long, j As Long
+    For i = 1 To collCompanies.Count
+        Dim entry As Variant: entry = collCompanies(i)
+        Dim mkt As String: mkt = CStr(entry(0))
+        Dim displayName As String: displayName = CStr(entry(2)) & " [" & mkt & "]"
+        Dim srcSheet As String: srcSheet = CStr(entry(3))
+        Dim srcStartCol As Long: srcStartCol = CLng(entry(4))
+        Dim periodCount As Long: periodCount = CLng(entry(5))
+
+        Dim companyStartCol As Long: companyStartCol = targetCol
+        wsTarget.Cells(1, companyStartCol).Value = displayName
+        If periodCount > 1 Then
+            wsTarget.Range(wsTarget.Cells(1, companyStartCol), _
+                           wsTarget.Cells(1, companyStartCol + periodCount - 1)).Merge
+        End If
+        With wsTarget.Cells(1, companyStartCol)
+            .Font.Name = "微软雅黑": .Font.Size = 11: .Font.Bold = True
+            .Font.Color = RGB(255, 255, 255): .Interior.Color = RGB(68, 114, 196)
+            .HorizontalAlignment = xlCenter: .VerticalAlignment = xlCenter
+        End With
+
+        For j = 1 To periodCount
+            wsTarget.Cells(2, targetCol).Formula = "='" & srcSheet & "'!" & _
+                ThisWorkbook.Sheets(srcSheet).Cells(2, srcStartCol + j - 1).Address(False, False)
+            wsTarget.Cells(2, targetCol).NumberFormat = "yyyy-mm-dd"
+            With wsTarget.Cells(2, targetCol)
+                .Font.Name = "微软雅黑": .Font.Size = 10: .Font.Bold = True
+                .Font.Color = RGB(255, 255, 255): .Interior.Color = RGB(68, 114, 196)
+                .HorizontalAlignment = xlCenter: .VerticalAlignment = xlCenter
+            End With
+            targetCol = targetCol + 1
+        Next j
+    Next i
+
+    Dim lastCol As Long: lastCol = targetCol - 1
+
+    Dim defs As Variant: defs = StandardIndicatorDefs()
+    Dim stdCount As Long: stdCount = UBound(defs) - LBound(defs) + 1
+
+    Dim k As Long
+    For k = 0 To stdCount - 1
+        Dim rowNum As Long: rowNum = 3 + k
+        wsTarget.Cells(rowNum, 1).Value = CStr(defs(k)(0))
+        wsTarget.Cells(rowNum, 2).Value = CStr(defs(k)(1))
+        wsTarget.Cells(rowNum, 3).Value = CStr(defs(k)(2))
+
+        Dim writeCol As Long: writeCol = 4
+        For i = 1 To collCompanies.Count
+            entry = collCompanies(i)
+            srcSheet = CStr(entry(3))
+            srcStartCol = CLng(entry(4))
+            periodCount = CLng(entry(5))
+            Dim srcRow As Long: srcRow = 3 + k
+            For j = 1 To periodCount
+                wsTarget.Cells(rowNum, writeCol).Formula = "='" & srcSheet & "'!" & _
+                    ThisWorkbook.Sheets(srcSheet).Cells(srcRow, srcStartCol + j - 1).Address(False, False)
+                wsTarget.Cells(rowNum, writeCol).NumberFormat = CStr(defs(k)(4))
+                writeCol = writeCol + 1
+            Next j
+        Next i
+    Next k
+
+    wsTarget.Columns("A").ColumnWidth = 18
+    wsTarget.Columns("B").ColumnWidth = 28
+    wsTarget.Columns("C").ColumnWidth = 34
+    Dim col As Long
+    For col = 4 To lastCol
+        wsTarget.Columns(col).ColumnWidth = 15.875
+    Next col
+    wsTarget.Rows(1).RowHeight = 22
+    wsTarget.Rows(2).RowHeight = 20
+
+    Call SetBorderLine(wsTarget.Range(wsTarget.Cells(1, 1), _
+                                       wsTarget.Cells(2 + stdCount, lastCol)))
+
+    With wsTarget.Range(wsTarget.Cells(3, 1), wsTarget.Cells(2 + stdCount, 3))
+        .Font.Bold = True
+    End With
+
+    wsTarget.Activate
+    ActiveWindow.FreezePanes = False
+    wsTarget.Cells(3, 4).Select
+    ActiveWindow.FreezePanes = True
+    wsTarget.Cells(1, 1).Select
+
+    On Error Resume Next
+    If Not wsTarget.Range("A1").Comment Is Nothing Then wsTarget.Range("A1").Comment.Delete
+    On Error GoTo 0
+    Dim displayMode As String: displayMode = ReadDisplayCurrency()
+    Dim commentText As String
+    commentText = "跨市场指标合表 (公司数=" & collCompanies.Count & ")" & vbCrLf & _
+                  "数据源: 4 张分市场指标表 (引用公式, 自动同步)" & vbCrLf & _
+                  "当前显示模式: " & displayMode & vbCrLf & _
+                  "切换 B6 后请先重跑各市场, 再点 '合并跨市场指标表'"
+    wsTarget.Range("A1").AddComment commentText
+    wsTarget.Range("A1").Comment.Shape.TextFrame.AutoSize = True
+
+    Application.ScreenUpdating = True
+End Sub
+
+
+Private Function MarketIndicatorSheetName(ByVal market As String) As String
+    Select Case UCase$(Trim$(market))
+        Case "A":  MarketIndicatorSheetName = "A股_指标表"
+        Case "US": MarketIndicatorSheetName = "美股_指标表"
+        Case "HK": MarketIndicatorSheetName = "港股_指标表"
+        Case "KR": MarketIndicatorSheetName = "韩股_指标表"
+    End Select
+End Function
+
+
+Private Function WorksheetExists(ByVal sheetName As String) As Boolean
+    On Error Resume Next
+    Dim ws As Worksheet: Set ws = ThisWorkbook.Sheets(sheetName)
+    WorksheetExists = (Err.Number = 0 And Not ws Is Nothing)
+    Err.Clear
+    On Error GoTo 0
+End Function
+
+
+Private Sub CollectCompaniesFromIndicatorSheet(ByVal ws As Worksheet, _
+                                               ByVal market As String, _
+                                               ByRef outColl As Collection)
+    Dim startCol As Long: startCol = StandardDataStartCol(ws)
+    Dim lastCol As Long
+    lastCol = ws.Cells(2, ws.Columns.Count).End(xlToLeft).Column
+    If lastCol < startCol Then Exit Sub
+
+    Dim col As Long: col = startCol
+    Do While col <= lastCol
+        Dim companyHeader As String: companyHeader = StandardHeaderTextAt(ws, col)
+        If Len(Trim$(companyHeader)) = 0 Then
+            col = col + 1
+        Else
+            Dim spanEnd As Long: spanEnd = col
+            Do While spanEnd <= lastCol
+                If StandardHeaderTextAt(ws, spanEnd) = companyHeader Then
+                    spanEnd = spanEnd + 1
+                Else
+                    Exit Do
+                End If
+            Loop
+            Dim periodCount As Long: periodCount = spanEnd - col
+            Dim ticker As String: ticker = ExtractTickerFromHeader(companyHeader)
+
+            outColl.Add Array(market, ticker, companyHeader, ws.Name, col, periodCount)
+            col = spanEnd
+        End If
+    Loop
+End Sub
+
+
+Private Function ExtractTickerFromHeader(ByVal header As String) As String
+    Dim p1 As Long, p2 As Long
+    p1 = InStrRev(header, "(")
+    p2 = InStrRev(header, ")")
+    If p1 > 0 And p2 > p1 Then
+        ExtractTickerFromHeader = Mid$(header, p1 + 1, p2 - p1 - 1)
+    Else
+        ExtractTickerFromHeader = Trim$(header)
+    End If
+End Function
+
+
 ' --------- 指标表追加标准指标层 ---------
 '   market: "A" / "US" / "HK" / "KR"
 '   依赖对应市场的资产负债表、利润表已经生成; 缺字段时公式留空

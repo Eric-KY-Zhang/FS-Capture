@@ -259,6 +259,12 @@ Public Sub 一键全抓(Optional ByVal blnSilent As Boolean = False)
     DoEvents
     模块_抓韩股指标表.Main
 
+    ' Phase 4g Step 2: 一键全抓后自动刷新跨市场指标表
+    On Error Resume Next
+    BuildCrossMarketIndicatorSheet
+    Err.Clear
+    On Error GoTo CleanUp
+
 CleanUp:
     Dim runErrDesc As String
     If Err.Number <> 0 Then

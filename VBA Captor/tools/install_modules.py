@@ -60,6 +60,7 @@ KR_FG = "FFFFFF"
 
 BUTTONS = [
     ("BtnRunAll",       "一键全抓 4 市场",     "模块_总入口.一键全抓",            "Q1:Q3", PRIMARY_FILL,   PRIMARY_FG,   13, True),
+    ("BtnBuildCrossInd", "合并跨市场指标表",   "模块_工具函数.BuildCrossMarketIndicatorSheet", "Q5:Q7", PRIMARY_FILL, PRIMARY_FG, 12, True),
     ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A8:B8", PRIMARY_FILL,   PRIMARY_FG,   12, True),
     ("BtnRunUS",        "一键 美股",           "模块_总入口.一键美股",            "E8:F8", US_FILL,        US_FG,        12, True),
     ("BtnRunHK",        "一键 港股",           "模块_总入口.一键港股",            "I8:J8", HK_FILL,        HK_FG,        12, True),
@@ -813,6 +814,75 @@ def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
     return ws
 
 
+def _refresh_diagnostic_headers(ws):
+    """Phase 4g Step 1: self-heal diagnostic header to 11 columns without touching row 3+."""
+    headers = ["公司", "报表", "输出指标", "状态", "数据源",
+               "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注", "FX_Rate"]
+    widths = [14, 16, 30, 18, 18, 14, 42, 14, 10, 58, 12]
+
+    try:
+        ws.Range(ws.Cells(1, 1), ws.Cells(1, 11)).UnMerge()
+    except Exception:
+        pass
+
+    ws.Cells(1, 1).Value = f"{ws.Name.replace('_', '')} (每次跑数后自动刷新)"
+    ws.Range(ws.Cells(1, 1), ws.Cells(1, 11)).Merge()
+    title = ws.Range(ws.Cells(1, 1), ws.Cells(1, 11))
+    title.Font.Name = "微软雅黑"
+    title.Font.Size = 12
+    title.Font.Bold = True
+    title.Font.Color = rgb_long("FFFFFF")
+    title.Interior.Color = rgb_long("4472C4")
+    title.HorizontalAlignment = -4108
+    title.VerticalAlignment = -4108
+
+    for j, txt in enumerate(headers, start=1):
+        c = ws.Cells(2, j)
+        c.Value = txt
+        c.Font.Name = "微软雅黑"
+        c.Font.Size = 10
+        c.Font.Bold = True
+        c.Font.Color = rgb_long("FFFFFF")
+        c.Interior.Color = rgb_long("4472C4")
+        c.HorizontalAlignment = -4108
+        c.VerticalAlignment = -4108
+    for j, w in enumerate(widths, start=1):
+        ws.Columns(j).ColumnWidth = w
+    ws.Columns("A").NumberFormat = "@"
+    ws.Rows(1).RowHeight = 22
+    ws.Rows(2).RowHeight = 20
+
+
+def _make_cross_market_indicator_sheet(wb, name="跨市场_指标表"):
+    """Phase 4g Step 2: cross-market indicator view sheet."""
+    ws = wb.Worksheets.Add(After=wb.Sheets(wb.Sheets.Count))
+    ws.Name = name
+
+    headers = [("A", "指标类型", 18), ("B", "指标名称", 28), ("C", "英文指标名", 34)]
+    for col, txt, width in headers:
+        c = ws.Range(f"{col}1")
+        c.Value = txt
+        c.Font.Name = "微软雅黑"
+        c.Font.Size = 11
+        c.Font.Bold = True
+        c.Font.Color = rgb_long("FFFFFF")
+        c.Interior.Color = rgb_long("4472C4")
+        c.HorizontalAlignment = -4108
+        c.VerticalAlignment = -4108
+        ws.Columns(col).ColumnWidth = width
+
+    ws.Rows(1).RowHeight = 22
+    ws.Rows(2).RowHeight = 20
+    try:
+        ws.Activate()
+        wb.Application.ActiveWindow.SplitColumn = 3
+        wb.Application.ActiveWindow.SplitRow = 2
+        wb.Application.ActiveWindow.FreezePanes = True
+    except Exception:
+        pass
+    return ws
+
+
 def _make_fx_sheet(wb, name="汇率"):
     """Phase 4f Step 2: 汇率 sheet (8 列表头, 跨市场共享缓存)
       Row 1: 报告期/USDCNY期末/USDCNY期均/HKDCNY期末/HKDCNY期均/KRWCNY期末/KRWCNY期均/备注
@@ -930,11 +1000,13 @@ def ensure_market_sheets(wb):
 
     for diag_name in ("美股_抓取诊断", "港股_抓取诊断", "韩股_抓取诊断"):
         if diag_name in {sh.Name for sh in wb.Sheets}:
+            ws_diag = wb.Sheets(diag_name)
+            _refresh_diagnostic_headers(ws_diag)
             try:
-                wb.Sheets(diag_name).Visible = 0  # xlSheetHidden
+                ws_diag.Visible = 0  # xlSheetHidden
             except Exception:
                 pass
-            print(f"  ~ sheet 已存在: {diag_name}")
+            print(f"  ~ sheet 已存在 (表头已升级到 11 列): {diag_name}")
         else:
             ws_diag = _make_diagnostic_sheet(wb, diag_name)
             try:
@@ -942,6 +1014,13 @@ def ensure_market_sheets(wb):
             except Exception:
                 pass
             print(f"  + sheet 新建: {diag_name}")
+
+    # ---- Phase 4g Step 2: 跨市场指标合并视图 ----
+    if "跨市场_指标表" in {sh.Name for sh in wb.Sheets}:
+        print("  ~ sheet 已存在: 跨市场_指标表")
+    else:
+        _make_cross_market_indicator_sheet(wb, "跨市场_指标表")
+        print("  + sheet 新建: 跨市场_指标表")
 
     # ---- Phase 4f Step 2: 汇率 sheet (跨市场共享缓存) ----
     if "汇率" in {sh.Name for sh in wb.Sheets}:
@@ -1050,6 +1129,7 @@ def reorder_report_sheets(wb):
         "港股_抓取诊断",
         "韩股_资产负债表", "韩股_利润表", "韩股_现金流量表", "韩股_指标表",
         "韩股_抓取诊断",
+        "跨市场_指标表",
         "汇率",   # ← Phase 4f Step 2 新增 (跨市场共享 FX 缓存)
     ]
     diagnostic_names = {"美股_抓取诊断", "港股_抓取诊断", "韩股_抓取诊断"}
