@@ -1618,3 +1618,10 @@ stockanalysis 调研:
 - stockanalysis 切换 defer 到 Phase 4h;港股候选路径本轮不可用,中概美股需补 BS/CF 子页面抓样和单位审计。
 - POOL_DATA_START_ROW 迁移是 invasive change,老用户从 4f 升级时旧样本池数据自动迁移到 Row 11+。
 - 全局 hide-tab 按钮使用 `Q8:Q10`,保留 Round 1 已验收的 `Q5:Q7`『合并跨市场指标表』按钮。
+
+### V.4 附带修复(Phase 4g 期间发现并修复,不在原 plan 范围内)
+
+- [bug] A 股 statement kind 编译错误:`WriteWideTable` 收到 `"balance"` / `"profit"` / `"cash"` 但 Phase 4f 期望 `"BalanceSheet"` / `"Income"` / `"CashFlow"`。已在 `8341306` commit 加 `hookKind` 映射。
+- [bug] AAPL fiscal year 漂移导致指标增长率公式找不到 prior period。已在 `db500e5` commit 给 `FindPriorSamePeriodStatementColumn` 加 ±31 天 fuzzy match。
+- [enhance] 港股 BS/IS 增长率公式因为只拉当年没有可比期。已在 `db500e5` commit 加双年 fetch loop。
+- [note] `tools/inspect_phase4g_state.py` 作为 Phase 4g frozen 回归驱动保持不改;上述附带修复通过现有指标公式输出和 Phase 4g inspect 间接覆盖。
