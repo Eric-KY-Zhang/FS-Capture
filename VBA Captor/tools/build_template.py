@@ -125,7 +125,7 @@ def build_sample_pool(ws):
         "E": 8, "F": 18, "G": 2, "H": 2,
         "I": 7, "J": 14, "K": 2, "L": 2,
         "M": 8, "N": 16, "O": 2, "P": 2,
-        "Q": 22,
+        "Q": 22, "R": 2, "S": 24,
     }
     for col, w in col_widths.items():
         ws.column_dimensions[col].width = w
@@ -201,6 +201,10 @@ def build_sample_pool(ws):
         ("M8:N8", "一键 韩股", "FF7030A0", WHITE, 11),
         ("Q1:Q3", "一键全抓 4 市场", "FF4472C4", WHITE, 11),
         ("Q5:Q7", "合并跨市场指标表", "FF4472C4", WHITE, 11),
+        ("S1:S3", "合并 4 张跨市场表", "FF4472C4", WHITE, 11),
+        ("S5:S7", "合并跨市场资产负债表", "FF4472C4", WHITE, 10),
+        ("S8:S10", "合并跨市场利润表", "FF4472C4", WHITE, 10),
+        ("S11:S13", "合并跨市场现金流量表", "FF4472C4", WHITE, 10),
         ("A9:B9", "切换 A 股 tabs 显隐", SECONDARY_BLUE, SECONDARY_FG, 9),
         ("E9:F9", "切换 美股 tabs 显隐", SECONDARY_BLUE, SECONDARY_FG, 9),
         ("I9:J9", "切换 港股 tabs 显隐", SECONDARY_BLUE, SECONDARY_FG, 9),
@@ -315,6 +319,28 @@ def build_cross_market_indicator_sheet(ws):
     ws.row_dimensions[1].height = 22
     ws.row_dimensions[2].height = 20
     ws.freeze_panes = "D3"
+
+
+def build_cross_market_statement_sheet(ws, statement_label):
+    """Phase 4h Step 2: 跨市场 BS/IS/CF 合表模板。"""
+    ws.column_dimensions["A"].width = 30
+    ws.column_dimensions["B"].width = 40
+    ws.sheet_format.defaultColWidth = 15.875
+
+    fill = PatternFill("solid", fgColor=DARK_BLUE)
+    headers = (("A1", "大类"), ("B1", "指标名称"))
+    for cell_addr, txt in headers:
+        cell = ws[cell_addr]
+        cell.value = txt
+        cell.font = HEADER_FONT
+        cell.fill = fill
+        cell.alignment = CENTER
+        cell.border = BORDER
+
+    ws["A1"].comment = None
+    ws.row_dimensions[1].height = 22
+    ws.row_dimensions[2].height = 20
+    ws.freeze_panes = "C3"
 
 
 def build_corp_info(ws):
@@ -463,6 +489,11 @@ def main():
 
     ws_diag_kr = wb.create_sheet("韩股_抓取诊断")
     build_diagnostic_sheet(ws_diag_kr, "韩股")
+
+    # ---- Phase 4h Step 2: 跨市场 BS/IS/CF 合并视图 ----
+    for label in ("资产负债表", "利润表", "现金流量表"):
+        ws_cross_stmt = wb.create_sheet(f"跨市场_{label}")
+        build_cross_market_statement_sheet(ws_cross_stmt, label)
 
     # ---- Phase 4g Step 2: 跨市场指标合并视图 ----
     ws_cross = wb.create_sheet("跨市场_指标表")

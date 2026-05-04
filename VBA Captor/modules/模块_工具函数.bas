@@ -1629,6 +1629,249 @@ Public Sub BuildCrossMarketIndicatorSheet()
 End Sub
 
 
+' ========== Phase 4h Step 2: 跨市场 BS/IS/CF 行项目 mapping 提案 ==========
+' 现状: 4 张分市场 X 表的行项目通过 IndicatorsByInsertion/写表顺序收集,顺序 = 第一次出现顺序。
+'       4 市场行项目集合各自不同 (A 股中文口径 / US GAAP / IFRS / K-IFRS 差异)。
+'   方案 P1: 严格对齐 - 只展示 4 市场都有的字段 (公共子集)
+'   方案 P2: 全展示并集 - 把 4 市场所有字段都列出来,某市场没有就空白
+'   方案 P3: 分组展示 - 按"全 4 市场都有 / 仅 N 市场有"分块,块内排序
+' Codex 当前实现选: P2。
+' 理由: 当前样本 exact-name 交集 BS/IS/CF 都是 0,而并集约 115/47/105 行,规模可控;
+'       P2 不丢 A 股中文行项目,也能对齐 US/HK/KR 之间同名英文项目。
+' ========================================================================
+
+
+' --------- Phase 4h Step 2: 把 4 张分市场 BS/IS/CF 合并展示到对应『跨市场_<报表>』 ---------
+'   - statementKind: "BalanceSheet" / "Income" / "CashFlow"
+'   - 行项目集合: P2 并集,按市场顺序 A/US/HK/KR + 源表行顺序第一次出现
+'   - 列布局: 横向铺 公司×报告期 perCompanyPeriods=True (跟指标表一致)
+Public Sub BuildCrossMarketStatementSheet(ByVal statementKind As String)
+    Dim targetSheet As String, statementLabel As String
+    Select Case UCase$(Trim$(statementKind))
+        Case "BALANCESHEET"
+            targetSheet = "跨市场_资产负债表": statementLabel = "资产负债表"
+        Case "INCOME"
+            targetSheet = "跨市场_利润表": statementLabel = "利润表"
+        Case "CASHFLOW"
+            targetSheet = "跨市场_现金流量表": statementLabel = "现金流量表"
+        Case Else
+            Err.Raise vbObjectError + 581, "BuildCrossMarketStatementSheet", _
+                "未知 statementKind: " & statementKind
+    End Select
+
+    Dim wsTarget As Worksheet
+    On Error Resume Next
+    Set wsTarget = ThisWorkbook.Sheets(targetSheet)
+    On Error GoTo 0
+    If wsTarget Is Nothing Then
+        Err.Raise vbObjectError + 582, "BuildCrossMarketStatementSheet", _
+            targetSheet & " sheet 不存在, 请重装模板"
+    End If
+
+    Application.ScreenUpdating = False
+    On Error Resume Next
+    wsTarget.UsedRange.UnMerge
+    On Error GoTo 0
+    wsTarget.Cells.Clear
+
+    wsTarget.Range("A1").Value = "大类"
+    wsTarget.Range("B1").Value = "指标名称"
+    With wsTarget.Range("A1:B1")
+        .Font.Name = "微软雅黑": .Font.Size = 11: .Font.Bold = True
+        .Font.Color = RGB(255, 255, 255): .Interior.Color = RGB(68, 114, 196)
+        .HorizontalAlignment = xlCenter: .VerticalAlignment = xlCenter
+    End With
+
+    Dim collCompanies As Collection: Set collCompanies = New Collection
+    Dim rowColl As Collection: Set rowColl = New Collection
+    Dim rowDict As Object: Set rowDict = CreateObject("Scripting.Dictionary")
+    Dim markets As Variant: markets = Array("A", "US", "HK", "KR")
+    Dim m As Variant
+    For Each m In markets
+        Dim sourceSheet As String: sourceSheet = MarketStatementSheetName(CStr(m), statementLabel)
+        If WorksheetExists(sourceSheet) Then
+            CollectCompaniesFromIndicatorSheet ThisWorkbook.Sheets(sourceSheet), CStr(m), collCompanies
+            CollectRowsFromStatementSheet ThisWorkbook.Sheets(sourceSheet), rowColl, rowDict
+        End If
+    Next m
+
+    If collCompanies.Count = 0 Then
+        wsTarget.Range("A3").Value = "(还没有任何分市场" & statementLabel & "数据, 请先点 一键X股 跑数后再合并)"
+        Application.ScreenUpdating = True
+        Exit Sub
+    End If
+
+    Dim targetCol As Long: targetCol = 3
+    Dim i As Long, j As Long
+    For i = 1 To collCompanies.Count
+        Dim entry As Variant: entry = collCompanies(i)
+        Dim mkt As String: mkt = CStr(entry(0))
+        Dim displayName As String: displayName = CStr(entry(2)) & " [" & mkt & "]"
+        Dim srcSheet As String: srcSheet = CStr(entry(3))
+        Dim srcStartCol As Long: srcStartCol = CLng(entry(4))
+        Dim periodCount As Long: periodCount = CLng(entry(5))
+
+        Dim companyStartCol As Long: companyStartCol = targetCol
+        wsTarget.Cells(1, companyStartCol).Value = displayName
+        If periodCount > 1 Then
+            wsTarget.Range(wsTarget.Cells(1, companyStartCol), _
+                           wsTarget.Cells(1, companyStartCol + periodCount - 1)).Merge
+        End If
+        With wsTarget.Cells(1, companyStartCol)
+            .Font.Name = "微软雅黑": .Font.Size = 11: .Font.Bold = True
+            .Font.Color = RGB(255, 255, 255): .Interior.Color = RGB(68, 114, 196)
+            .HorizontalAlignment = xlCenter: .VerticalAlignment = xlCenter
+        End With
+
+        For j = 1 To periodCount
+            wsTarget.Cells(2, targetCol).Formula = "='" & srcSheet & "'!" & _
+                ThisWorkbook.Sheets(srcSheet).Cells(2, srcStartCol + j - 1).Address(False, False)
+            wsTarget.Cells(2, targetCol).NumberFormat = "yyyy-mm-dd"
+            With wsTarget.Cells(2, targetCol)
+                .Font.Name = "微软雅黑": .Font.Size = 10: .Font.Bold = True
+                .Font.Color = RGB(255, 255, 255): .Interior.Color = RGB(68, 114, 196)
+                .HorizontalAlignment = xlCenter: .VerticalAlignment = xlCenter
+            End With
+            targetCol = targetCol + 1
+        Next j
+    Next i
+
+    Dim lastCol As Long: lastCol = targetCol - 1
+    Dim rowCount As Long: rowCount = rowColl.Count
+    If rowCount = 0 Then
+        wsTarget.Range("A3").Value = "(分市场" & statementLabel & "暂无行项目)"
+        Application.ScreenUpdating = True
+        Exit Sub
+    End If
+
+    Dim k As Long
+    For k = 1 To rowCount
+        Dim rowInfo As Variant: rowInfo = rowColl(k)
+        Dim rowNum As Long: rowNum = 2 + k
+        Dim categoryText As String: categoryText = CStr(rowInfo(0))
+        Dim itemText As String: itemText = CStr(rowInfo(1))
+        wsTarget.Cells(rowNum, 1).Value = categoryText
+        wsTarget.Cells(rowNum, 2).Value = itemText
+
+        Dim writeCol As Long: writeCol = 3
+        For i = 1 To collCompanies.Count
+            entry = collCompanies(i)
+            srcSheet = CStr(entry(3))
+            srcStartCol = CLng(entry(4))
+            periodCount = CLng(entry(5))
+            Dim srcRow As Long: srcRow = FindStatementRowByLabel(ThisWorkbook.Sheets(srcSheet), itemText)
+            For j = 1 To periodCount
+                If srcRow > 0 Then
+                    wsTarget.Cells(rowNum, writeCol).Formula = "='" & srcSheet & "'!" & _
+                        ThisWorkbook.Sheets(srcSheet).Cells(srcRow, srcStartCol + j - 1).Address(False, False)
+                    wsTarget.Cells(rowNum, writeCol).NumberFormat = "_-* #,##0.00_-;-* #,##0.00_-;_-* ""-""??_-;_-@_-"
+                Else
+                    wsTarget.Cells(rowNum, writeCol).Value = ""
+                End If
+                writeCol = writeCol + 1
+            Next j
+        Next i
+    Next k
+
+    wsTarget.Columns("A").ColumnWidth = 30
+    wsTarget.Columns("B").ColumnWidth = 40
+    Dim col As Long
+    For col = 3 To lastCol
+        wsTarget.Columns(col).ColumnWidth = 15.875
+    Next col
+    wsTarget.Rows(1).RowHeight = 22
+    wsTarget.Rows(2).RowHeight = 20
+
+    Call SetBorderLine(wsTarget.Range(wsTarget.Cells(1, 1), _
+                                       wsTarget.Cells(2 + rowCount, lastCol)))
+    With wsTarget.Range(wsTarget.Cells(3, 1), wsTarget.Cells(2 + rowCount, 2))
+        .Font.Bold = True
+    End With
+
+    wsTarget.Activate
+    ActiveWindow.FreezePanes = False
+    wsTarget.Cells(3, 3).Select
+    ActiveWindow.FreezePanes = True
+    wsTarget.Cells(1, 1).Select
+
+    On Error Resume Next
+    If Not wsTarget.Range("A1").Comment Is Nothing Then wsTarget.Range("A1").Comment.Delete
+    On Error GoTo 0
+    Dim displayMode As String: displayMode = ReadDisplayCurrency()
+    Dim commentText As String
+    commentText = "跨市场" & statementLabel & "合表 (公司数=" & collCompanies.Count & ", 行项目=" & rowCount & ")" & vbCrLf & _
+                  "行项目 mapping: P2 并集; 某市场没有的行项目留空" & vbCrLf & _
+                  "数据源: 4 张分市场" & statementLabel & " (引用公式, 自动同步)" & vbCrLf & _
+                  "当前显示模式: " & displayMode
+    wsTarget.Range("A1").AddComment commentText
+    wsTarget.Range("A1").Comment.Shape.TextFrame.AutoSize = True
+
+    Application.ScreenUpdating = True
+End Sub
+
+
+Public Sub BuildCrossMarketBalanceSheetWrapper()
+    BuildCrossMarketStatementSheet "BalanceSheet"
+End Sub
+
+
+Public Sub BuildCrossMarketIncomeWrapper()
+    BuildCrossMarketStatementSheet "Income"
+End Sub
+
+
+Public Sub BuildCrossMarketCashFlowWrapper()
+    BuildCrossMarketStatementSheet "CashFlow"
+End Sub
+
+
+Public Sub BuildAllCrossMarketSheets()
+    BuildCrossMarketStatementSheet "BalanceSheet"
+    BuildCrossMarketStatementSheet "Income"
+    BuildCrossMarketStatementSheet "CashFlow"
+    BuildCrossMarketIndicatorSheet
+End Sub
+
+
+Private Function MarketStatementSheetName(ByVal market As String, ByVal statementLabel As String) As String
+    Select Case UCase$(Trim$(market))
+        Case "A":  MarketStatementSheetName = "A股_" & statementLabel
+        Case "US": MarketStatementSheetName = "美股_" & statementLabel
+        Case "HK": MarketStatementSheetName = "港股_" & statementLabel
+        Case "KR": MarketStatementSheetName = "韩股_" & statementLabel
+    End Select
+End Function
+
+
+Private Sub CollectRowsFromStatementSheet(ByVal ws As Worksheet, _
+                                          ByRef rowColl As Collection, _
+                                          ByRef rowDict As Object)
+    Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, 2).End(xlUp).Row
+    Dim r As Long
+    For r = 3 To lastRow
+        Dim itemText As String: itemText = Trim$(CStr(ws.Cells(r, 2).Value))
+        If Len(itemText) > 0 Then
+            If Not rowDict.Exists(itemText) Then
+                rowDict.Add itemText, True
+                rowColl.Add Array(Trim$(CStr(ws.Cells(r, 1).Value)), itemText)
+            End If
+        End If
+    Next r
+End Sub
+
+
+Private Function FindStatementRowByLabel(ByVal ws As Worksheet, ByVal itemText As String) As Long
+    Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, 2).End(xlUp).Row
+    Dim r As Long
+    For r = 3 To lastRow
+        If Trim$(CStr(ws.Cells(r, 2).Value)) = itemText Then
+            FindStatementRowByLabel = r
+            Exit Function
+        End If
+    Next r
+End Function
+
+
 Private Function MarketIndicatorSheetName(ByVal market As String) As String
     Select Case UCase$(Trim$(market))
         Case "A":  MarketIndicatorSheetName = "A股_指标表"

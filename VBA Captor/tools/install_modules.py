@@ -62,6 +62,10 @@ BUTTONS = [
     ("BtnRunAll",       "一键全抓 4 市场",     "模块_总入口.一键全抓",            "Q1:Q3", PRIMARY_FILL,   PRIMARY_FG,   13, True),
     ("BtnBuildCrossInd", "合并跨市场指标表",   "模块_工具函数.BuildCrossMarketIndicatorSheet", "Q5:Q7", PRIMARY_FILL, PRIMARY_FG, 12, True),
     ("BtnHideAll",      "切换所有分市场 tabs 显隐", "模块_总入口.切换所有分市场tabs", "Q8:Q10", SECONDARY_FILL, SECONDARY_FG, 11, True),
+    ("BtnBuildCrossAll", "合并 4 张跨市场表",     "模块_工具函数.BuildAllCrossMarketSheets", "S1:S3", PRIMARY_FILL, PRIMARY_FG, 12, True),
+    ("BtnBuildCrossBS",  "合并跨市场资产负债表",  "模块_工具函数.BuildCrossMarketBalanceSheetWrapper", "S5:S7", PRIMARY_FILL, PRIMARY_FG, 11, True),
+    ("BtnBuildCrossIS",  "合并跨市场利润表",      "模块_工具函数.BuildCrossMarketIncomeWrapper", "S8:S10", PRIMARY_FILL, PRIMARY_FG, 11, True),
+    ("BtnBuildCrossCF",  "合并跨市场现金流量表",  "模块_工具函数.BuildCrossMarketCashFlowWrapper", "S11:S13", PRIMARY_FILL, PRIMARY_FG, 11, True),
     ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A8:B8", PRIMARY_FILL,   PRIMARY_FG,   12, True),
     ("BtnRunUS",        "一键 美股",           "模块_总入口.一键美股",            "E8:F8", US_FILL,        US_FG,        12, True),
     ("BtnRunHK",        "一键 港股",           "模块_总入口.一键港股",            "I8:J8", HK_FILL,        HK_FG,        12, True),
@@ -385,16 +389,18 @@ def layout_sample_pool(ws_pool):
 
     try:
         ws_pool.Range("A1:Q10").UnMerge()
+        ws_pool.Range("S1:S13").UnMerge()
     except Exception:
         pass
     ws_pool.Range("A1:Q10").Clear()
+    ws_pool.Range("S1:S13").Clear()
 
     widths = {
         "A": 11, "B": 16, "C": 2, "D": 2,
         "E": 8, "F": 18, "G": 2, "H": 2,
         "I": 7, "J": 14, "K": 2, "L": 2,
         "M": 8, "N": 16, "O": 2, "P": 2,
-        "Q": 22,
+        "Q": 22, "R": 2, "S": 24,
     }
     for col, width in widths.items():
         ws_pool.Columns(col).ColumnWidth = width
@@ -493,6 +499,10 @@ def layout_sample_pool(ws_pool):
         ("M8:N8", "一键 韩股", KR_FILL, "FFFFFF", 11),
         ("Q1:Q3", "一键全抓 4 市场", PRIMARY_FILL, "FFFFFF", 11),
         ("Q5:Q7", "合并跨市场指标表", PRIMARY_FILL, "FFFFFF", 11),
+        ("S1:S3", "合并 4 张跨市场表", PRIMARY_FILL, "FFFFFF", 11),
+        ("S5:S7", "合并跨市场资产负债表", PRIMARY_FILL, "FFFFFF", 10),
+        ("S8:S10", "合并跨市场利润表", PRIMARY_FILL, "FFFFFF", 10),
+        ("S11:S13", "合并跨市场现金流量表", PRIMARY_FILL, "FFFFFF", 10),
         ("A9:B9", "切换 A 股 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
         ("E9:F9", "切换 美股 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
         ("I9:J9", "切换 港股 tabs 显隐", SECONDARY_FILL, SECONDARY_FG, 9),
@@ -931,6 +941,36 @@ def _make_cross_market_indicator_sheet(wb, name="跨市场_指标表"):
     return ws
 
 
+def _make_cross_market_statement_sheet(wb, name):
+    """Phase 4h Step 2: cross-market BS/IS/CF view sheet."""
+    ws = wb.Worksheets.Add(After=wb.Sheets(wb.Sheets.Count))
+    ws.Name = name
+
+    headers = [("A", "大类", 30), ("B", "指标名称", 40)]
+    for col, txt, width in headers:
+        c = ws.Range(f"{col}1")
+        c.Value = txt
+        c.Font.Name = "微软雅黑"
+        c.Font.Size = 11
+        c.Font.Bold = True
+        c.Font.Color = rgb_long("FFFFFF")
+        c.Interior.Color = rgb_long("4472C4")
+        c.HorizontalAlignment = -4108
+        c.VerticalAlignment = -4108
+        ws.Columns(col).ColumnWidth = width
+
+    ws.Rows(1).RowHeight = 22
+    ws.Rows(2).RowHeight = 20
+    try:
+        ws.Activate()
+        wb.Application.ActiveWindow.SplitColumn = 2
+        wb.Application.ActiveWindow.SplitRow = 2
+        wb.Application.ActiveWindow.FreezePanes = True
+    except Exception:
+        pass
+    return ws
+
+
 def _make_fx_sheet(wb, name="汇率"):
     """Phase 4f Step 2: 汇率 sheet (8 列表头, 跨市场共享缓存)
       Row 1: 报告期/USDCNY期末/USDCNY期均/HKDCNY期末/HKDCNY期均/KRWCNY期末/KRWCNY期均/备注
@@ -1063,6 +1103,14 @@ def ensure_market_sheets(wb):
                 pass
             print(f"  + sheet 新建: {diag_name}")
 
+    # ---- Phase 4h Step 2: 跨市场 BS/IS/CF 合并视图 ----
+    for cross_name in ("跨市场_资产负债表", "跨市场_利润表", "跨市场_现金流量表"):
+        if cross_name in {sh.Name for sh in wb.Sheets}:
+            print(f"  ~ sheet 已存在: {cross_name}")
+        else:
+            _make_cross_market_statement_sheet(wb, cross_name)
+            print(f"  + sheet 新建: {cross_name}")
+
     # ---- Phase 4g Step 2: 跨市场指标合并视图 ----
     if "跨市场_指标表" in {sh.Name for sh in wb.Sheets}:
         print("  ~ sheet 已存在: 跨市场_指标表")
@@ -1177,6 +1225,7 @@ def reorder_report_sheets(wb):
         "港股_抓取诊断",
         "韩股_资产负债表", "韩股_利润表", "韩股_现金流量表", "韩股_指标表",
         "韩股_抓取诊断",
+        "跨市场_资产负债表", "跨市场_利润表", "跨市场_现金流量表",
         "跨市场_指标表",
         "汇率",   # ← Phase 4f Step 2 新增 (跨市场共享 FX 缓存)
     ]
