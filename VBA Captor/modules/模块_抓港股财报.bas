@@ -242,7 +242,10 @@ Private Sub FetchHKFromXueqiu(ByVal strTicker As String, _
              "symbol=" & strTicker & "&type=all&is_detail=true&count=" & CStr(maxPeriods)
 
     stage = "HttpGet"
-    Dim strJson As String: strJson = XueqiuHttpGet(strUrl, strCookie)
+    Dim strJson As String
+    strJson = CachedXueqiuHttpGet(strUrl, strCookie, _
+        "xueqiu_HK_" & UCase$(strTicker) & "_" & strKind & "_" & _
+        strQuarter & "_" & CStr(lngYear) & "_" & CStr(maxPeriods))
 
     stage = "DumpJson"
     On Error Resume Next

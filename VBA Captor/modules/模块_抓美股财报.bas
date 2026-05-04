@@ -273,7 +273,7 @@ Private Sub FetchAndAccumulateUSCompany(ByVal strTicker As String, _
     Err.Clear
     strCIK = LookupCIK(strTicker)
     strUrl = "https://data.sec.gov/api/xbrl/companyfacts/CIK" & strCIK & ".json"
-    strJson = EdgarHttpGet(strUrl)
+    strJson = CachedEdgarHttpGet(strUrl, "edgar_US_" & UCase$(strTicker) & "_companyfacts")
     Dim edgarErrNum As Long: edgarErrNum = Err.Number
     Dim edgarErrDesc As String: edgarErrDesc = Err.Description
     Err.Clear
@@ -976,7 +976,10 @@ Private Sub FetchUSFromXueqiu(ByVal strTicker As String, _
              "&is_detail=true&count=8"
 
     stage = "HttpGet"
-    Dim strJson As String: strJson = XueqiuHttpGet(strUrl, strCookie)
+    Dim strJson As String
+    strJson = CachedXueqiuHttpGet(strUrl, strCookie, _
+        "xueqiu_US_" & UCase$(strTicker) & "_" & strKind & "_" & _
+        strType & "_" & CStr(lngYear))
 
     ' Debug: 把 raw JSON 写到 samples/xueqiu_<ticker>_bs.json 方便调字段映射
     stage = "DumpJson"

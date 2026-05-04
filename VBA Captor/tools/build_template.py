@@ -201,6 +201,7 @@ def build_sample_pool(ws):
         ("M8:N8", "一键 韩股", "FF7030A0", WHITE, 11),
         ("Q1:Q3", "一键全抓 4 市场", "FF4472C4", WHITE, 11),
         ("Q5:Q7", "合并跨市场指标表", "FF4472C4", WHITE, 11),
+        ("Q14:Q14", "清空缓存", SECONDARY_BLUE, SECONDARY_FG, 9),
         ("S1:S3", "合并 4 张跨市场表", "FF4472C4", WHITE, 11),
         ("S5:S7", "合并跨市场资产负债表", "FF4472C4", WHITE, 10),
         ("S8:S10", "合并跨市场利润表", "FF4472C4", WHITE, 10),

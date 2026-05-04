@@ -837,6 +837,133 @@ Public Function LookupCIK(ByVal strTicker As String) As String
 End Function
 
 
+' --------- Phase 4h Step 5: 本地 HTTP 响应缓存 (24h TTL, 不缓存失败响应) ---------
+Public Function CachedEdgarHttpGet(ByVal strUrl As String, ByVal cacheKey As String) As String
+    Dim cached As String: cached = ReadLocalHttpCache(cacheKey)
+    If Len(cached) > 0 Then
+        CachedEdgarHttpGet = cached
+        Exit Function
+    End If
+
+    Dim response As String: response = EdgarHttpGet(strUrl)
+    WriteLocalHttpCache cacheKey, response
+    CachedEdgarHttpGet = response
+End Function
+
+
+Public Function CachedXueqiuHttpGet(ByVal strUrl As String, _
+                                     ByVal strCookie As String, _
+                                     ByVal cacheKey As String) As String
+    Dim cached As String: cached = ReadLocalHttpCache(cacheKey)
+    If Len(cached) > 0 Then
+        CachedXueqiuHttpGet = cached
+        Exit Function
+    End If
+
+    Dim response As String: response = XueqiuHttpGet(strUrl, strCookie)
+    WriteLocalHttpCache cacheKey, response
+    CachedXueqiuHttpGet = response
+End Function
+
+
+Public Function ReadLocalHttpCache(ByVal cacheKey As String, _
+                                   Optional ByVal ttlHours As Long = 24) As String
+    ReadLocalHttpCache = ""
+    cacheKey = Trim$(cacheKey)
+    If Len(cacheKey) = 0 Then Exit Function
+    If ttlHours <= 0 Or ttlHours > 168 Then ttlHours = 24
+
+    Dim fso As Object: Set fso = CreateObject("Scripting.FileSystemObject")
+    Dim path As String: path = LocalHttpCachePath(cacheKey)
+    If Not fso.FileExists(path) Then Exit Function
+
+    Dim ageHours As Double
+    ageHours = (Now - fso.GetFile(path).DateLastModified) * 24#
+    If ageHours < 0 Or ageHours >= ttlHours Then Exit Function
+
+    ReadLocalHttpCache = ReadUtf8TextFile(path)
+End Function
+
+
+Public Sub WriteLocalHttpCache(ByVal cacheKey As String, ByVal responseText As String)
+    cacheKey = Trim$(cacheKey)
+    If Len(cacheKey) = 0 Or Len(responseText) = 0 Then Exit Sub
+
+    Dim fso As Object: Set fso = CreateObject("Scripting.FileSystemObject")
+    Dim dirPath As String: dirPath = LocalHttpCacheDir()
+    If Not fso.FolderExists(dirPath) Then fso.CreateFolder dirPath
+    WriteUtf8TextFile LocalHttpCachePath(cacheKey), responseText
+End Sub
+
+
+Public Sub ClearLocalCache()
+    Dim fso As Object: Set fso = CreateObject("Scripting.FileSystemObject")
+    Dim dirPath As String: dirPath = LocalHttpCacheDir()
+    If fso.FolderExists(dirPath) Then fso.DeleteFolder dirPath, True
+    If Not g_silentMode Then MsgBox "本地 HTTP 缓存已清空。", vbInformation, "清空缓存"
+End Sub
+
+
+Private Function LocalHttpCacheDir() As String
+    Dim basePath As String: basePath = ThisWorkbook.Path
+    If Len(basePath) = 0 Then basePath = CurDir$
+    LocalHttpCacheDir = basePath & Application.PathSeparator & ".cache"
+End Function
+
+
+Private Function LocalHttpCachePath(ByVal cacheKey As String) As String
+    LocalHttpCachePath = LocalHttpCacheDir() & Application.PathSeparator & _
+                         LocalCacheSafeFileName(cacheKey)
+End Function
+
+
+Private Function LocalCacheSafeFileName(ByVal cacheKey As String) As String
+    Dim s As String: s = Trim$(cacheKey)
+    Dim bad As Variant
+    For Each bad In Array("\", "/", ":", "*", "?", """", "<", ">", "|", " ", vbTab, vbCr, vbLf)
+        s = Replace(s, CStr(bad), "_")
+    Next bad
+    If Len(s) = 0 Then s = "http_cache"
+    If Len(s) > 120 Then s = Left$(s, 120)
+    LocalCacheSafeFileName = s & "_" & LocalCacheStableHash(cacheKey) & ".json"
+End Function
+
+
+Private Function LocalCacheStableHash(ByVal cacheKey As String) As String
+    Dim h As Double: h = 5381#
+    Dim i As Long
+    For i = 1 To Len(cacheKey)
+        h = h * 33# + (AscW(Mid$(cacheKey, i, 1)) And 255)
+        h = h - Fix(h / 2147483647#) * 2147483647#
+    Next i
+    LocalCacheStableHash = Right$("0000000000" & CStr(CLng(h)), 10)
+End Function
+
+
+Private Function ReadUtf8TextFile(ByVal path As String) As String
+    With CreateObject("ADODB.Stream")
+        .Type = 2
+        .Charset = "utf-8"
+        .Open
+        .LoadFromFile path
+        ReadUtf8TextFile = .ReadText
+        .Close
+    End With
+End Function
+
+
+Private Sub WriteUtf8TextFile(ByVal path As String, ByVal textValue As String)
+    With CreateObject("ADODB.Stream")
+        .Type = 2
+        .Charset = "utf-8"
+        .Open
+        .WriteText textValue
+        .SaveToFile path, 2
+        .Close
+    End With
+End Sub
+
+
 ' --------- 按代码字符特征推断市场 ---------
 '   返回 "A" / "HK" / "US"; KR 不自动推断, 需用户在样本池 C 列手填
 Public Function DetectMarket(ByVal strCode As String) As String

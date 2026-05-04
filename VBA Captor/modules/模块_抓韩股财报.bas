@@ -294,7 +294,10 @@ Private Sub ParseKRStockAnalysisPage(ByVal strTicker As String, _
                                      ByRef dictCategoryMap As Object, _
                                      ByRef dictMatchInfo As Object)
     Dim strUrl As String: strUrl = StockAnalysisKRUrl(strTicker, strKind, quarterly)
-    Dim strHtml As String: strHtml = StockAnalysisHttpGet(strUrl)
+    Dim cacheKey As String
+    cacheKey = "stockanalysis_KR_" & NormalizeKRTicker(strTicker) & "_" & strKind & "_" & _
+               IIf(quarterly, "quarterly", "annual")
+    Dim strHtml As String: strHtml = StockAnalysisHttpGet(strUrl, cacheKey)
 
     Dim objHtml As Object: Set objHtml = CreateObject("htmlfile")
     objHtml.Open
@@ -423,7 +426,13 @@ Private Function StockAnalysisKRUrl(ByVal strTicker As String, _
 End Function
 
 
-Private Function StockAnalysisHttpGet(ByVal strUrl As String) As String
+Private Function StockAnalysisHttpGet(ByVal strUrl As String, Optional ByVal cacheKey As String = "") As String
+    Dim cached As String: cached = ReadLocalHttpCache(cacheKey)
+    If Len(cached) > 0 Then
+        StockAnalysisHttpGet = cached
+        Exit Function
+    End If
+
     Dim objWinHttp As Object, arrByte() As Byte
     Set objWinHttp = CreateObject("WinHttp.WinHttpRequest.5.1")
     With objWinHttp
@@ -444,6 +453,7 @@ Private Function StockAnalysisHttpGet(ByVal strUrl As String) As String
         arrByte = .ResponseBody
     End With
     StockAnalysisHttpGet = KRByteToStr(arrByte, "utf-8")
+    WriteLocalHttpCache cacheKey, StockAnalysisHttpGet
 End Function
 
 

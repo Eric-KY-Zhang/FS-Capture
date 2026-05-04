@@ -12,5 +12,8 @@ samples/regression_phase4f_*.json
 # Phase 4g stockanalysis 覆盖度调研 HTML sample (本地留存, 不入库)
 samples/stockanalysis_*.html
 
+# Phase 4h 本地 HTTP 响应缓存
+.cache/
+
 # 注: archive/ 下的历史 xlsm 也被父级 .gitignore 的 *.xlsm 排除
 #     如需把 V2_2_宽表版.xlsm (用户参考样例) 也排除, 父级规则已覆盖
