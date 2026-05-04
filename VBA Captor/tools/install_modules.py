@@ -763,16 +763,16 @@ def _make_corp_info_sheet(wb, name):
 
 def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
     """创建空抓取诊断 sheet。
-    Row 1 = 大标题(合并 A1:J1, 深蓝白字), Row 2 = 10 列表头, Row 3+ 由 VBA 写
+    Row 1 = 大标题(合并 A1:K1, 深蓝白字), Row 2 = 11 列表头, Row 3+ 由 VBA 写
     冻结 Row 2; 列宽 + 表头颜色与 VBA 端 EnsureDiagnosticSheet() 保持一致 (避免双方互踩)。
     """
     ws = wb.Worksheets.Add(After=wb.Sheets(wb.Sheets.Count))
     ws.Name = name
 
-    # Row 1: 标题, 合并 A1:J1
+    # Row 1: 标题, 合并 A1:K1
     ws.Range("A1").Value = f"{name.replace('_', '')} (每次跑数后自动刷新)"
-    ws.Range("A1:J1").Merge()
-    title = ws.Range("A1:J1")
+    ws.Range("A1:K1").Merge()
+    title = ws.Range("A1:K1")
     title.Font.Name = "微软雅黑"
     title.Font.Size = 12
     title.Font.Bold = True
@@ -781,9 +781,9 @@ def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
     title.HorizontalAlignment = -4108
     title.VerticalAlignment = -4108
 
-    # Row 2: 10 列表头
+    # Row 2: 11 列表头
     headers = ["公司", "报表", "输出指标", "状态", "数据源",
-               "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注"]
+               "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注", "FX_Rate"]
     for j, txt in enumerate(headers, start=1):
         c = ws.Cells(2, j)
         c.Value = txt
@@ -795,7 +795,7 @@ def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
         c.HorizontalAlignment = -4108
         c.VerticalAlignment = -4108
 
-    widths = [14, 16, 30, 18, 18, 14, 42, 14, 10, 58]
+    widths = [14, 16, 30, 18, 18, 14, 42, 14, 10, 58, 12]
     for j, w in enumerate(widths, start=1):
         ws.Columns(j).ColumnWidth = w
     ws.Columns("A").NumberFormat = "@"

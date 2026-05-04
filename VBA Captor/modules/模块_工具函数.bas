@@ -148,16 +148,16 @@ Public Sub EnsureDiagnosticSheet()
 
     Dim headers As Variant
     headers = Array("公司", "报表", "输出指标", "状态", "数据源", _
-                    "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注")
+                    "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注", "FX_Rate")
 
     On Error Resume Next
-    ws.Range(ws.Cells(1, 1), ws.Cells(1, 10)).UnMerge
+    ws.Range(ws.Cells(1, 1), ws.Cells(1, 11)).UnMerge
     Err.Clear
     On Error GoTo 0
 
     ws.Cells(1, 1).Value = Replace(diagName, "_", "") & " (每次跑数后自动刷新)"
-    ws.Range(ws.Cells(1, 1), ws.Cells(1, 10)).Merge
-    With ws.Range(ws.Cells(1, 1), ws.Cells(1, 10))
+    ws.Range(ws.Cells(1, 1), ws.Cells(1, 11)).Merge
+    With ws.Range(ws.Cells(1, 1), ws.Cells(1, 11))
         .Font.Name = "微软雅黑"
         .Font.Size = 12
         .Font.Bold = True
@@ -191,10 +191,11 @@ Public Sub EnsureDiagnosticSheet()
     ws.Columns("H").ColumnWidth = 14
     ws.Columns("I").ColumnWidth = 10
     ws.Columns("J").ColumnWidth = 58
+    ws.Columns("K").ColumnWidth = 12
     ws.Range("A:A").NumberFormat = "@"
     ws.Rows(1).RowHeight = 22
     ws.Rows(2).RowHeight = 20
-    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(2, 10)))
+    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(2, 11)))
 
     On Error Resume Next
     ws.Visible = xlSheetHidden
@@ -208,7 +209,7 @@ Public Sub ClearDiagnosticSheet()
     Dim ws As Worksheet: Set ws = ThisWorkbook.Sheets(CurrentDiagnosticSheetName())
     Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
     If lastRow < 1000 Then lastRow = 1000
-    ws.Range(ws.Cells(3, 1), ws.Cells(lastRow, 10)).ClearContents
+    ws.Range(ws.Cells(3, 1), ws.Cells(lastRow, 11)).ClearContents
 End Sub
 
 
@@ -233,10 +234,11 @@ Public Sub AddDiagnosticRow(ByVal collRows As Collection, _
                             ByVal fieldText As String, _
                             ByVal unitText As String, _
                             ByVal scoreText As String, _
-                            ByVal noteText As String)
+                            ByVal noteText As String, _
+                            Optional ByVal fxRateText As String = "1.0")
     If collRows Is Nothing Then Exit Sub
     collRows.Add Array(ticker, strKind, label, statusText, sourceText, _
-                       taxonomyText, fieldText, unitText, scoreText, noteText)
+                       taxonomyText, fieldText, unitText, scoreText, noteText, fxRateText)
 End Sub
 
 
@@ -252,24 +254,29 @@ Public Sub WriteDiagnosticForKind(ByVal strKind As String, ByVal collRows As Col
     If startRow < 3 Then startRow = 3
 
     Dim arrOut As Variant
-    ReDim arrOut(1 To collRows.Count, 1 To 10)
+    ReDim arrOut(1 To collRows.Count, 1 To 11)
 
     Dim i As Long, j As Long, rowData As Variant
     For i = 1 To collRows.Count
         rowData = collRows.Item(i)
-        For j = 0 To 9
-            arrOut(i, j + 1) = rowData(j)
+        For j = 0 To 10
+            If j <= UBound(rowData) Then
+                arrOut(i, j + 1) = rowData(j)
+            Else
+                arrOut(i, j + 1) = "1.0"
+            End If
         Next j
     Next i
 
-    ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 10)).Value = arrOut
-    With ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 10))
+    ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 11)).Value = arrOut
+    With ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 11))
         .Font.Name = "微软雅黑"
         .Font.Size = 9
         .VerticalAlignment = xlCenter
     End With
     ws.Range(ws.Cells(startRow, 9), ws.Cells(startRow + collRows.Count - 1, 9)).HorizontalAlignment = xlRight
-    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(startRow + collRows.Count - 1, 10)))
+    ws.Range(ws.Cells(startRow, 11), ws.Cells(startRow + collRows.Count - 1, 11)).HorizontalAlignment = xlRight
+    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(startRow + collRows.Count - 1, 11)))
 End Sub
 
 
@@ -1145,6 +1152,15 @@ Public Sub WriteWideTable(ByVal ws As Worksheet, _
             Else
                 strName = strCode
             End If
+            ' Phase 4f Step 5: 统一RMB 模式下追加原始报告币种 tag
+            If displayMode = "统一RMB" And Not dictReportingCurrency Is Nothing Then
+                If dictReportingCurrency.Exists(strCode) Then
+                    Dim origCur As String: origCur = CStr(dictReportingCurrency(strCode))
+                    If origCur <> "RMB" And Len(origCur) > 0 Then
+                        strName = strName & " [" & origCur & "→RMB]"
+                    End If
+                End If
+            End If
 
             Dim periodsForCompany As Collection
             Dim periodCount As Long
@@ -1303,6 +1319,61 @@ NextDataCompany:
 End Sub
 
 
+Public Function UnitDescriptionForMarket(ByVal sheetName As String) As String
+    Select Case True
+        Case InStr(sheetName, "A股") > 0
+            UnitDescriptionForMarket = "百万 RMB (新浪财报源)"
+        Case InStr(sheetName, "美股") > 0
+            UnitDescriptionForMarket = "百万 USD (EDGAR)"
+        Case InStr(sheetName, "港股") > 0
+            UnitDescriptionForMarket = "百万 (各家公司报告币种, 见 港股_抓取诊断 Unit/FX_Rate 列)"
+        Case InStr(sheetName, "韩股") > 0
+            UnitDescriptionForMarket = "十亿 KRW (stockanalysis)"
+        Case Else
+            UnitDescriptionForMarket = "(单位见诊断 sheet)"
+    End Select
+End Function
+
+
+Public Sub RefreshA1CurrencyComment(ByVal wsTarget As Worksheet, ByVal targetSheet As String)
+    Dim displayMode As String: displayMode = ReadDisplayCurrency()
+    On Error Resume Next
+    If Not wsTarget.Range("A1").Comment Is Nothing Then wsTarget.Range("A1").Comment.Delete
+    On Error GoTo 0
+
+    Dim commentText As String
+    If displayMode = "统一RMB" Then
+        commentText = "单位: 百万 RMB (统一汇率换算; 汇率源见『汇率』sheet, 期末/期间均值混合)" & vbCrLf & _
+                      "切回原币: 样本池 B6 改为 '原币' 后重跑"
+    Else
+        commentText = "单位: " & UnitDescriptionForMarket(targetSheet) & vbCrLf & _
+                      "统一显示 RMB: 样本池 B6 改为 '统一RMB' 后重跑"
+    End If
+
+    wsTarget.Range("A1").AddComment commentText
+    wsTarget.Range("A1").Comment.Shape.TextFrame.AutoSize = True
+End Sub
+
+
+Public Function FxRateTextForDiagnostic(ByVal reportingCurrency As String, _
+                                        ByVal periodEnd As String, _
+                                        ByVal strKind As String) As String
+    FxRateTextForDiagnostic = "1.0"
+    If ReadDisplayCurrency() <> "统一RMB" Then Exit Function
+    If Len(Trim$(periodEnd)) = 0 Then Exit Function
+
+    Dim curCode As String: curCode = Trim$(reportingCurrency)
+    If Len(curCode) = 0 Then curCode = "RMB"
+
+    Dim useEopFlag As Boolean
+    useEopFlag = (UCase$(Trim$(strKind)) = "BALANCESHEET")
+
+    Dim fxNum As Double
+    fxNum = GetFxRate(curCode, periodEnd, useEopFlag)
+    If fxNum > 0 Then FxRateTextForDiagnostic = Format$(fxNum, "0.000000")
+End Function
+
+
 ' --------- 生成只含 18 个标准指标的指标表 ---------
 '   market: "A" / "US" / "HK" / "KR"; 从对应资产负债表复制公司/报告期表头, 再填标准指标公式
 Public Sub BuildStandardIndicatorSheet(ByVal market As String)
@@ -1403,6 +1474,7 @@ Public Sub BuildStandardIndicatorSheet(ByVal market As String)
     wsTarget.Cells(3, 4).Select
     ActiveWindow.FreezePanes = True
     wsTarget.Cells(1, 1).Select
+    RefreshA1CurrencyComment wsTarget, targetSheet
     Application.ScreenUpdating = True
 End Sub
 
@@ -2278,6 +2350,7 @@ NextRow:
                     perCompanyPeriods:=False, _
                     dictReportingCurrency:=Nothing, _
                     statementKind:=strKind
+    RefreshA1CurrencyComment wsTarget, targetSheet
 
 CleanUp:
     Application.ScreenUpdating = True

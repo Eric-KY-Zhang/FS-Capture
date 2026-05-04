@@ -307,8 +307,8 @@ def build_corp_info(ws):
 def build_diagnostic_sheet(ws, market_label="美股"):
     """
     Phase 4b-14a/4c: 抓取诊断 sheet 模板
-      Row 1: 大标题 (合并 A1:J1, 深蓝白字)
-      Row 2: 10 列表头 — 公司/报表/输出指标/状态/数据源/Taxonomy/命中字段/Unit/Score/匹配方式+备注
+    Row 1: 大标题 (合并 A1:K1, 深蓝白字)
+    Row 2: 11 列表头 — 公司/报表/输出指标/状态/数据源/Taxonomy/命中字段/Unit/Score/匹配方式+备注/FX_Rate
       Row 3+: 由 VBA 写入(每次跑数后刷新)
       冻结 Row 2; 列宽 + 表头颜色与 install_modules.py._make_diagnostic_sheet
         和 模块_工具函数.bas.EnsureDiagnosticSheet() 三处保持一致
@@ -317,9 +317,9 @@ def build_diagnostic_sheet(ws, market_label="美股"):
     title_fill = PatternFill("solid", fgColor=DARK_BLUE)
     title_font = Font(name="微软雅黑", size=12, bold=True, color=WHITE)
 
-    # Row 1: 标题, 合并 A1:J1
+    # Row 1: 标题, 合并 A1:K1
     ws["A1"] = f"{market_label}抓取诊断 (每次跑数后自动刷新)"
-    ws.merge_cells("A1:J1")
+    ws.merge_cells("A1:K1")
     for cell_addr in ["A1"]:
         c = ws[cell_addr]
         c.font = title_font
@@ -327,9 +327,9 @@ def build_diagnostic_sheet(ws, market_label="美股"):
         c.alignment = CENTER
         c.border = BORDER
 
-    # Row 2: 10 列表头
+    # Row 2: 11 列表头
     headers = ["公司", "报表", "输出指标", "状态", "数据源",
-               "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注"]
+               "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注", "FX_Rate"]
     header_font = Font(name="微软雅黑", size=10, bold=True, color=WHITE)
     for j, txt in enumerate(headers, start=1):
         col_letter = get_column_letter(j)
@@ -340,7 +340,7 @@ def build_diagnostic_sheet(ws, market_label="美股"):
         c.alignment = CENTER
         c.border = BORDER
 
-    widths = [14, 16, 30, 18, 18, 14, 42, 14, 10, 58]
+    widths = [14, 16, 30, 18, 18, 14, 42, 14, 10, 58, 12]
     for j, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(j)].width = w
     for row in range(1, 1001):

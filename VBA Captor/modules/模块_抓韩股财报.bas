@@ -164,12 +164,7 @@ NextRow:
                    perCompanyPeriods:=True, _
                    dictReportingCurrency:=dictReportingCurrency, _
                    statementKind:=hookKind
-
-    On Error Resume Next
-    If Not wsTarget.Range("A1").Comment Is Nothing Then wsTarget.Range("A1").Comment.Delete
-    wsTarget.Range("A1").AddComment "单位: 十亿韩元 (KRW billions)"
-    Err.Clear
-    On Error GoTo CleanUp
+    RefreshA1CurrencyComment wsTarget, targetSheet
 
 CleanUp:
     Dim cleanErrNum As Long: cleanErrNum = Err.Number
@@ -372,6 +367,7 @@ Private Sub ParseKRStockAnalysisPage(ByVal strTicker As String, _
                 Set objRow = dictRows.Item(CStr(cand))
                 scaleDivisor = KRMapEntryScale(mapEntry)
                 unitText = KRMapEntryUnit(mapEntry)
+                Dim matchPeriodEnd As String: matchPeriodEnd = ""
 
                 For Each key In periods.Keys
                     j = CLng(key)
@@ -379,6 +375,7 @@ Private Sub ParseKRStockAnalysisPage(ByVal strTicker As String, _
                         rawValue = KRCellText(objRow, j)
                         If KRTryScaledValue(rawValue, scaleDivisor, scaledValue) Then
                             periodEnd = CStr(periods.Item(key))
+                            If periodEnd > matchPeriodEnd Then matchPeriodEnd = periodEnd
                             If Not dictPeriodSet.Exists(periodEnd) Then dictPeriodSet.Add periodEnd, True
                             If Not dictIndicatorSet.Exists(strLabel) Then
                                 dictIndicatorSet.Add strLabel, dictIndicatorSet.Count
@@ -399,7 +396,7 @@ Private Sub ParseKRStockAnalysisPage(ByVal strTicker As String, _
                     End If
                 Next key
 
-                AddOrUpdateKRMatch dictMatchInfo, strLabel, CStr(cand), unitText, candIdx, totalCand
+                AddOrUpdateKRMatch dictMatchInfo, strLabel, CStr(cand), unitText, candIdx, totalCand, matchPeriodEnd
                 Exit For
             End If
         Next cand
@@ -665,15 +662,21 @@ Private Sub AddOrUpdateKRMatch(ByVal dictMatchInfo As Object, _
                                ByVal fieldName As String, _
                                ByVal unitText As String, _
                                ByVal candIdx As Long, _
-                               ByVal totalCand As Long)
+                               ByVal totalCand As Long, _
+                               ByVal periodEnd As String)
     Dim scoreText As String: scoreText = CStr(candIdx) & "/" & CStr(totalCand)
     If dictMatchInfo.Exists(label) Then
         Dim oldInfo As Variant: oldInfo = dictMatchInfo.Item(label)
         Dim oldIdx As Long: oldIdx = CLng(Split(CStr(oldInfo(2)), "/")(0))
-        If candIdx >= oldIdx Then Exit Sub
-        dictMatchInfo.Item(label) = Array(fieldName, unitText, scoreText)
+        If candIdx > oldIdx Then Exit Sub
+        If candIdx = oldIdx Then
+            If periodEnd > CStr(oldInfo(3)) Then oldInfo(3) = periodEnd
+            dictMatchInfo.Item(label) = oldInfo
+            Exit Sub
+        End If
+        dictMatchInfo.Item(label) = Array(fieldName, unitText, scoreText, periodEnd)
     Else
-        dictMatchInfo.Add label, Array(fieldName, unitText, scoreText)
+        dictMatchInfo.Add label, Array(fieldName, unitText, scoreText, periodEnd)
     End If
 End Sub
 
@@ -691,9 +694,10 @@ Private Sub AppendKRDiagnosticsForConceptMap(ByVal ticker As String, _
         label = MapEntryLabel(mapEntry)
         If dictMatchInfo.Exists(label) Then
             info = dictMatchInfo.Item(label)
+            Dim fxText As String: fxText = FxRateTextForDiagnostic("KRW", CStr(info(3)), strKind)
             AddDiagnosticRow collRows, ticker, strKind, label, "OK_STOCKANALYSIS", _
                              "stockanalysis.com", "HTML", CStr(info(0)), _
-                             CStr(info(1)), CStr(info(2)), "exact field match via htmlfile DOM"
+                             CStr(info(1)), CStr(info(2)), "exact field match via htmlfile DOM", fxText
         Else
             AddDiagnosticRow collRows, ticker, strKind, label, "MISSING", _
                              "stockanalysis.com", "HTML", "—", "KRW billions", "—", _

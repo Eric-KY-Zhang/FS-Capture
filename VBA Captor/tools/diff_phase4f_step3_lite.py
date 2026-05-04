@@ -45,6 +45,10 @@ def main():
             excel.Run("模块_测试.TestStep3Smoke")
             log("=== smoke macro done ===")
 
+            log("=== invoking 模块_测试.TestStep45Smoke ===")
+            excel.Run("模块_测试.TestStep45Smoke")
+            log("=== Step 4/5 smoke macro done ===")
+
             ws_yuanbi = wb.Sheets("_phase4f_step3_yuanbi")
             ws_rmb = wb.Sheets("_phase4f_step3_rmb")
             a = dump_sheet(ws_yuanbi)

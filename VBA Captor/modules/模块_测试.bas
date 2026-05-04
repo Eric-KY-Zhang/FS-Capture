@@ -66,6 +66,73 @@ Public Sub TestStep3Smoke()
 End Sub
 
 
+Public Sub TestStep45Smoke()
+    Dim wsPool As Worksheet
+    Set wsPool = ThisWorkbook.Worksheets("样本池")
+
+    Dim savedB6 As Variant
+    savedB6 = wsPool.Range("B6").Value
+
+    g_diagnosticSheetName = "美股_抓取诊断"
+    ClearDiagnosticSheet
+
+    Dim rows As Collection
+    Set rows = New Collection
+    AddDiagnosticRow rows, "AAPL", "BalanceSheet", "Total assets", "OK", "EDGAR", _
+                     "us-gaap", "Assets", "USD", "100", "smoke", "7.123456"
+    WriteDiagnosticForKind "BalanceSheet", rows
+
+    Dim wsDiag As Worksheet
+    Set wsDiag = ThisWorkbook.Worksheets("美股_抓取诊断")
+    If CStr(wsDiag.Cells(2, 11).Value) <> "FX_Rate" Then _
+        Err.Raise vbObjectError + 742, "TestStep45Smoke", "诊断 K 列表头不是 FX_Rate"
+    If CStr(wsDiag.Cells(3, 11).Value) <> "7.123456" Then _
+        Err.Raise vbObjectError + 743, "TestStep45Smoke", "诊断 K3 没写入 fx rate"
+
+    Dim wsTag As Worksheet
+    Set wsTag = GetOrClearSmokeSheet("_phase4f_step5_tag")
+
+    Dim arrCodes(1 To 1) As String
+    arrCodes(1) = "AAPL"
+
+    Dim arrPeriods(1 To 1) As String
+    arrPeriods(1) = "2024-12-31"
+
+    Dim arrIndicators(1 To 1) As String
+    arrIndicators(1) = "TextOnly"
+
+    Dim dictCompanyName As Object: Set dictCompanyName = CreateObject("Scripting.Dictionary")
+    dictCompanyName.Add "AAPL", "Apple"
+
+    Dim dictCategory As Object: Set dictCategory = CreateObject("Scripting.Dictionary")
+    dictCategory.Add "TextOnly", "Smoke"
+
+    Dim dictData As Object: Set dictData = CreateObject("Scripting.Dictionary")
+    Dim dictCompany As Object: Set dictCompany = CreateObject("Scripting.Dictionary")
+    Dim dictPer As Object: Set dictPer = CreateObject("Scripting.Dictionary")
+    dictPer.Add "TextOnly", "non-numeric"
+    dictCompany.Add "2024-12-31", dictPer
+    dictData.Add "AAPL", dictCompany
+
+    Dim dictCurrency As Object: Set dictCurrency = CreateObject("Scripting.Dictionary")
+    dictCurrency.Add "AAPL", "USD"
+
+    wsPool.Range("B6").Value = "统一RMB"
+    WriteWideTable wsTag, arrCodes, dictCompanyName, dictData, arrPeriods, arrIndicators, dictCategory, _
+                   perCompanyPeriods:=False, dictReportingCurrency:=dictCurrency, statementKind:="BalanceSheet"
+    RefreshA1CurrencyComment wsTag, "美股_资产负债表"
+
+    If InStr(CStr(wsTag.Cells(1, 3).Value), "[USD→RMB]") = 0 Then _
+        Err.Raise vbObjectError + 744, "TestStep45Smoke", "R1 缺少 USD→RMB tag"
+    If wsTag.Range("A1").Comment Is Nothing Then _
+        Err.Raise vbObjectError + 745, "TestStep45Smoke", "A1 缺少动态注释"
+    If InStr(wsTag.Range("A1").Comment.Text, "统一汇率换算") = 0 Then _
+        Err.Raise vbObjectError + 746, "TestStep45Smoke", "A1 注释不是统一RMB文案"
+
+    wsPool.Range("B6").Value = savedB6
+End Sub
+
+
 Private Function GetOrClearSmokeSheet(ByVal sheetName As String) As Worksheet
     Dim ws As Worksheet
     On Error Resume Next

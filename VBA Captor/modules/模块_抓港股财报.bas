@@ -164,12 +164,7 @@ NextRow:
                    perCompanyPeriods:=True, _
                    dictReportingCurrency:=dictReportingCurrency, _
                    statementKind:=hookKind
-
-    On Error Resume Next
-    If Not wsTarget.Range("A1").Comment Is Nothing Then wsTarget.Range("A1").Comment.Delete
-    wsTarget.Range("A1").AddComment "单位: 百万(各家公司报告币种, 见 港股_抓取诊断 Unit 列)"
-    Err.Clear
-    On Error GoTo CleanUp
+    RefreshA1CurrencyComment wsTarget, targetSheet
 
 CleanUp:
     Application.ScreenUpdating = True
@@ -350,7 +345,7 @@ Private Sub FetchHKFromXueqiu(ByVal strTicker As String, _
                     End If
 
                     AddOrUpdateHKMatch dictMatchInfo, strLabel, Trim$(CStr(cand)), _
-                                       currencyText, candIdx, totalCand
+                                       currencyText, candIdx, totalCand, periodEnd
                     Exit For
                 End If
 NextCandidate:
@@ -611,12 +606,29 @@ Private Function HK_NzStr(ByVal dict As Object, ByVal key As String) As String
 End Function
 
 
+Private Function HKDiagnosticCurrencyCode(ByVal currencyText As String) As String
+    Select Case UCase$(Trim$(currencyText))
+        Case "", "REPORT_CURRENCY"
+            HKDiagnosticCurrencyCode = "HKD"
+        Case "CNY", "RMB", "人民币"
+            HKDiagnosticCurrencyCode = "RMB"
+        Case "HKD", "港币"
+            HKDiagnosticCurrencyCode = "HKD"
+        Case "USD", "美元"
+            HKDiagnosticCurrencyCode = "USD"
+        Case Else
+            HKDiagnosticCurrencyCode = currencyText
+    End Select
+End Function
+
+
 Private Sub AddOrUpdateHKMatch(ByVal dictMatchInfo As Object, _
                                ByVal strLabel As String, _
                                ByVal fieldText As String, _
                                ByVal currencyText As String, _
                                ByVal candIdx As Long, _
-                               ByVal totalCand As Long)
+                               ByVal totalCand As Long, _
+                               ByVal periodEnd As String)
     Dim scoreText As String, noteBase As String
     If candIdx = 1 Then
         scoreText = "100"
@@ -629,10 +641,12 @@ Private Sub AddOrUpdateHKMatch(ByVal dictMatchInfo As Object, _
     If dictMatchInfo.Exists(strLabel) Then
         Dim info As Variant: info = dictMatchInfo.Item(strLabel)
         info(7) = CLng(info(7)) + 1
+        If periodEnd > CStr(info(8)) Then info(8) = periodEnd
         dictMatchInfo.Item(strLabel) = info
     Else
         dictMatchInfo.Add strLabel, Array("OK_XUEQIU", "Xueqiu", "xueqiu_hk", _
-                                          fieldText, currencyText, scoreText, noteBase, 1)
+                                          fieldText, HKDiagnosticCurrencyCode(currencyText), _
+                                          scoreText, noteBase, 1, periodEnd)
     End If
 End Sub
 
@@ -651,8 +665,9 @@ Private Sub AppendHKDiagnosticsForConceptMap(ByVal strTicker As String, _
             Dim info As Variant: info = dictMatchInfo.Item(strLabel)
             Dim noteText As String: noteText = CStr(info(6))
             If CLng(info(7)) > 0 Then noteText = noteText & "; periods_written=" & CStr(info(7))
+            Dim fxText As String: fxText = FxRateTextForDiagnostic(CStr(info(4)), CStr(info(8)), strKind)
             AddDiagnosticRow collDiagRows, strTicker, strKind, strLabel, CStr(info(0)), CStr(info(1)), _
-                             CStr(info(2)), CStr(info(3)), CStr(info(4)), CStr(info(5)), noteText
+                             CStr(info(2)), CStr(info(3)), CStr(info(4)), CStr(info(5)), noteText, fxText
         Else
             AddDiagnosticRow collDiagRows, strTicker, strKind, strLabel, "MISSING", "—", _
                              "xueqiu_hk", "—", "—", "—", "no xueqiu hk field matched"

@@ -186,12 +186,7 @@ NextRow:
                     perCompanyPeriods:=True, _
                     dictReportingCurrency:=dictReportingCurrency, _
                     statementKind:=hookKind
-
-    ' 单位标注: 在 R1 下方 / sheet 名字附近, A1 cell 内容补充
-    On Error Resume Next
-    wsTarget.Range("A1").AddComment "单位: 百万美元 (USD millions)"
-    Err.Clear
-    On Error GoTo CleanUp
+    RefreshA1CurrencyComment wsTarget, targetSheet
 
 CleanUp:
     Application.ScreenUpdating = True
@@ -419,10 +414,12 @@ Private Function AccumulateEdgarTaxonomy(ByVal strTicker As String, _
 
                         If dictCanonical.Count > 0 Then
                             Dim ck As Variant
+                            Dim fxPeriodEnd As String: fxPeriodEnd = ""
                             For Each ck In dictCanonical.Keys
                                 Dim pair As Variant: pair = dictCanonical.Item(ck)
                                 Dim canonEnd As String: canonEnd = CStr(pair(0))
                                 Dim canonVal As Variant: canonVal = CDbl(pair(2)) / dblScale
+                                If canonEnd > fxPeriodEnd Then fxPeriodEnd = canonEnd
 
                                 If Not dictPeriodSet.Exists(canonEnd) Then dictPeriodSet.Add canonEnd, True
                                 If Not dictIndicatorSet.Exists(strLabel) Then
@@ -457,7 +454,7 @@ Private Function AccumulateEdgarTaxonomy(ByVal strTicker As String, _
                             End If
                             dictMatchInfo(strLabel) = Array(statusText, sourceName, taxonomyName, _
                                                             conceptName, strUnit, scoreText, noteBase, _
-                                                            CLng(dictCanonical.Count))
+                                                            CLng(dictCanonical.Count), fxPeriodEnd)
                             AccumulateEdgarTaxonomy = AccumulateEdgarTaxonomy + dictCanonical.Count
                             Exit For
                         ElseIf Not dictMatchInfo.Exists("NOPERIOD|" & strLabel) Then
@@ -473,14 +470,14 @@ Private Function AccumulateEdgarTaxonomy(ByVal strTicker As String, _
                             End If
                             dictMatchInfo.Add "NOPERIOD|" & strLabel, _
                                 Array("MISSING", sourceName, taxonomyName, conceptName, _
-                                      strUnit, noPeriodScore, noPeriodNote, 0)
+                                      strUnit, noPeriodScore, noPeriodNote, 0, "")
                         End If
                     ElseIf taxonomyName = "ifrs-full" Then
                         Dim actualUnit As String: actualUnit = FirstUnitKey(units)
                         If Len(actualUnit) > 0 And Not dictMatchInfo.Exists("NONUSD|" & strLabel) Then
                             dictMatchInfo.Add "NONUSD|" & strLabel, _
                                 Array("MISSING_NON_USD", sourceName, taxonomyName, conceptName, _
-                                      actualUnit, "—", "non_usd_unit", 0)
+                                      actualUnit, "—", "non_usd_unit", 0, "")
                         End If
                     End If
                 End If
@@ -650,8 +647,11 @@ Private Sub AppendMatchDiagnostic(ByVal strTicker As String, ByVal strKind As St
                                   ByVal collDiagRows As Collection)
     Dim noteText As String: noteText = CStr(info(6))
     If CLng(info(7)) > 0 Then noteText = noteText & "; periods_written=" & CStr(info(7))
+    Dim periodEnd As String: periodEnd = ""
+    If UBound(info) >= 8 Then periodEnd = CStr(info(8))
+    Dim fxText As String: fxText = FxRateTextForDiagnostic("USD", periodEnd, strKind)
     AddDiagnosticRow collDiagRows, strTicker, strKind, strLabel, CStr(info(0)), CStr(info(1)), _
-                     CStr(info(2)), CStr(info(3)), CStr(info(4)), CStr(info(5)), noteText
+                     CStr(info(2)), CStr(info(3)), CStr(info(4)), CStr(info(5)), noteText, fxText
 End Sub
 
 
@@ -1116,11 +1116,12 @@ Private Sub FetchUSFromXueqiu(ByVal strTicker As String, _
                     If dictMatchInfo.Exists(strLabel) Then
                         Dim info As Variant: info = dictMatchInfo.Item(strLabel)
                         info(7) = CLng(info(7)) + 1
+                        If periodEnd > CStr(info(8)) Then info(8) = periodEnd
                         dictMatchInfo.Item(strLabel) = info
                     Else
                         dictMatchInfo.Add strLabel, Array("OK_XUEQIU", "Xueqiu", "xueqiu", _
                                                          Trim$(CStr(cand)), MapEntryUnit(mapEntry), _
-                                                         scoreText, noteBase, 1)
+                                                         scoreText, noteBase, 1, periodEnd)
                     End If
                     Exit For    ' 找到一个匹配的就够
                 End If
