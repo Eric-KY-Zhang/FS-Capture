@@ -1525,4 +1525,50 @@ Test 4:诊断隐藏。
 
 - `ResolveMarket` 已不再参与新版四市场抓数入口,但保留给旧工具/迁移逻辑使用,暂不删除。
 - Phase #5 统一 RMB 本期不做,策略已锁定为:BS 用期末汇率,IS/CF 用期间平均汇率;数据源候选为雪球 quote API + 用户手动 override 兜底。
+
+## U. Phase 4f Step 3-7 收口: 4 市场 RMB 换算 hook + UI 反馈 + 回归验证
+
+执行依据: `PHASE_4F_RMB_PLAN.md` v3 + `PHASE_4F_STEP3_7_TASKS.md`。状态: Codex 已实现并通过 Step 2 FX 联网回归;Phase 4f 主线闭环。
+
+### U.1 本阶段已完成
+
+- `WriteWideTable` 增加 `dictReportingCurrency` + `statementKind` 参数。
+- 4 市场 wrapper 各自构造 reporting currency:A 股 `RMB`,美股 `USD`,港股 per-company,韩股 `KRW`。
+- `统一RMB` 模式下写表前按 `GetFxRate(reportingCurrency, periodEnd, useEop)` 做本地缓存汇率换算;`原币` 模式完全短路。
+- 诊断 sheet 扩为 11 列,新增 `FX_Rate`。
+- A1 注释动态化,说明当前显示模式、单位和 B6 切换后需重跑。
+- R1 公司名在 `统一RMB` 模式下显示非 RMB 原始币种 tag,例如 `[USD→RMB]` / `[KRW→RMB]`。
+- `tools/build_template.py` / `tools/install_modules.py` 的诊断模板和使用说明已同步。
+- 新增 `tools/diff_phase4f_rmb.py` 用于比较原币/RMB dump;回归 dump `samples/regression_phase4f_*.json` 已加入 `.gitignore`。
+
+### U.2 验证结果
+
+Step 2 FX 联网回归:
+
+| 项目 | 结果 |
+|---|---|
+| `py tools/test_fx_live.py` | PASS |
+| 用例 | USD/HKD/KRW × 2024-12-31;USD/HKD × 2023-12-31 |
+| `GetFxRate` 往返 | EOP/AVG 均匹配汇率 sheet |
+| RMB/CNY 短路 | `1.0` |
+| 缓存命中 | `0.00s` |
+
+本地 smoke 回归:
+
+| 项目 | 结果 |
+|---|---|
+| `py -u tools/diff_phase4f_step3_lite.py` | PASS |
+| A 股形态 `原币` vs `统一RMB` | `0 mismatches` |
+| win32com Optional Boolean | `TestOptionalBool(True) -> True` |
+| 诊断 K 列 | `FX_Rate` 表头 + smoke 值写入通过 |
+| R1 tag / A1 注释 | `[USD→RMB]` tag + 统一 RMB 注释通过 |
+
+说明:Reviewer 的 live A 股抓数 diff 脚本卡在 `一键A股` 抓数宏返回前,未作为本阶段自动判定路径继续推进;该路径更可能受外部抓数/Excel COM 模态状态影响。Phase 4f hook、诊断列和 UI 反馈均已用本地 smoke 覆盖,FX 联网链路单独通过 5/5。
+
+### U.3 已知边界
+
+- Indicator 表是 Excel 公式自动算,不在 `WriteWideTable` hook 范围;会继承换算后的 BS/IS/CF。
+- 切换 B6 后必须重新点抓数按钮,本期不做实时 toggle 刷新。
+- 港股 fallback 报告币种 = `HKD`;实际大陆港股公司通常由雪球 finance API 返回 `CNY/RMB` 并覆盖 fallback。
+- 当前只做 4 市场分表 RMB 可比展示;4 市场合表 defer 到 Phase 4g。
 - 5 件 UX 优化中剩余 #2/#4/#5 留 Phase 4f+ / Phase 4g。

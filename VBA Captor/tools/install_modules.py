@@ -1016,8 +1016,12 @@ def update_intro_sheet(wb):
         "汇率与币种 (Phase 4f Step 2 起)",
         "新增『汇率』sheet 缓存 USDCNY / HKDCNY / KRWCNY 期末与期间平均汇率。",
         "数据源: 雪球 K 线 USDCNY.FX / HKDCNY.FX / KRWCNY.FX, 期间平均 = 区间内日 close 算术平均。",
-        "用户可在 汇率 sheet 手填 cell 覆盖系统拉取值; 备注列可写 override 理由。",
-        "样本池 B6 切换『显示币种』: 默认『原币』; 选『统一RMB』后 Step 4 跑数会自动 × 汇率写 RMB。",
+        "  1. 在样本池 A 列填代码、B 列填简称 (各市场分栏)。",
+        "  2. B5 可填雪球访客 cookie (一般留空也可, 系统会自动 warmup 拿)。",
+        "  3. B6 选 '原币' (默认) 或 '统一RMB' (4 市场全部按当期汇率换算成 RMB 显示)。",
+        "  4. 点 '一键全抓 4 市场', 等候 ~3 分钟。",
+        "  5. 切换 B6 后需要重新点抓数按钮, 数值才会重算 (本期不做实时 toggle)。",
+        "汇率值在『汇率』sheet 缓存; 用户可手填 cell override 系统拉取值, 备注列写理由。",
     ]
 
     for idx, text in enumerate(lines, start=2):

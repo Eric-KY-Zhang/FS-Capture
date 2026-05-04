@@ -6,5 +6,8 @@
 tools/__pycache__/
 *.pyc
 
+# Phase 4f 回归 dump (本地生成, 不入库)
+samples/regression_phase4f_*.json
+
 # 注: archive/ 下的历史 xlsm 也被父级 .gitignore 的 *.xlsm 排除
 #     如需把 V2_2_宽表版.xlsm (用户参考样例) 也排除, 父级规则已覆盖
