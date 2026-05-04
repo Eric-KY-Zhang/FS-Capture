@@ -1572,3 +1572,49 @@ Step 2 FX 联网回归:
 - 港股 fallback 报告币种 = `HKD`;实际大陆港股公司通常由雪球 finance API 返回 `CNY/RMB` 并覆盖 fallback。
 - 当前只做 4 市场分表 RMB 可比展示;4 市场合表 defer 到 Phase 4g。
 - 5 件 UX 优化中剩余 #2/#4/#5 留 Phase 4f+ / Phase 4g。
+
+## V. Phase 4g 收口: 跨市场合并指标表 + UX hide-tab + 备用数据源调研
+
+执行依据: `PHASE_4G_PLAN.md` v2。状态: Codex 已实现并通过本地回归 + 无网络验收;Phase 4g 全期闭环。
+
+### V.1 本阶段已完成
+
+- [Step 1] `install_modules.py` 对已存在诊断 sheet 强制刷新 11 列表头,升级即可见 `FX_Rate`。
+- [Step 2] 新建『跨市场_指标表』+ VBA `BuildCrossMarketIndicatorSheet`:18 标准指标 × 横向铺公司×报告期,每个数据 cell 公式引用 4 张分市场指标表;一键全抓末尾自动刷新。
+- [Step 3] hide-tab 按钮 5 个 (4 市场 + 1 全局),`POOL_DATA_START_ROW` 10 → 11,旧 Row 10+ 样本自动下移到 Row 11+。
+- [Step 4] stockanalysis 港股 + 中概美股 6 ticker 覆盖度调研报告已写入 `samples/STOCKANALYSIS_PROBE.md`;不切换数据源。
+
+### V.2 验证结果
+
+Phase 4f 回归:
+
+| 项目 | 结果 |
+|---|---|
+| `py tools/test_fx_live.py --skip-install` | PASS,5/5;USD/HKD/KRW 2024-12-31 与 USD/HKD 2023-12-31 缓存命中 0.00s |
+| `py -u tools/diff_phase4f_step3_lite.py` | PASS;A股资产负债表 `原币` vs `统一RMB` 为 0 mismatches |
+
+Phase 4g 无网络验收:
+
+| 项目 | 结果 |
+|---|---|
+| `tools/inspect_phase4g_state.py` | PASS |
+| 跨市场表头 | R1 横向铺 `安克创新(300866) [A]` / `Apple(AAPL) [US]` / `腾讯控股(00700) [HK]` 等公司 |
+| 跨市场公式 | Row 3-5 数据 cell 正常引用分市场指标表,例如 `=A股_指标表!D3` / `=美股_指标表!D3` |
+| hide-tab 按钮 | `BtnHideA/US/HK/KR` 位于 `A9/E9/I9/M9`;`BtnHideAll` 位于 `Q8:Q10` |
+| 显隐宏 | 全局 toggle 第一次隐藏 19/19 分市场 sheet,第二次恢复 19/19 |
+| 诊断表 | 美股/港股/韩股诊断 Row 2 均为 11 列,`K2=FX_Rate` |
+
+stockanalysis 调研:
+
+| 范围 | 结果 |
+|---|---|
+| 港股 00700/02519/09988 | 3/3 HTTP 404,候选路径不可用 |
+| 中概美股 BABA/JD/PDD | 3/3 HTTP 200,`/financials/` 收入表可用;BS/CF 需另取子页面 |
+| 结论 | Phase 4g 不切换;Phase 4h 可把 stockanalysis 作为中概美股备用路径候选,港股暂不切 |
+
+### V.3 已知边界
+
+- 跨市场指标表只合 18 项标准指标 (Indicator);BS/IS/CF 全合 defer 到 Phase 4h。
+- stockanalysis 切换 defer 到 Phase 4h;港股候选路径本轮不可用,中概美股需补 BS/CF 子页面抓样和单位审计。
+- POOL_DATA_START_ROW 迁移是 invasive change,老用户从 4f 升级时旧样本池数据自动迁移到 Row 11+。
+- 全局 hide-tab 按钮使用 `Q8:Q10`,保留 Round 1 已验收的 `Q5:Q7`『合并跨市场指标表』按钮。
