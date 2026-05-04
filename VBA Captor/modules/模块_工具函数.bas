@@ -1055,6 +1055,7 @@ End Function
 '   perCompanyPeriods : True 时每家公司只展开自己有数据的报告期 (美股用)
 '   dictReportingCurrency : code -> 报告币种; Nothing 时按 RMB 处理
 '   statementKind     : "BalanceSheet" / "Income" / "CashFlow", 用于选择期末/均值汇率
+'   useRawDumpLayer   : True 时把原币值写入隐藏 raw dump 区,展示区写 B6 联动公式
 Public Sub WriteWideTable(ByVal ws As Worksheet, _
                            ByRef arrCodes As Variant, _
                            ByRef dictCompanyName As Object, _
@@ -1064,7 +1065,8 @@ Public Sub WriteWideTable(ByVal ws As Worksheet, _
                            ByRef dictCategory As Object, _
                            Optional ByVal perCompanyPeriods As Boolean = False, _
                            Optional ByRef dictReportingCurrency As Object = Nothing, _
-                           Optional ByVal statementKind As String = "")
+                           Optional ByVal statementKind As String = "", _
+                           Optional ByVal useRawDumpLayer As Boolean = True)
     Dim numCompanies As Long, numPeriods As Long, numIndicators As Long
     Dim i As Long, j As Long, k As Long, intRow As Long, intCol As Long
     Dim strCode As String, strName As String, strInd As String, strPeriod As String
@@ -1106,6 +1108,8 @@ Public Sub WriteWideTable(ByVal ws As Worksheet, _
 
     Dim totalCols As Long: totalCols = metaCols + totalDataCols
     If totalCols < metaCols + 1 Then totalCols = metaCols + 1
+    Dim dataCols As Long: dataCols = totalCols - metaCols
+    If dataCols < 0 Then dataCols = 0
 
     ' 1) 清旧数据 (保留 A1:B1 容器, 但 R1 公司名 + R2 + R3+ 数据全部重画)
     With ws
@@ -1153,14 +1157,9 @@ Public Sub WriteWideTable(ByVal ws As Worksheet, _
             Else
                 strName = strCode
             End If
-            ' Phase 4f Step 5: 统一RMB 模式下追加原始报告币种 tag
-            If displayMode = "统一RMB" And Not dictReportingCurrency Is Nothing Then
-                If dictReportingCurrency.Exists(strCode) Then
-                    Dim origCur As String: origCur = CStr(dictReportingCurrency(strCode))
-                    If origCur <> "RMB" And Len(origCur) > 0 Then
-                        strName = strName & " [" & origCur & "→RMB]"
-                    End If
-                End If
+            Dim origCur As String: origCur = "RMB"
+            If Not dictReportingCurrency Is Nothing Then
+                If dictReportingCurrency.Exists(strCode) Then origCur = CStr(dictReportingCurrency(strCode))
             End If
 
             Dim periodsForCompany As Collection
@@ -1175,7 +1174,17 @@ Public Sub WriteWideTable(ByVal ws As Worksheet, _
 
             intCol = currentCol
             companyStartCols(strCode) = intCol
-            .Cells(1, intCol).Value = strName
+            If useRawDumpLayer And origCur <> "RMB" And Len(origCur) > 0 Then
+                .Cells(1, intCol).Formula = "=" & FormulaQuote(strName) & _
+                    "&IF('样本池'!$B$6=""统一RMB""," & _
+                    FormulaQuote(" [" & origCur & "→RMB]") & ","""")"
+            Else
+                If displayMode = "统一RMB" And origCur <> "RMB" And Len(origCur) > 0 Then
+                    .Cells(1, intCol).Value = strName & " [" & origCur & "→RMB]"
+                Else
+                    .Cells(1, intCol).Value = strName
+                End If
+            End If
 
             ' 合并 R1 这家公司占的 N 列
             If periodCount > 1 Then
@@ -1223,6 +1232,8 @@ NextHeaderCompany:
         '    用 Variant 二维数组一次性写入, 比逐 cell 快
         Dim arrOut As Variant
         ReDim arrOut(1 To numIndicators, 1 To totalCols)
+        Dim arrRawData As Variant
+        If useRawDumpLayer And dataCols > 0 Then ReDim arrRawData(1 To numIndicators, 1 To dataCols)
         For k = 1 To numIndicators
             strInd = CStr(arrIndicators(k))
             If dictCategory.Exists(strInd) Then arrOut(k, 1) = dictCategory(strInd)
@@ -1253,7 +1264,9 @@ NextHeaderCompany:
                                 Dim rawVal As Variant: rawVal = dictPer(strInd)
                                 Dim writeVal As Variant: writeVal = rawVal
                                 ' Phase 4f Step 3: 统一RMB 显示模式 -> 按报告币种乘汇率
-                                If displayMode = "统一RMB" And IsNumeric(rawVal) Then
+                                If useRawDumpLayer Then
+                                    arrRawData(k, intCol + j - 1 - metaCols) = rawVal
+                                ElseIf displayMode = "统一RMB" And IsNumeric(rawVal) Then
                                     Dim curCode As String: curCode = "RMB"
                                     If Not dictReportingCurrency Is Nothing Then
                                         If dictReportingCurrency.Exists(strCode) Then _
@@ -1266,8 +1279,10 @@ NextHeaderCompany:
                                     Else
                                         writeVal = rawVal
                                     End If
+                                    arrOut(k, intCol + j - 1) = writeVal
+                                Else
+                                    arrOut(k, intCol + j - 1) = writeVal
                                 End If
-                                arrOut(k, intCol + j - 1) = writeVal
                             End If
                         End If
                     Next j
@@ -1277,6 +1292,55 @@ NextDataCompany:
         Next k
 
         .Range(.Cells(3, 1), .Cells(2 + numIndicators, totalCols)).Value = arrOut
+        If useRawDumpLayer And dataCols > 0 Then
+            Dim rawStartRow As Long
+            rawStartRow = Application.WorksheetFunction.Max(200, 3 + numIndicators + 10)
+            Dim rawDataStartRow As Long: rawDataStartRow = rawStartRow + 2
+
+            .Range(.Cells(rawStartRow, metaCols + 1), _
+                   .Cells(rawDataStartRow + numIndicators - 1, totalCols)).Clear
+            .Range(.Cells(rawDataStartRow, metaCols + 1), _
+                   .Cells(rawDataStartRow + numIndicators - 1, totalCols)).Value = arrRawData
+            .Rows(CStr(rawStartRow) & ":" & CStr(rawDataStartRow + numIndicators - 1)).Hidden = True
+
+            For k = 1 To numIndicators
+                For i = 1 To numCompanies
+                    strCode = CStr(arrCodes(i))
+                    If perCompanyPeriods Then
+                        If Not companyStartCols.Exists(strCode) Then GoTo NextFormulaCompany
+                        Set periodsForCompany = companyPeriods(strCode)
+                        intCol = CLng(companyStartCols(strCode))
+                        periodCount = periodsForCompany.Count
+                    Else
+                        intCol = metaCols + 1 + (i - 1) * numPeriods
+                        periodCount = numPeriods
+                    End If
+
+                    Dim formulaCur As String: formulaCur = "RMB"
+                    If Not dictReportingCurrency Is Nothing Then
+                        If dictReportingCurrency.Exists(strCode) Then formulaCur = CStr(dictReportingCurrency(strCode))
+                    End If
+
+                    For j = 1 To periodCount
+                        If perCompanyPeriods Then
+                            strPeriod = CStr(periodsForCompany.Item(j))
+                        Else
+                            strPeriod = CStr(arrPeriodsSorted(j))
+                        End If
+                        Dim targetDataCol As Long: targetDataCol = intCol + j - 1
+                        Dim rawRef As String: rawRef = .Cells(rawDataStartRow + k - 1, targetDataCol).Address(False, False)
+                        Dim fxForFormula As Double
+                        fxForFormula = GetFxRate(formulaCur, strPeriod, useEopForBS)
+                        If fxForFormula <= 0 Then fxForFormula = 1#
+                        Dim fxText As String: fxText = Replace(Trim$(Str$(fxForFormula)), ",", ".")
+                        .Cells(2 + k, targetDataCol).Formula = "=IF(" & rawRef & "="""",""""," & _
+                            "IF('样本池'!$B$6=""原币""," & rawRef & "," & _
+                            "IF(ISNUMBER(" & rawRef & ")," & rawRef & "*" & fxText & "," & rawRef & ")))"
+                    Next j
+NextFormulaCompany:
+                Next i
+            Next k
+        End If
 
         ' 5) 列宽 / 字体 / 边框 / 冻结
         .Columns("A").ColumnWidth = 30
@@ -1318,6 +1382,11 @@ NextDataCompany:
         .Cells(1, 1).Select
     End With
 End Sub
+
+
+Private Function FormulaQuote(ByVal textValue As String) As String
+    FormulaQuote = """" & Replace(textValue, """", """""") & """"
+End Function
 
 
 Public Function UnitDescriptionForMarket(ByVal sheetName As String) As String
