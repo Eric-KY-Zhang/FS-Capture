@@ -481,7 +481,7 @@ def _apply_card_brand(ws_pool, left_col, right_col, title, brand_hex, light_hex,
     _style_merged_range(ws_pool.Range(ws_pool.Cells(7, left_col), ws_pool.Cells(7, right_col)), title, brand_hex, "FFFFFF", 12, True)
     band = ws_pool.Range(ws_pool.Cells(8, left_col), ws_pool.Cells(8, right_col))
     band.Merge()
-    band.Interior.Color = rgb_long(brand_hex)
+    band.Interior.Color = rgb_long("FFFFFF")  # Phase 4j.3: 白色窄带,作为 header 与按钮之间的呼吸间距(去掉 Phase 4j.2 的 brand 色重复带)
 
     _style_merged_range(ws_pool.Range(ws_pool.Cells(9, left_col), ws_pool.Cells(10, right_col)), "", brand_hex, "FFFFFF", 14, True)
     _style_merged_range(ws_pool.Range(ws_pool.Cells(11, left_col), ws_pool.Cells(12, right_col)), "", light_hex, SECONDARY_FG, 11, True)
@@ -526,10 +526,10 @@ def layout_sample_pool(ws_pool):
     ws_pool.Range("W1:Y8").Clear()
 
     widths = {
-        "A": 11, "B": 16, "C": 4, "D": 11,
-        "E": 16, "F": 4, "G": 11, "H": 16,
-        "I": 4, "J": 11, "K": 16, "L": 4,
-        "M": 10, "N": 8, "O": 8, "P": 8,
+        "A": 11, "B": 16, "C": 1, "D": 11,
+        "E": 16, "F": 1, "G": 11, "H": 16,
+        "I": 1, "J": 11, "K": 16, "L": 1,
+        "M": 1, "N": 8, "O": 8, "P": 8,
         "Q": 8, "R": 4, "S": 14, "T": 14,
         "U": 14, "V": 14,
     }
