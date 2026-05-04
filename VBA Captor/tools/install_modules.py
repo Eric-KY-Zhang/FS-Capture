@@ -536,6 +536,14 @@ def layout_sample_pool(ws_pool):
     for col, width in widths.items():
         ws_pool.Columns(col).ColumnWidth = width
 
+    # Phase 4j.4: 彻底 hide 5 个 padding 列, 让 4 张卡片视觉上紧贴
+    # (Phase 4j.3 缩到 width=1 仍可见空列, 改 Hidden=True 才消失)
+    for hide_col in ("C", "F", "I", "L", "M"):
+        try:
+            ws_pool.Columns(hide_col).Hidden = True
+        except Exception as e:
+            print(f"  ! 隐藏列 {hide_col} 失败: {e}")
+
     label_fill = rgb_long("F7FBFF")
     value_fill = rgb_long("FFF8DF")
     border_blue = "7EA6D9"
