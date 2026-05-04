@@ -1,7 +1,7 @@
 """
 Phase 4f Step 3 lite reviewer test:
   Local A股-shaped smoke test for WriteWideTable.
-  B6=原币 vs B6=统一RMB, expect byte-identical because A股 reports RMB.
+  E6=原币 vs E6=统一RMB, expect byte-identical because A股 reports RMB.
 
 This avoids live Sina/Xueqiu/StockAnalysis fetches. Progress is printed to stderr
 (always unbuffered) so we can see where COM calls fail.

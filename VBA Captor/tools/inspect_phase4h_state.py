@@ -69,7 +69,7 @@ def main() -> int:
         print("\n[2] buttons and toggles", flush=True)
         ws_pool = wb.Worksheets("样本池")
         expected_buttons = {
-            "BtnClearCache": ("Q9:Q11", "清空 HTTP 缓存"),
+            "BtnClearCache": ("O11:P12", "清空 HTTP 缓存"),
         }
         for name, (addr, caption) in expected_buttons.items():
             try:
@@ -97,20 +97,20 @@ def main() -> int:
                 pass
         print("manual fallback toggle removed; old cross-market and single-table buttons absent")
 
-        print("\n[3] B6 realtime toggle smoke", flush=True)
-        saved_b6 = ws_pool.Range("B6").Value
+        print("\n[3] E6 realtime toggle smoke", flush=True)
+        saved_b6 = ws_pool.Range("E6").Value
         excel.Run("模块_测试.TestPhase4hToggleSmoke")
         ws_smoke = wb.Worksheets("_phase4h_toggle_smoke")
-        ws_pool.Range("B6").Value = "原币"
+        ws_pool.Range("E6").Value = "原币"
         excel.Calculate()
         raw_val = ws_smoke.Range("C3").Value
-        ws_pool.Range("B6").Value = "统一RMB"
+        ws_pool.Range("E6").Value = "统一RMB"
         excel.Calculate()
         rmb_val = ws_smoke.Range("C3").Value
-        ws_pool.Range("B6").Value = saved_b6
+        ws_pool.Range("E6").Value = saved_b6
         print(f"_phase4h_toggle_smoke C3 raw={raw_val}, rmb={rmb_val}")
         if not (isinstance(raw_val, (int, float)) and isinstance(rmb_val, (int, float)) and rmb_val > raw_val * 5):
-            failures.append("B6 realtime toggle did not change USD numeric value")
+            failures.append("E6 realtime toggle did not change USD numeric value")
 
         print("\n[4] local cache smoke", flush=True)
         excel.Run("模块_工具函数.ClearLocalCache")
@@ -122,12 +122,12 @@ def main() -> int:
             failures.append("local cache read/write smoke failed")
 
         print("\n[5] stockanalysis fallback smoke", flush=True)
-        ws_pool.Range("E11:F80").ClearContents()
-        ws_pool.Range("E11").Value = "BABA"
-        ws_pool.Range("F11").Value = "阿里巴巴"
-        ws_pool.Range("A2").Value = 2025
-        ws_pool.Range("A4").Value = "全部"
-        ws_pool.Range("B5").Value = "invalid_cookie_for_phase4h"
+        ws_pool.Range("E13:F80").ClearContents()
+        ws_pool.Range("E13").Value = "BABA"
+        ws_pool.Range("F13").Value = "阿里巴巴"
+        ws_pool.Range("E3").Value = 2025
+        ws_pool.Range("E4").Value = "全部"
+        ws_pool.Range("E5").Value = "invalid_cookie_for_phase4h"
         excel.Run("模块_抓美股资产负债表.Main")
         ws_diag = wb.Worksheets("美股_抓取诊断")
         fallback_rows = 0

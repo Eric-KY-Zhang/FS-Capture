@@ -77,17 +77,17 @@ KR_FILL = "7030A0"        # 深紫 — 韩股按钮区分
 KR_FG = "FFFFFF"
 
 BUTTONS = [
-    ("BtnRunAll",       "一键全抓 4 市场",     "模块_总入口.一键全抓",            "Q1:Q3", SECONDARY_FILL, SECONDARY_FG, 13, True),
-    ("BtnHideAll",      "显示/隐藏 所有市场数据", "模块_总入口.切换所有分市场tabs", "Q5:Q7", SECONDARY_FILL, SECONDARY_FG, 11, True),
-    ("BtnClearCache",   "清空 HTTP 缓存",       "模块_工具函数.ClearLocalCache",   "Q9:Q11", SECONDARY_FILL, SECONDARY_FG, 10, True),
-    ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A8:B8", PRIMARY_FILL,   PRIMARY_FG,   10, True),
-    ("BtnRunUS",        "一键 美股",           "模块_总入口.一键美股",            "E8:F8", US_FILL,        US_FG,        12, True),
-    ("BtnRunHK",        "一键 港股",           "模块_总入口.一键港股",            "I8:J8", HK_FILL,        HK_FG,        12, True),
-    ("BtnRunKR",        "一键 韩股",           "模块_总入口.一键韩股",            "M8:N8", KR_FILL,        KR_FG,        12, True),
-    ("BtnHideA",        "显示/隐藏 A 股数据",    "模块_总入口.切换A股tabs",          "A9:B9", SECONDARY_FILL, SECONDARY_FG, 9, False),
-    ("BtnHideUS",       "显示/隐藏 美股数据",    "模块_总入口.切换美股tabs",         "E9:F9", SECONDARY_FILL, SECONDARY_FG, 9, False),
-    ("BtnHideHK",       "显示/隐藏 港股数据",    "模块_总入口.切换港股tabs",         "I9:J9", SECONDARY_FILL, SECONDARY_FG, 9, False),
-    ("BtnHideKR",       "显示/隐藏 韩股数据",    "模块_总入口.切换韩股tabs",         "M9:N9", SECONDARY_FILL, SECONDARY_FG, 9, False),
+    ("BtnRunAll",       "一键全抓 4 市场",     "模块_总入口.一键全抓",            "O3:P4", SECONDARY_FILL, SECONDARY_FG, 13, True),
+    ("BtnHideAll",      "显示/隐藏\n所有市场数据", "模块_总入口.切换所有分市场tabs", "O7:P9", SECONDARY_FILL, SECONDARY_FG, 11, True),
+    ("BtnClearCache",   "清空 HTTP 缓存",       "模块_工具函数.ClearLocalCache",   "O11:P12", SECONDARY_FILL, SECONDARY_FG, 10, True),
+    ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A9:C10", PRIMARY_FILL,   PRIMARY_FG,   12, True),
+    ("BtnRunUS",        "一键 美股",           "模块_总入口.一键美股",            "E9:G10", US_FILL,        US_FG,        12, True),
+    ("BtnRunHK",        "一键 港股",           "模块_总入口.一键港股",            "I9:K10", HK_FILL,        HK_FG,        12, True),
+    ("BtnRunKR",        "一键 韩股",           "模块_总入口.一键韩股",            "M9:N10", KR_FILL,        KR_FG,        12, True),
+    ("BtnHideA",        "显示/隐藏 A股数据",     "模块_总入口.切换A股tabs",          "A11:C11", SECONDARY_FILL, SECONDARY_FG, 9, False),
+    ("BtnHideUS",       "显示/隐藏 美股数据",    "模块_总入口.切换美股tabs",         "E11:G11", SECONDARY_FILL, SECONDARY_FG, 9, False),
+    ("BtnHideHK",       "显示/隐藏 港股数据",    "模块_总入口.切换港股tabs",         "I11:K11", SECONDARY_FILL, SECONDARY_FG, 9, False),
+    ("BtnHideKR",       "显示/隐藏 韩股数据",    "模块_总入口.切换韩股tabs",         "M11:N11", SECONDARY_FILL, SECONDARY_FG, 9, False),
 ]
 
 # 已废弃: install 时从当前 xlsm 主动移除 (即使 modules/ 下仍有遗留也清掉)
@@ -401,222 +401,281 @@ def migrate_phase4g_sample_rows(ws_pool):
     print("  + Phase 4g 样本池数据行已从 Row 10+ 下移到 Row 11+")
 
 
+def capture_sample_pool_companies(ws_pool):
+    """Collect existing four-market sample rows before repainting the UI."""
+    col_map = {"A": (1, 2), "US": (5, 6), "HK": (9, 10), "KR": (13, 14)}
+    by_market = {market: [] for market in col_map}
+    seen = {market: set() for market in col_map}
+    skip_tokens = {"代码", "简称", "一键 A 股", "一键 美股", "一键 港股", "一键 韩股"}
+
+    for start_row in (13, 11, 10):
+        for row in range(start_row, 1001):
+            for market, (code_col, name_col) in col_map.items():
+                code = _cell_text(ws_pool.Cells(row, code_col))
+                if not code or code in skip_tokens or "显示/隐藏" in code:
+                    continue
+                key = code.upper()
+                if key in seen[market]:
+                    continue
+                name = _cell_text(ws_pool.Cells(row, name_col))
+                by_market[market].append((code, name))
+                seen[market].add(key)
+
+    return by_market
+
+
+def restore_sample_pool_companies(ws_pool, by_market, start_row=13):
+    col_map = {"A": (1, 2), "US": (5, 6), "HK": (9, 10), "KR": (13, 14)}
+    for market, (code_col, name_col) in col_map.items():
+        ws_pool.Range(ws_pool.Cells(start_row, code_col), ws_pool.Cells(1000, name_col)).ClearContents()
+        for offset, (code, name) in enumerate(by_market.get(market, [])):
+            row = start_row + offset
+            ws_pool.Cells(row, code_col).NumberFormat = "@"
+            ws_pool.Cells(row, code_col).Value = code
+            ws_pool.Cells(row, name_col).Value = name
+
+
 def layout_sample_pool(ws_pool):
-    """重画 Phase 4g 样本池配置区、市场分栏和数据区格式,不清除 Row 11+ 公司数据。"""
-    year_value = ws_pool.Range("A2").Value or 2025
-    quarter_value = ws_pool.Range("A4").Value or "全部"
-    cookie_value = ws_pool.Range("B5").Value or ""
-    # Phase 4f Step 2: 保留用户已选的 B6 显示币种 (空 → install_currency_toggle_cell 写默认)
-    currency_value = ws_pool.Range("B6").Value or ""
+    """重画样本池配置区、市场卡片和数据区格式,保留已有公司数据。"""
+    year_value = ws_pool.Range("E3").Value or ws_pool.Range("A2").Value or 2025
+    quarter_value = ws_pool.Range("E4").Value or ws_pool.Range("A4").Value or "全部"
+    cookie_value = ws_pool.Range("E5").Value or ws_pool.Range("B5").Value or ""
+    currency_value = ws_pool.Range("E6").Value or ws_pool.Range("B6").Value or "原币"
 
     migrate_phase4g_sample_rows(ws_pool)
+    companies = capture_sample_pool_companies(ws_pool)
 
     try:
-        ws_pool.Range("A1:R10").UnMerge()
-        ws_pool.Range("S1:U24").UnMerge()
+        ws_pool.Range("A1:S24").UnMerge()
         ws_pool.Range("W1:Y5").UnMerge()
     except Exception:
         pass
-    ws_pool.Range("A1:R10").Clear()
-    ws_pool.Range("S1:U24").Clear()
+    ws_pool.Range("A1:S24").Clear()
     ws_pool.Range("W1:Y5").Clear()
 
     widths = {
-        "A": 11, "B": 16, "C": 2, "D": 2,
-        "E": 8, "F": 18, "G": 2, "H": 2,
-        "I": 7, "J": 14, "K": 2, "L": 2,
-        "M": 8, "N": 16, "O": 2, "P": 2,
-        "Q": 13, "R": 16, "S": 2, "T": 13, "U": 18,
-        "V": 2, "W": 18, "X": 18, "Y": 24,
+        "A": 11, "B": 16, "C": 8, "D": 8,
+        "E": 11, "F": 16, "G": 8, "H": 8,
+        "I": 10, "J": 16, "K": 8, "L": 8,
+        "M": 10, "N": 16, "O": 15, "P": 16,
+        "Q": 18, "R": 18, "S": 24,
+        "T": 2, "U": 2, "V": 2, "W": 2,
     }
     for col, width in widths.items():
         ws_pool.Columns(col).ColumnWidth = width
 
-    label_fill = rgb_long("B4C7E7")
-    value_fill = rgb_long("FFE699")
-    cookie_fill = rgb_long("FFF2CC")
+    label_fill = rgb_long("F7FBFF")
+    value_fill = rgb_long("FFF8DF")
+    border_blue = rgb_long("7EA6D9")
+    pale_blue = rgb_long("EAF2FF")
+    pale_red = rgb_long("FCE4E4")
+    pale_green = rgb_long("EAF4E3")
+    pale_purple = rgb_long("EEE8F7")
 
-    for addr, value in (
-        ("A1", "年份 (留空=取最新)"),
-        ("A3", "季度 (Q1/Q2/Q3/Q4 或 全部)"),
-        ("A5", "雪球 Cookie"),
-        ("A6", "显示币种"),
-    ):
-        cell = ws_pool.Range(addr)
-        cell.Value = value
-        cell.Font.Name = "微软雅黑"
-        cell.Font.Size = 10
-        cell.Font.Bold = True
-        cell.Interior.Color = label_fill
-        cell.HorizontalAlignment = -4108
-        cell.VerticalAlignment = -4108
+    header = ws_pool.Range("A2:N2")
+    header.Merge()
+    header.Value = "参数设置"
+    header.Font.Name = "微软雅黑"
+    header.Font.Size = 12
+    header.Font.Bold = True
+    header.Font.Color = rgb_long("FFFFFF")
+    header.Interior.Color = rgb_long("002060")
+    header.HorizontalAlignment = -4131
+    header.VerticalAlignment = -4108
 
-    ws_pool.Range("A2").Value = year_value
-    ws_pool.Range("A4").Value = quarter_value
-    for addr in ("A2", "A4"):
-        cell = ws_pool.Range(addr)
-        cell.Font.Name = "微软雅黑"
-        cell.Font.Size = 11
-        cell.Font.Bold = True
-        cell.Interior.Color = value_fill
-        cell.HorizontalAlignment = -4108
-        cell.VerticalAlignment = -4108
+    config_rows = [
+        (3, "年份（留空=取最新）", year_value),
+        (4, "Q1/Q2/Q3/Q4 或 全部", quarter_value),
+        (5, "雪球 Cookie", cookie_value),
+        (6, "显示币种", currency_value),
+    ]
+    for row, label, value in config_rows:
+        label_rng = ws_pool.Range(f"A{row}:D{row}")
+        value_rng = ws_pool.Range(f"E{row}:N{row}")
+        label_rng.Merge()
+        value_rng.Merge()
+        label_rng.Value = label
+        value_rng.Value = value
+        label_rng.Font.Name = "微软雅黑"
+        label_rng.Font.Size = 10
+        label_rng.Font.Bold = True
+        label_rng.Font.Color = rgb_long("002060")
+        label_rng.Interior.Color = label_fill
+        label_rng.HorizontalAlignment = -4131
+        label_rng.VerticalAlignment = -4108
+        value_rng.Font.Name = "Consolas" if row == 5 else "微软雅黑"
+        value_rng.Font.Size = 9 if row == 5 else 11
+        value_rng.Interior.Color = value_fill
+        value_rng.HorizontalAlignment = -4131
+        value_rng.VerticalAlignment = -4108
+        value_rng.WrapText = True
 
     try:
-        ws_pool.Range("A4").Validation.Delete()
-        ws_pool.Range("A4").Validation.Add(
+        ws_pool.Range("E4").Validation.Delete()
+        ws_pool.Range("E4").Validation.Add(
             Type=XL_VALIDATE_LIST,
             AlertStyle=XL_VALID_ALERT_STOP,
             Operator=1,
             Formula1="全部,Q1,Q2,Q3,Q4",
         )
-        ws_pool.Range("A4").Validation.IgnoreBlank = False
-        ws_pool.Range("A4").Validation.InCellDropdown = True
+        ws_pool.Range("E4").Validation.IgnoreBlank = False
+        ws_pool.Range("E4").Validation.InCellDropdown = True
     except Exception as e:
-        print(f"  ! A4 数据验证添加失败: {e}")
+        print(f"  ! E4 数据验证添加失败: {e}")
 
+    for addr in ("E5", "E6"):
+        try:
+            if ws_pool.Range(addr).Comment is not None:
+                ws_pool.Range(addr).Comment.Delete()
+        except Exception:
+            pass
     try:
-        ws_pool.Range("B5:F5").UnMerge()
-    except Exception:
-        pass
-    ws_pool.Range("B5:F5").Merge()
-    val_cell = ws_pool.Range("B5")
-    val_cell.Value = cookie_value
-    val_cell.Font.Name = "Consolas"
-    val_cell.Font.Size = 9
-    val_cell.Interior.Color = cookie_fill
-    val_cell.HorizontalAlignment = -4131
-    val_cell.VerticalAlignment = -4108
-    val_cell.WrapText = True
-    try:
-        if val_cell.Comment is None:
-            val_cell.AddComment(
-                "雪球登录凭证,用于港股和部分中概美股备用数据源。\n"
-                "如果港股或中概美股取数失败,请重新登录雪球后复制新的 xq_a_token。"
-            )
-    except Exception:
-        pass
-
-    # Phase 4f Step 2: 恢复 B6 显示币种 (clear A1:Q10 已清掉, 这里写回; 空 → 后续 install_currency_toggle_cell 写默认)
-    if currency_value:
-        ws_pool.Range("B6").Value = currency_value
-
-    markets = [
-        ("A7:B7", "A 股(新浪)", PRIMARY_FILL),
-        ("E7:F7", "美股(EDGAR+雪球)", US_FILL),
-        ("I7:J7", "港股(雪球 HK)", HK_FILL),
-        ("M7:N7", "韩股(stockanalysis)", KR_FILL),
-    ]
-    for addr, caption, fill_hex in markets:
-        rng = ws_pool.Range(addr)
-        if addr.split(":")[0] != addr.split(":")[-1]:
-            rng.Merge()
-        rng.Value = caption
-        rng.Font.Name = "微软雅黑"
-        rng.Font.Size = 11
-        rng.Font.Bold = True
-        rng.Font.Color = rgb_long("FFFFFF")
-        rng.Interior.Color = rgb_long(fill_hex)
-        rng.HorizontalAlignment = -4108
-        rng.VerticalAlignment = -4108
-
-    placeholders = [
-        ("A8:B8", "一键 A 股", PRIMARY_FILL, "FFFFFF", 10),
-        ("E8:F8", "一键 美股", US_FILL, "FFFFFF", 11),
-        ("I8:J8", "一键 港股", HK_FILL, "FFFFFF", 11),
-        ("M8:N8", "一键 韩股", KR_FILL, "FFFFFF", 11),
-        ("Q1:Q3", "一键全抓 4 市场", SECONDARY_FILL, SECONDARY_FG, 12),
-        ("Q5:Q7", "显示/隐藏 所有市场数据", SECONDARY_FILL, SECONDARY_FG, 10),
-        ("Q9:Q11", "清空 HTTP 缓存", SECONDARY_FILL, SECONDARY_FG, 10),
-        ("A9:B9", "显示/隐藏 A 股数据", SECONDARY_FILL, SECONDARY_FG, 9),
-        ("E9:F9", "显示/隐藏 美股数据", SECONDARY_FILL, SECONDARY_FG, 9),
-        ("I9:J9", "显示/隐藏 港股数据", SECONDARY_FILL, SECONDARY_FG, 9),
-        ("M9:N9", "显示/隐藏 韩股数据", SECONDARY_FILL, SECONDARY_FG, 9),
-    ]
-    for addr, caption, fill_hex, font_color_hex, font_size in placeholders:
-        rng = ws_pool.Range(addr)
-        if addr.split(":")[0] != addr.split(":")[-1]:
-            rng.Merge()
-            rng.Value = caption
-        else:
-            rng.Value = caption
-        rng.Font.Name = "微软雅黑"
-        rng.Font.Size = font_size
-        rng.Font.Bold = True
-        rng.Font.Color = rgb_long(font_color_hex)
-        rng.Interior.Color = rgb_long(fill_hex)
-        rng.HorizontalAlignment = -4108
-        rng.VerticalAlignment = -4108
-
-    section_cells = [
-        ("Q4", "全局显示", "F2F2F2"),
-        ("Q8", "工具", "F2F2F2"),
-    ]
-    for addr, caption, fill_hex in section_cells:
-        cell = ws_pool.Range(addr)
-        cell.Value = caption
-        cell.Font.Name = "微软雅黑"
-        cell.Font.Size = 9
-        cell.Font.Bold = True
-        cell.Font.Color = rgb_long("404040")
-        cell.Interior.Color = rgb_long(fill_hex)
-        cell.HorizontalAlignment = -4108
-        cell.VerticalAlignment = -4108
-
-    try:
-        set_cell_comment(
-            ws_pool.Range("Q9"),
-            "清除本地暂存的抓数结果。\n"
-            "下次抓数会重新从公开数据来源取数,适合强制刷新或排查数据陈旧问题。\n"
-            "日常使用无需点击。"
+        ws_pool.Range("E5").AddComment(
+            "雪球登录凭证,用于港股和部分中概美股备用数据源。\n"
+            "如果港股或中概美股取数失败,请重新登录雪球后复制新的 xq_a_token。"
         )
     except Exception:
         pass
 
+    for addr in ("A2:N6", "O2:P12", "Q2:S12"):
+        rng = ws_pool.Range(addr)
+        for border_idx in (7, 8, 9, 10):
+            try:
+                b = rng.Borders(border_idx)
+                b.LineStyle = 1
+                b.Weight = 2
+                b.Color = border_blue if addr != "Q2:S12" else rgb_long("F1C232")
+            except Exception:
+                pass
 
-    hint_rng = ws_pool.Range("S1:U5")
+    markets = [
+        ("A7:D18", "A股(新浪)", PRIMARY_FILL, pale_blue, "A12", "B12"),
+        ("E7:H18", "美股(EDGAR+雪球)", US_FILL, pale_red, "E12", "F12"),
+        ("I7:L18", "港股(雪球 HK)", HK_FILL, pale_green, "I12", "J12"),
+        ("M7:N18", "韩股(stockanalysis)", KR_FILL, pale_purple, "M12", "N12"),
+    ]
+    for card_addr, caption, fill_hex, body_fill, code_cell, name_cell in markets:
+        card = ws_pool.Range(card_addr)
+        card.Interior.Color = rgb_long("FFFFFF")
+        for border_idx in (7, 8, 9, 10):
+            try:
+                b = card.Borders(border_idx)
+                b.LineStyle = 1
+                b.Weight = 2
+                b.Color = rgb_long("D9E2F3")
+            except Exception:
+                pass
+
+        header_rng = ws_pool.Range(card_addr.split(":")[0]).Resize(1, card.Columns.Count)
+        header_rng.Merge()
+        header_rng.Value = caption
+        header_rng.Font.Name = "微软雅黑"
+        header_rng.Font.Size = 12
+        header_rng.Font.Bold = True
+        header_rng.Font.Color = rgb_long("FFFFFF")
+        header_rng.Interior.Color = rgb_long(fill_hex)
+        header_rng.HorizontalAlignment = -4108
+        header_rng.VerticalAlignment = -4108
+
+        for cell_addr, text in ((code_cell, "代码"), (name_cell, "简称")):
+            cell = ws_pool.Range(cell_addr)
+            cell.Value = text
+            cell.Font.Name = "微软雅黑"
+            cell.Font.Size = 10
+            cell.Font.Bold = True
+            cell.Font.Color = rgb_long("FFFFFF")
+            cell.Interior.Color = rgb_long(fill_hex)
+            cell.HorizontalAlignment = -4108
+            cell.VerticalAlignment = -4108
+
+        body = ws_pool.Range(f"{code_cell}:{name_cell}").Resize(7, 2)
+        body.Interior.Color = rgb_long("FFFFFF")
+
+    placeholders = [
+        ("A9:C10", "一键 A 股", PRIMARY_FILL, "FFFFFF", 12),
+        ("E9:G10", "一键 美股", US_FILL, "FFFFFF", 12),
+        ("I9:K10", "一键 港股", HK_FILL, "FFFFFF", 12),
+        ("M9:N10", "一键 韩股", KR_FILL, "FFFFFF", 12),
+        ("A11:C11", "显示/隐藏 A股数据", pale_blue, SECONDARY_FG, 9),
+        ("E11:G11", "显示/隐藏 美股数据", pale_red, "7F0000", 9),
+        ("I11:K11", "显示/隐藏 港股数据", pale_green, "375623", 9),
+        ("M11:N11", "显示/隐藏 韩股数据", pale_purple, "4F2D7F", 9),
+        ("O3:P4", "一键全抓 4 市场", SECONDARY_FILL, SECONDARY_FG, 12),
+        ("O7:P9", "显示/隐藏\n所有市场数据", pale_blue, SECONDARY_FG, 11),
+        ("O11:P12", "清空 HTTP 缓存", pale_blue, SECONDARY_FG, 10),
+    ]
+    for addr, caption, fill_hex, font_color_hex, font_size in placeholders:
+        rng = ws_pool.Range(addr)
+        rng.Merge()
+        rng.Value = caption
+        rng.Font.Name = "微软雅黑"
+        rng.Font.Size = font_size
+        rng.Font.Bold = True
+        rng.Font.Color = rgb_long(font_color_hex)
+        rng.Interior.Color = rgb_long(fill_hex) if isinstance(fill_hex, str) else fill_hex
+        rng.HorizontalAlignment = -4108
+        rng.VerticalAlignment = -4108
+        rng.WrapText = True
+
+    for addr, caption in (("O5:P5", "全局显示"), ("O10:P10", "工具")):
+        rng = ws_pool.Range(addr)
+        rng.Merge()
+        rng.Value = caption
+        rng.Font.Name = "微软雅黑"
+        rng.Font.Size = 11
+        rng.Font.Bold = True
+        rng.Font.Color = rgb_long("000000")
+        rng.Interior.Color = rgb_long("E7E6E6")
+        rng.HorizontalAlignment = -4108
+        rng.VerticalAlignment = -4108
+
+    try:
+        set_cell_comment(
+            ws_pool.Range("O11"),
+            "删除 .cache/ 目录中的 24h 本地 HTTP 响应缓存。\n"
+            "下次抓数会重新发起 HTTP 请求,用于强制刷新或排查数据陈旧问题。\n"
+            "日常无需点击。"
+        )
+    except Exception:
+        pass
+
+    hint_rng = ws_pool.Range("Q2:S12")
     hint_rng.Merge()
     hint_rng.Value = (
-        "【使用提示】\n"
-        "1. A2 / A4 选择年度 + 季度\n"
-        "2. B5 填雪球 cookie;B6 切原币 / 统一RMB\n"
-        "3. 第 11 行起按市场录入公司\n"
-        "4. 先点各市场一键按钮抓数\n"
-        "5. 一键全抓会自动刷新跨市场指标表"
+        "💡 使用提示\n\n"
+        "1. E3 / E4 选择年度 + 季度\n\n"
+        "2. E5 填雪球 cookie;E6 切原币 / 统一RMB\n\n"
+        "3. 第 13 行起按市场录入公司\n\n"
+        "4. 先点击右侧一键按钮抓取\n\n"
+        "5. 一键全抓会自动刷新所有市场指标表"
     )
     hint_rng.Font.Name = "微软雅黑"
-    hint_rng.Font.Size = 9
-    hint_rng.Font.Color = rgb_long("7F6000")
-    hint_rng.Interior.Color = rgb_long("FFF2CC")
+    hint_rng.Font.Size = 10
+    hint_rng.Font.Color = rgb_long("000000")
+    hint_rng.Interior.Color = rgb_long("FFF8E6")
     hint_rng.HorizontalAlignment = -4131
     hint_rng.VerticalAlignment = -4160
     hint_rng.WrapText = True
 
-    for code_col, name_col in (("A", "B"), ("E", "F"), ("I", "J"), ("M", "N")):
-        for col, caption in ((code_col, "代码"), (name_col, "简称")):
-            cell = ws_pool.Range(f"{col}10")
-            cell.Value = caption
-            cell.Font.Name = "微软雅黑"
-            cell.Font.Size = 11
-            cell.Font.Bold = True
-            cell.Font.Color = rgb_long("FFFFFF")
-            cell.Interior.Color = rgb_long(PRIMARY_FILL)
-            cell.HorizontalAlignment = -4108
-            cell.VerticalAlignment = -4108
+    restore_sample_pool_companies(ws_pool, companies, start_row=13)
 
     for col in ("A", "E", "I", "M"):
-        ws_pool.Range(f"{col}11:{col}1000").NumberFormat = "@"
+        ws_pool.Range(f"{col}13:{col}1000").NumberFormat = "@"
 
-    for row in range(1, 7):    # Phase 4f Step 2: 含 row 6 显示币种
+    for row in range(1, 7):
         ws_pool.Rows(row).RowHeight = 22
+    ws_pool.Rows(1).RowHeight = 20
+    ws_pool.Rows(2).RowHeight = 24
     ws_pool.Rows(7).RowHeight = 24
-    ws_pool.Rows(8).RowHeight = 34
-    ws_pool.Rows(9).RowHeight = 22
-    ws_pool.Rows(10).RowHeight = 22
-    for row in range(11, 52):
+    ws_pool.Rows(8).RowHeight = 20
+    ws_pool.Rows(9).RowHeight = 28
+    ws_pool.Rows(10).RowHeight = 28
+    ws_pool.Rows(11).RowHeight = 26
+    ws_pool.Rows(12).RowHeight = 22
+    for row in range(13, 52):
         ws_pool.Rows(row).RowHeight = 20
 
-    data_range = ws_pool.Range("A10:N51")
+    data_range = ws_pool.Range("A12:N51")
     data_range.Font.Name = "微软雅黑"
     data_range.Font.Size = 10
     for border_idx in (7, 8, 9, 10, 11, 12):
@@ -624,19 +683,19 @@ def layout_sample_pool(ws_pool):
             b = data_range.Borders(border_idx)
             b.LineStyle = 1
             b.Weight = 2
-            b.Color = rgb_long("BFBFBF")
+            b.Color = rgb_long("D9D9D9")
         except Exception:
             pass
 
     try:
         ws_pool.Activate()
         ws_pool.Application.ActiveWindow.SplitColumn = 0
-        ws_pool.Application.ActiveWindow.SplitRow = 10
+        ws_pool.Application.ActiveWindow.SplitRow = 12
         ws_pool.Application.ActiveWindow.FreezePanes = True
     except Exception:
         pass
 
-    # Phase 4f Step 2: 配置 B6 显示币种 toggle (默认 "原币" + 数据验证下拉)
+    # Phase 4f Step 2: 配置 E6 显示币种 toggle (默认 "原币" + 数据验证下拉)
     install_currency_toggle_cell(ws_pool)
     try:
         set_cell_comment(
@@ -1098,18 +1157,18 @@ def _write_fx_legend(ws_fx):
         ("  期间均值汇率", "用于利润表 / 现金流量表,反映整个报告期内损益和现金流的平均折算。"),
         ("", ""),
         ("应用规则", ""),
-        ("  B6 = 原币", "各公司按报告币种显示,不做人民币折算。"),
-        ("  B6 = 统一RMB", "非人民币口径会按报告期汇率折算成人民币,便于横向对比。"),
+        ("  E6 = 原币", "各公司按报告币种显示,不做人民币折算。"),
+        ("  E6 = 统一RMB", "非人民币口径会按报告期汇率折算成人民币,便于横向对比。"),
         ("  RMB / CNY", "本身就是人民币口径,无需折算。"),
         ("  手工调整汇率", "如需人工修正,可直接改 B-G 列;已生成的报表需要重新点击对应『一键 X 股』按钮后才会反映。"),
         ("", ""),
         ("本地暂存", ""),
         ("  24 小时复用", "同一报告期、同一币种在 24 小时内重复使用已取到的汇率,让重复跑数更快。"),
-        ("  清空 HTTP 缓存", "样本池 Q9:Q11 按钮;清空后下次跑数会重新取汇率和财报数据。"),
+        ("  清空 HTTP 缓存", "样本池 O11:P12 按钮;清空后下次跑数会重新取汇率和财报数据。"),
         ("", ""),
         ("注意事项", ""),
         ("  报表已生成后", "如需重新换汇请重跑对应『一键 X 股』按钮。"),
-        ("  B5 登录凭证", "汇率本身不需要 B5;B5 主要影响港股和部分中概美股备用数据源。"),
+        ("  E5 登录凭证", "汇率本身不需要 E5;E5 主要影响港股和部分中概美股备用数据源。"),
     ]
 
     for idx, (label, desc) in enumerate(rows, start=start_row + 1):
@@ -1146,20 +1205,9 @@ def _write_fx_legend(ws_fx):
 def install_currency_toggle_cell(ws_pool):
     """
     Phase 4f Step 2: 样本池 row 6 装『显示币种』toggle
-      A6 = 标签『显示币种』(浅蓝)
-      B6 = 默认 "原币" (浅黄), 数据验证下拉 "原币,统一RMB"; 不覆盖用户已设的值
+      E6:N6 = 默认 "原币" (浅黄), 数据验证下拉 "原币,统一RMB"; 不覆盖用户已设的值
     """
-    label_cell = ws_pool.Range("A6")
-    if not label_cell.Value:
-        label_cell.Value = "显示币种"
-    label_cell.Font.Name = "微软雅黑"
-    label_cell.Font.Size = 10
-    label_cell.Font.Bold = True
-    label_cell.Interior.Color = rgb_long("B4C7E7")    # 浅蓝
-    label_cell.HorizontalAlignment = -4108
-    label_cell.VerticalAlignment = -4108
-
-    val_cell = ws_pool.Range("B6")
+    val_cell = ws_pool.Range("E6")
     # 不覆盖用户已选的值; 仅在空时写默认
     if not val_cell.Value:
         val_cell.Value = "原币"
@@ -1185,7 +1233,7 @@ def install_currency_toggle_cell(ws_pool):
         val_cell.Validation.IgnoreBlank = False
         val_cell.Validation.InCellDropdown = True
     except Exception as e:
-        print(f"  ! B6 数据验证添加失败: {e}")
+        print(f"  ! E6 数据验证添加失败: {e}")
 
     # 加 comment 解释 toggle 含义
     try:
@@ -1198,7 +1246,7 @@ def install_currency_toggle_cell(ws_pool):
     except Exception:
         pass
 
-    print("  + A6/B6 显示币种 toggle 已配置 (默认 '原币')")
+    print("  + E6 显示币种 toggle 已配置 (默认 '原币')")
 
 
 def ensure_market_sheets(wb):
@@ -1386,9 +1434,9 @@ def update_intro_sheet(wb):
 
     row = section(row, "§ 2 快速开始")
     quick_steps = [
-        ("1", "在『样本池』A2 选择年度,A4 选择季度。年度留空时,工具尽量使用可取得的最新报告期。"),
-        ("2", "如需港股或部分中概美股,在 B5 填入雪球登录凭证;B6 选择『原币』或『统一RMB』。"),
-        ("3", "第 11 行起按市场录入公司:A:B=A股,E:F=美股,I:J=港股,M:N=韩股。"),
+        ("1", "在『样本池』E3 选择年度,E4 选择季度。年度留空时,工具尽量使用可取得的最新报告期。"),
+        ("2", "如需港股或部分中概美股,在 E5 填入雪球登录凭证;E6 选择『原币』或『统一RMB』。"),
+        ("3", "第 13 行起按市场录入公司:A:B=A股,E:F=美股,I:J=港股,M:N=韩股。"),
         ("4", "点击对应市场的一键按钮。抓数完成后,对应市场的 4 张正式报表会自动显示。"),
         ("5", "点击『一键全抓 4 市场』后,跨市场_指标表会自动刷新。"),
         ("6", "跑数后『跨市场_指标表』自动展示 18 项标准指标的 4 市场对比。"),
@@ -1414,12 +1462,12 @@ def update_intro_sheet(wb):
         ("汇率", "公开历史汇率数据,本地记录到『汇率』sheet。"),
     ]
     row = table(row, ("对象", "说明"), source_rows, widths_override={"B": 18, "C": 70})
-    row = paragraph(row, "登录凭证只保存在本地工作簿中。过期后请重新复制到样本池 B5。", height=24)
+    row = paragraph(row, "登录凭证只保存在本地工作簿中。过期后请重新复制到样本池 E5。", height=24)
 
     row = section(row, "§ 5 汇率换算说明")
     fx_rows = [
-        ("B6 = 原币", "各市场按报告币种或市场默认单位显示,不做 RMB 换算。"),
-        ("B6 = 统一RMB", "非人民币报告币种按报告期汇率折算:资产负债表用期末汇率,利润表 / 现金流量表用期间均值。"),
+        ("E6 = 原币", "各市场按报告币种或市场默认单位显示,不做 RMB 换算。"),
+        ("E6 = 统一RMB", "非人民币报告币种按报告期汇率折算:资产负债表用期末汇率,利润表 / 现金流量表用期间均值。"),
         ("RMB / CNY", "报告币种为人民币时无需折算。"),
         ("手工改汇率", "已写表公式不会自动反向刷新;需要重跑对应写表或合表按钮。"),
     ]
@@ -1427,11 +1475,11 @@ def update_intro_sheet(wb):
 
     row = section(row, "§ 6 常见问题")
     faq_rows = [
-        ("Q1: 港股或中概美股取数失败怎么办?", "先检查 B5 登录凭证是否过期。重新登录后复制新的 xq_a_token,再重跑对应市场。"),
-        ("Q2: 切换 B6 后数字变了是否正常?", "正常。『统一RMB』会把外币报告币种折算成人民币,用于跨市场可比。"),
+        ("Q1: 港股或中概美股取数失败怎么办?", "先检查 E5 登录凭证是否过期。重新登录后复制新的 xq_a_token,再重跑对应市场。"),
+        ("Q2: 切换 E6 后数字变了是否正常?", "正常。『统一RMB』会把外币报告币种折算成人民币,用于跨市场可比。"),
         ("Q3: 跨市场指标表何时刷新?", "点击『一键全抓 4 市场』后自动刷新;也可以单独运行 BuildCrossMarketIndicatorSheet。"),
         ("Q4: 为什么只保留跨市场指标表?", "BS/IS/CF 保留在分市场表中按原披露口径查看;跨市场对比聚焦 18 项标准指标。"),
-        ("Q5: 老版样本池升级会丢数据吗?", "不会。第 11 行起的公司代码和简称会保留;安装脚本只重画上方配置区和按钮区。"),
+        ("Q5: 老版样本池升级会丢数据吗?", "不会。已有公司代码和简称会迁移到第 13 行起;安装脚本只重画上方配置区和按钮区。"),
     ]
     row = table(row, ("问题", "处理建议"), faq_rows, widths_override={"B": 30, "C": 64})
 

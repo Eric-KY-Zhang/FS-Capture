@@ -16,7 +16,7 @@ Public Sub TestStep3Smoke()
     Set wsPool = ThisWorkbook.Worksheets("样本池")
 
     Dim savedB6 As Variant
-    savedB6 = wsPool.Range("B6").Value
+    savedB6 = wsPool.Range("E6").Value
 
     Dim wsYuanbi As Worksheet
     Dim wsRmb As Worksheet
@@ -54,15 +54,15 @@ Public Sub TestStep3Smoke()
     dictCompany.Add "2023-12-31", dictPer2023
     dictData.Add "300866", dictCompany
 
-    wsPool.Range("B6").Value = "原币"
+    wsPool.Range("E6").Value = "原币"
     WriteWideTable wsYuanbi, arrCodes, dictCompanyName, dictData, arrPeriods, arrIndicators, dictCategory, _
                    perCompanyPeriods:=False, dictReportingCurrency:=Nothing, statementKind:="BalanceSheet"
 
-    wsPool.Range("B6").Value = "统一RMB"
+    wsPool.Range("E6").Value = "统一RMB"
     WriteWideTable wsRmb, arrCodes, dictCompanyName, dictData, arrPeriods, arrIndicators, dictCategory, _
                    perCompanyPeriods:=False, dictReportingCurrency:=Nothing, statementKind:="BalanceSheet"
 
-    wsPool.Range("B6").Value = savedB6
+    wsPool.Range("E6").Value = savedB6
 End Sub
 
 
@@ -71,7 +71,7 @@ Public Sub TestStep45Smoke()
     Set wsPool = ThisWorkbook.Worksheets("样本池")
 
     Dim savedB6 As Variant
-    savedB6 = wsPool.Range("B6").Value
+    savedB6 = wsPool.Range("E6").Value
 
     g_diagnosticSheetName = "美股_抓取诊断"
     ClearDiagnosticSheet
@@ -117,7 +117,7 @@ Public Sub TestStep45Smoke()
     Dim dictCurrency As Object: Set dictCurrency = CreateObject("Scripting.Dictionary")
     dictCurrency.Add "AAPL", "USD"
 
-    wsPool.Range("B6").Value = "统一RMB"
+    wsPool.Range("E6").Value = "统一RMB"
     WriteWideTable wsTag, arrCodes, dictCompanyName, dictData, arrPeriods, arrIndicators, dictCategory, _
                    perCompanyPeriods:=False, dictReportingCurrency:=dictCurrency, statementKind:="BalanceSheet"
     RefreshA1CurrencyComment wsTag, "美股_资产负债表"
@@ -129,7 +129,7 @@ Public Sub TestStep45Smoke()
     If InStr(wsTag.Range("A1").Comment.Text, "统一汇率换算") = 0 Then _
         Err.Raise vbObjectError + 746, "TestStep45Smoke", "A1 注释不是统一RMB文案"
 
-    wsPool.Range("B6").Value = savedB6
+    wsPool.Range("E6").Value = savedB6
 End Sub
 
 
@@ -138,7 +138,7 @@ Public Sub TestPhase4hToggleSmoke()
     Set wsPool = ThisWorkbook.Worksheets("样本池")
 
     Dim savedB6 As Variant
-    savedB6 = wsPool.Range("B6").Value
+    savedB6 = wsPool.Range("E6").Value
 
     Dim wsSmoke As Worksheet
     Set wsSmoke = GetOrClearSmokeSheet("_phase4h_toggle_smoke")
@@ -168,11 +168,11 @@ Public Sub TestPhase4hToggleSmoke()
     Dim dictCurrency As Object: Set dictCurrency = CreateObject("Scripting.Dictionary")
     dictCurrency.Add "AAPL", "USD"
 
-    wsPool.Range("B6").Value = "原币"
+    wsPool.Range("E6").Value = "原币"
     WriteWideTable wsSmoke, arrCodes, dictCompanyName, dictData, arrPeriods, arrIndicators, dictCategory, _
                    perCompanyPeriods:=False, dictReportingCurrency:=dictCurrency, statementKind:="BalanceSheet"
 
-    wsPool.Range("B6").Value = savedB6
+    wsPool.Range("E6").Value = savedB6
 End Sub
 
 

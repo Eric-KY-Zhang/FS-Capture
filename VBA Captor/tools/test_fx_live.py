@@ -103,14 +103,14 @@ def run_live_test():
             # Cookie + currency state
             try:
                 pool = wb.Sheets("样本池")
-                cookie = str(pool.Range("B5").Value or "")
-                b6 = pool.Range("B6").Value
-                print(f"\n样本池 B5 cookie length = {len(cookie)}")
+                cookie = str(pool.Range("E5").Value or "")
+                b6 = pool.Range("E6").Value
+                print(f"\n样本池 E5 cookie length = {len(cookie)}")
                 if cookie:
                     print(f"  cookie head = {cookie[:60]!r}...")
                 else:
                     print("  WARN: cookie empty — FX call may still work via warmup")
-                print(f"样本池 B6 显示币种 = {b6!r}")
+                print(f"样本池 E6 显示币种 = {b6!r}")
             except Exception as e:
                 print(f"样本池 read failed: {e}")
 

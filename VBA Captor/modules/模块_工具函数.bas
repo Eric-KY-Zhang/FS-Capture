@@ -17,15 +17,12 @@ Option Explicit
 ' =================================================================
 
 ' --------- 样本池约定 (兄弟模块共享)
-'   Row 1-5: 全局配置区 (A1=年份, A2=year, A3=季度, A4=quarter, B5:F5=雪球 cookie)
-'   Row 7  : 分市场标题
-'   Row 8  : 分市场一键按钮
-'   Row 9  : 分市场 tabs 显隐按钮
-'   Row 10 : 各市场数据表头
-'   Row 11+: 股票数据
+'   Row 2-6: 全局配置区 (E3=year, E4=quarter, E5:N5=雪球 cookie, E6=显示币种)
+'   Row 7-12: 分市场标题 / 按钮 / 数据表头
+'   Row 13+: 股票数据
 '   列    : A:B=A股, E:F=美股, I:J=港股, M:N=韩股
 '   URL 不再存 sheet, A 股抓数模块内部按代码+年份自拼 URL
-Public Const POOL_DATA_START_ROW As Long = 11
+Public Const POOL_DATA_START_ROW As Long = 13
 Public Const POOL_A_CODE_COL As Long = 1
 Public Const POOL_A_NAME_COL As Long = 2
 Public Const POOL_US_CODE_COL As Long = 5
@@ -485,13 +482,13 @@ NextEntry:
 End Sub
 
 
-' --------- 读取样本池 A4 单元格的季度选择 ---------
+' --------- 读取样本池 E4 单元格的季度选择 ---------
 '   合法值: "全部" / "Q1" / "Q2" / "Q3" / "Q4"
 '   读不到 / 空 / 异常 → 默认 "全部" (= 不过滤)
 Public Function ReadQuarterSelection() As String
     On Error Resume Next
     Dim s As String
-    s = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("A4").Value))
+    s = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("E4").Value))
     If Err.Number <> 0 Or Len(s) = 0 Then
         ReadQuarterSelection = "全部"
         Err.Clear
@@ -502,11 +499,11 @@ Public Function ReadQuarterSelection() As String
 End Function
 
 
-' --------- 读样本池 A2 年份选择 (0 = 留空 = 不过滤) ---------
+' --------- 读样本池 E3 年份选择 (0 = 留空 = 不过滤) ---------
 Public Function ReadYearSelection() As Long
     On Error Resume Next
     Dim v As Variant
-    v = ThisWorkbook.Sheets("样本池").Range("A2").Value
+    v = ThisWorkbook.Sheets("样本池").Range("E3").Value
     If IsNumeric(v) Then
         ReadYearSelection = CLng(v)
     Else
@@ -620,7 +617,7 @@ End Function
 
 
 ' --------- HTTP 抓取 (雪球 Xueqiu, UTF-8 解码) ---------
-'   雪球 API 需要登录后的 Cookie (用户从浏览器 F12 复制粘到 样本池!B5)
+'   雪球 API 需要登录后的 Cookie (用户从浏览器 F12 复制粘到 样本池!E5)
 '   Source: https://xueqiu.com (登录后访问财报页面 → F12 → 拷 Cookie 头)
 Public Function XueqiuHttpGet(ByVal strUrl As String, ByVal strCookie As String) As String
     Dim objWinHttp As Object, arrByte() As Byte
@@ -650,15 +647,15 @@ Public Function XueqiuHttpGet(ByVal strUrl As String, ByVal strCookie As String)
 End Function
 
 
-' --------- 读样本池 B5 单元格的雪球 cookie ---------
+' --------- 读样本池 E5 单元格的雪球 cookie ---------
 '   用户在浏览器登录 xueqiu.com → F12 → Application → Cookies → 找 xq_a_token, 拷它的 value
-'   粘到 B5; 也可以粘整段 Cookie 头 (含 xq_a_token=... 和别的 key)
+'   粘到 E5; 也可以粘整段 Cookie 头 (含 xq_a_token=... 和别的 key)
 '   - 单纯 token 值 (无 "=") → 自动包装成 "xq_a_token=<value>"
 '   - 已含 "=" → 当成完整 Cookie 头用
 Public Function ReadXueqiuCookie() As String
     On Error Resume Next
     Dim s As String
-    s = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("B5").Value))
+    s = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("E5").Value))
     If Len(s) = 0 Then
         ReadXueqiuCookie = ""
     ElseIf InStr(s, "=") = 0 Then
@@ -671,13 +668,13 @@ Public Function ReadXueqiuCookie() As String
 End Function
 
 
-' --------- Phase 4f Step 2: 读样本池 B6 显示币种切换 ---------
+' --------- Phase 4f Step 2: 读样本池 E6 显示币种切换 ---------
 '   返回 "原币" (默认) 或 "统一RMB"
-'   B6 不存在 / 空 / sheet 不存在 → "原币"; 用户改 B6 立即生效
+'   E6 不存在 / 空 / sheet 不存在 → "原币"; 用户改 E6 立即生效
 Public Function ReadDisplayCurrency() As String
     On Error Resume Next
     Dim s As String
-    s = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("B6").Value))
+    s = Trim$(CStr(ThisWorkbook.Sheets("样本池").Range("E6").Value))
     If Err.Number <> 0 Or Len(s) = 0 Then s = "原币"
     Err.Clear
     On Error GoTo 0
@@ -1185,7 +1182,7 @@ End Function
 '   perCompanyPeriods : True 时每家公司只展开自己有数据的报告期 (美股用)
 '   dictReportingCurrency : code -> 报告币种; Nothing 时按 RMB 处理
 '   statementKind     : "BalanceSheet" / "Income" / "CashFlow", 用于选择期末/均值汇率
-'   useRawDumpLayer   : True 时把原币值写入隐藏 raw dump 区,展示区写 B6 联动公式
+'   useRawDumpLayer   : True 时把原币值写入隐藏 raw dump 区,展示区写 E6 联动公式
 Public Sub WriteWideTable(ByVal ws As Worksheet, _
                            ByRef arrCodes As Variant, _
                            ByRef dictCompanyName As Object, _
@@ -1202,7 +1199,7 @@ Public Sub WriteWideTable(ByVal ws As Worksheet, _
     Dim strCode As String, strName As String, strInd As String, strPeriod As String
     Dim varValue As Variant
 
-    ' Phase 4f Step 3: RMB 换算预读, 避免内循环反复读样本池 B6
+    ' Phase 4f Step 3: RMB 换算预读, 避免内循环反复读样本池 E6
     Dim displayMode As String: displayMode = ReadDisplayCurrency()
     Dim useEopForBS As Boolean
     useEopForBS = (UCase$(Trim$(statementKind)) = "BALANCESHEET")
@@ -1306,7 +1303,7 @@ Public Sub WriteWideTable(ByVal ws As Worksheet, _
             companyStartCols(strCode) = intCol
             If useRawDumpLayer And origCur <> "RMB" And Len(origCur) > 0 Then
                 .Cells(1, intCol).Formula = "=" & FormulaQuote(strName) & _
-                    "&IF('样本池'!$B$6=""统一RMB""," & _
+                    "&IF('样本池'!$E$6=""统一RMB""," & _
                     FormulaQuote(" [" & origCur & "→RMB]") & ","""")"
             Else
                 If displayMode = "统一RMB" And origCur <> "RMB" And Len(origCur) > 0 Then
@@ -1464,7 +1461,7 @@ NextDataCompany:
                         If fxForFormula <= 0 Then fxForFormula = 1#
                         Dim fxText As String: fxText = Replace(Trim$(Str$(fxForFormula)), ",", ".")
                         .Cells(2 + k, targetDataCol).Formula = "=IF(" & rawRef & "="""",""""," & _
-                            "IF('样本池'!$B$6=""原币""," & rawRef & "," & _
+                            "IF('样本池'!$E$6=""原币""," & rawRef & "," & _
                             "IF(ISNUMBER(" & rawRef & ")," & rawRef & "*" & fxText & "," & rawRef & ")))"
                     Next j
 NextFormulaCompany:
@@ -1544,10 +1541,10 @@ Public Sub RefreshA1CurrencyComment(ByVal wsTarget As Worksheet, ByVal targetShe
     Dim commentText As String
     If displayMode = "统一RMB" Then
         commentText = "单位: 百万 RMB (统一汇率换算; 汇率源见『汇率』sheet, 期末/期间均值混合)" & vbCrLf & _
-                      "切回原币: 样本池 B6 改为 '原币' 后重跑"
+                      "切回原币: 样本池 E6 改为 '原币' 后重跑"
     Else
         commentText = "单位: " & UnitDescriptionForMarket(targetSheet) & vbCrLf & _
-                      "统一显示 RMB: 样本池 B6 改为 '统一RMB' 后重跑"
+                      "统一显示 RMB: 样本池 E6 改为 '统一RMB' 后重跑"
     End If
 
     wsTarget.Range("A1").AddComment commentText
@@ -1643,7 +1640,7 @@ Public Sub BuildStandardIndicatorSheet(ByVal market As String)
 
     If targetCol = 4 Then
         Err.Raise vbObjectError + 561, "BuildStandardIndicatorSheet", _
-            sourceSheet & " 没有匹配当前 A2/A4 选择的报告期"
+            sourceSheet & " 没有匹配当前 E3/E4 选择的报告期"
     End If
 
     Dim lastCol As Long: lastCol = targetCol - 1
@@ -1822,7 +1819,7 @@ Public Sub BuildCrossMarketIndicatorSheet()
     commentText = "跨市场指标合表 (公司数=" & collCompanies.Count & ")" & vbCrLf & _
                   "数据源: 4 张分市场指标表 (引用公式, 自动同步)" & vbCrLf & _
                   "当前显示模式: " & displayMode & vbCrLf & _
-                  "切换 B6 后请先重跑各市场, 再点 '合并跨市场指标表'"
+                  "切换 E6 后请先重跑各市场, 再点 '合并跨市场指标表'"
     wsTarget.Range("A1").AddComment commentText
     wsTarget.Range("A1").Comment.Shape.TextFrame.AutoSize = True
 
@@ -2697,7 +2694,7 @@ Public Sub RunOneStatement(ByVal strID As String, ByVal strType As String, _
     On Error GoTo CleanUp
     Application.ScreenUpdating = False
 
-    ' A2 年份: 0=取最新季度, >0=该年报告 (跟以前 HYPERLINK 公式逻辑等价)
+    ' E3 年份: 0=取最新季度, >0=该年报告 (跟以前 HYPERLINK 公式逻辑等价)
     lngYear = ReadYearSelection()
     Dim collFetchYears As Collection: Set collFetchYears = New Collection
     collFetchYears.Add lngYear
@@ -2777,7 +2774,7 @@ NextRow:
         arrCodes(i) = collCodes(i)
     Next i
 
-    ' Phase 3: 季度过滤 (读样本池 A4, 留下匹配后缀的报告期)
+    ' Phase 3: 季度过滤 (读样本池 E4, 留下匹配后缀的报告期)
     FilterPeriodsByQuarter dictPeriodSet, ReadQuarterSelection()
 
     Dim arrPeriods As Variant, arrIndicators As Variant
