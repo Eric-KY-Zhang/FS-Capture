@@ -1039,6 +1039,44 @@ End Function
 
 ' --------- 同 EdgarHttpGet 但目标主机是 www.sec.gov (tickers.json) ---------
 Private Function EdgarHttpGetTickers() As String
+    Dim startTime As Double: startTime = Timer
+    Dim cacheKey As String: cacheKey = "sec_ticker_map_company_tickers"
+    Dim cacheAge As Double, cacheStatus As String, cacheBody As String
+    Dim result As THttpResult
+    ResetHttpResult result
+    result.Source = "SEC_TICKER_MAP"
+    result.CacheKey = cacheKey
+    result.UrlHash = ComputeShortHash("https://www.sec.gov/files/company_tickers.json")
+    result.CacheAgeHours = -1
+
+    On Error GoTo CacheReadError
+    cacheBody = ReadLocalHttpCacheWithAge(cacheKey, GetTtlHoursForSource("SEC_TICKER_MAP"), cacheAge, cacheStatus)
+    On Error GoTo 0
+    If Len(cacheBody) > 0 Then
+        result.Body = cacheBody
+        result.CacheStatus = "HIT"
+        result.CacheAgeHours = cacheAge
+        result.StatusCode = 0
+        result.StatusText = "CACHE_HIT"
+        result.ElapsedMs = ElapsedMsSince(startTime)
+        g_lastHttpResult = result
+        EdgarHttpGetTickers = cacheBody
+        Exit Function
+    End If
+    result.CacheStatus = cacheStatus
+    If Len(result.CacheStatus) = 0 Then result.CacheStatus = "MISS"
+    result.CacheAgeHours = cacheAge
+    GoTo DoHttp
+
+CacheReadError:
+    result.CacheStatus = "READ_ERROR"
+    result.CacheAgeHours = -1
+    result.ErrorStage = "CACHE_READ"
+    result.ErrorText = Left$(Err.Description, 200)
+    Err.Clear
+    On Error GoTo 0
+
+DoHttp:
     Dim objWinHttp As Object, arrByte() As Byte
     Set objWinHttp = CreateObject("WinHttp.WinHttpRequest.5.1")
     With objWinHttp
@@ -1056,6 +1094,20 @@ Private Function EdgarHttpGetTickers() As String
         arrByte = .ResponseBody
     End With
     EdgarHttpGetTickers = ByteToStr(arrByte, "utf-8")
+    result.Body = EdgarHttpGetTickers
+    result.StatusCode = 200
+    result.StatusText = "OK"
+    result.ElapsedMs = ElapsedMsSince(startTime)
+    On Error Resume Next
+    WriteLocalHttpCache cacheKey, EdgarHttpGetTickers
+    If Err.Number <> 0 Then
+        result.CacheStatus = "WRITE_ERROR"
+        result.ErrorStage = "CACHE_WRITE"
+        result.ErrorText = Left$(Err.Description, 200)
+        Err.Clear
+    End If
+    On Error GoTo 0
+    g_lastHttpResult = result
 End Function
 
 
@@ -1071,10 +1123,25 @@ Public Function LookupCIK(ByVal strTicker As String) As String
 End Function
 
 
-' --------- Phase 4h Step 5: 本地 HTTP 响应缓存 (24h TTL, 不缓存失败响应) ---------
+' --------- Phase 4m Step 3: 按数据源配置本地 HTTP cache TTL ---------
+Public Function GetTtlHoursForSource(ByVal sourceName As String) As Long
+    Select Case UCase$(Trim$(sourceName))
+        Case "SEC_TICKER_MAP"
+            GetTtlHoursForSource = 168
+        Case "XUEQIU", "XUEQIU_HK", "XUEQIU_US", "XUEQIU_KR"
+            GetTtlHoursForSource = 12
+        Case "EDGAR", "EDGAR_COMPANYFACTS", "STOCKANALYSIS", "STOCKANALYSIS_KR", "STOCKANALYSIS_US", "FX_KLINE"
+            GetTtlHoursForSource = 24
+        Case Else
+            GetTtlHoursForSource = 24
+    End Select
+End Function
+
+
+' --------- Phase 4h Step 5: 本地 HTTP 响应缓存 (source-aware TTL, 不缓存失败响应) ---------
 Public Function CachedEdgarHttpGet(ByVal strUrl As String, ByVal cacheKey As String) As String
     Dim result As THttpResult
-    CachedEdgarHttpGet = RunCachedHttpGet(strUrl, cacheKey, "EDGAR", 24, result)
+    CachedEdgarHttpGet = RunCachedHttpGet(strUrl, cacheKey, "EDGAR", GetTtlHoursForSource("EDGAR"), result)
 End Function
 
 
@@ -1082,7 +1149,7 @@ Public Function CachedXueqiuHttpGet(ByVal strUrl As String, _
                                      ByVal strCookie As String, _
                                      ByVal cacheKey As String) As String
     Dim result As THttpResult
-    CachedXueqiuHttpGet = RunCachedHttpGet(strUrl, cacheKey, "XUEQIU", 24, result, strCookie)
+    CachedXueqiuHttpGet = RunCachedHttpGet(strUrl, cacheKey, "XUEQIU", GetTtlHoursForSource("XUEQIU"), result, strCookie)
 End Function
 
 
@@ -2471,9 +2538,15 @@ Public Sub BuildCrossMarketIndicatorSheet()
     commentText = "跨市场指标合表 (公司数=" & collCompanies.Count & ")" & vbCrLf & _
                   "数据源: 4 张分市场指标表 (引用公式, 自动同步)" & vbCrLf & _
                   "当前显示模式: " & displayMode & vbCrLf & _
-                  "切换 E6 后请先重跑各市场, 再点 '合并跨市场指标表'"
+                  "切换 E6 后请先重跑各市场, 再点 '合并跨市场指标表'" & vbCrLf & _
+                  "数据质量检查结果在 美股_抓取诊断 sheet 末尾的 GLOBAL_QA 行查看"
     wsTarget.Range("A1").AddComment commentText
     wsTarget.Range("A1").Comment.Shape.TextFrame.AutoSize = True
+
+    On Error Resume Next
+    RunDataQualityChecks
+    Err.Clear
+    On Error GoTo CleanUp
 
 CleanUp:
     errNum = Err.Number
@@ -2492,6 +2565,245 @@ End Sub
 Public Sub BuildAllCrossMarketSheets()
     BuildCrossMarketIndicatorSheet
 End Sub
+
+
+' Phase 4m Step 2: 跨市场指标表生成后追加 3 条轻量数据质量 QA 结果
+Public Sub RunDataQualityChecks()
+    Dim savedDiagnosticSheet As String: savedDiagnosticSheet = g_diagnosticSheetName
+    Dim savedAppendOnly As Boolean: savedAppendOnly = g_diagnosticAppendOnly
+    On Error GoTo SafeExit
+
+    g_diagnosticSheetName = "美股_抓取诊断"
+    g_diagnosticAppendOnly = True
+    EnsureDiagnosticSheet
+
+    Dim wsDiag As Worksheet: Set wsDiag = ThisWorkbook.Sheets("美股_抓取诊断")
+    DeleteExistingQaRows wsDiag
+
+    Dim checkedBsCells As Long
+    Dim bsViolations As Long
+    bsViolations = CheckBalanceSheetEquation(checkedBsCells)
+    Dim bsStatus As String: bsStatus = "OK"
+    If bsViolations > 0 Then bsStatus = "WARN"
+    AddDiagnosticQARow "BS_BALANCE", "资产负债表平衡检查", bsStatus, _
+        "checked=" & CStr(checkedBsCells) & "; violations=" & CStr(bsViolations), _
+        CStr(bsViolations) & "/" & CStr(Application.WorksheetFunction.Max(checkedBsCells, 1))
+
+    Dim fxMissing As Long
+    fxMissing = CountFxMissingDiagnostics()
+    Dim fxStatus As String: fxStatus = "OK"
+    If fxMissing > 0 Then fxStatus = "WARN"
+    AddDiagnosticQARow "FX_MISSING", "汇率缺失诊断汇总", fxStatus, _
+        "FX_MISSING rows across diagnostic sheets=" & CStr(fxMissing), CStr(fxMissing)
+
+    Dim checkedFields As Long
+    Dim missingFields As Long
+    missingFields = CheckKeyFieldsPresence(checkedFields)
+    Dim keyStatus As String: keyStatus = "OK"
+    If missingFields > 0 Then keyStatus = "WARN"
+    AddDiagnosticQARow "KEY_FIELDS", "关键字段存在性检查", keyStatus, _
+        "checked=" & CStr(checkedFields) & "; missing_or_blank=" & CStr(missingFields), _
+        CStr(missingFields) & "/" & CStr(Application.WorksheetFunction.Max(checkedFields, 1))
+
+SafeExit:
+    g_diagnosticSheetName = savedDiagnosticSheet
+    g_diagnosticAppendOnly = savedAppendOnly
+    Err.Clear
+End Sub
+
+
+Private Sub DeleteExistingQaRows(ByVal wsDiag As Worksheet)
+    Dim lastRow As Long: lastRow = wsDiag.Cells(wsDiag.Rows.Count, 1).End(xlUp).Row
+    Dim r As Long
+    For r = lastRow To 3 Step -1
+        If CStr(wsDiag.Cells(r, 1).Value) = "GLOBAL_QA" Then wsDiag.Rows(r).Delete
+    Next r
+End Sub
+
+
+Private Sub AddDiagnosticQARow(ByVal qaCode As String, _
+                               ByVal qaName As String, _
+                               ByVal statusText As String, _
+                               ByVal noteText As String, _
+                               Optional ByVal scoreText As String = "")
+    EnsureDiagnosticSheet
+    Dim ws As Worksheet: Set ws = ThisWorkbook.Sheets("美股_抓取诊断")
+    Dim startRow As Long
+    startRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 1
+    If startRow < 3 Then startRow = 3
+
+    ws.Cells(startRow, 1).Value = "GLOBAL_QA"
+    ws.Cells(startRow, 2).Value = qaCode
+    ws.Cells(startRow, 3).Value = qaName
+    ws.Cells(startRow, 4).Value = statusText
+    ws.Cells(startRow, 5).Value = "QA"
+    ws.Cells(startRow, 6).Value = "Phase4m"
+    ws.Cells(startRow, 7).Value = qaCode
+    ws.Cells(startRow, 8).Value = "N/A"
+    ws.Cells(startRow, 9).NumberFormat = "@"
+    ws.Cells(startRow, 9).Value = DiagnosticScoreText(scoreText)
+    ws.Cells(startRow, 10).Value = noteText
+    ws.Cells(startRow, 11).Value = "1.0"
+    ws.Range(ws.Cells(startRow, 12), ws.Cells(startRow, 17)).NumberFormat = "@"
+
+    With ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow, 17))
+        .Font.Name = "微软雅黑"
+        .Font.Size = 9
+        .VerticalAlignment = xlCenter
+    End With
+    ws.Cells(startRow, 9).HorizontalAlignment = xlRight
+    ws.Cells(startRow, 11).HorizontalAlignment = xlRight
+    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(startRow, 17)))
+End Sub
+
+
+Private Function CheckBalanceSheetEquation(ByRef checkedCells As Long) As Long
+    Dim sheetName As Variant
+    For Each sheetName In Array("A股_资产负债表", "美股_资产负债表", "港股_资产负债表", "韩股_资产负债表")
+        If Not WorksheetExists(CStr(sheetName)) Then GoTo NextSheet
+        Dim ws As Worksheet: Set ws = ThisWorkbook.Sheets(CStr(sheetName))
+        Dim rowAssets As Long: rowAssets = FindQaRowByAliases(ws, Array("总资产", "资产总计", "Total assets", "Total Assets"), Array())
+        Dim rowLiabilities As Long: rowLiabilities = FindQaRowByAliases(ws, Array("总负债", "负债合计", "Total liabilities", "Total Liabilities"), Array("权益", "equity", "equities", "流动", "current", "非流动", "non-current", "noncurrent"))
+        Dim rowEquity As Long: rowEquity = FindQaRowByAliases(ws, Array("股东权益", "所有者权益", "权益合计", "Total equity", "Shareholders equity", "Stockholders equity"), Array("实收", "资本", "公积", "未分配", "少数", "preferred", "capital"))
+        If rowAssets = 0 Or rowLiabilities = 0 Or rowEquity = 0 Then GoTo NextSheet
+
+        Dim startCol As Long: startCol = StandardDataStartCol(ws)
+        Dim lastCol As Long: lastCol = ws.Cells(2, ws.Columns.Count).End(xlToLeft).Column
+        Dim c As Long
+        For c = startCol To lastCol
+            Dim assets As Double, liabilities As Double, equity As Double
+            If QaNumericCell(ws.Cells(rowAssets, c), assets) And _
+               QaNumericCell(ws.Cells(rowLiabilities, c), liabilities) And _
+               QaNumericCell(ws.Cells(rowEquity, c), equity) And Abs(assets) > 0.0000001 Then
+                checkedCells = checkedCells + 1
+                If Abs(assets - liabilities - equity) / Abs(assets) > 0.01 Then _
+                    CheckBalanceSheetEquation = CheckBalanceSheetEquation + 1
+            End If
+        Next c
+NextSheet:
+    Next sheetName
+End Function
+
+
+Private Function CountFxMissingDiagnostics() As Long
+    Dim sheetName As Variant
+    For Each sheetName In Array("美股_抓取诊断", "港股_抓取诊断", "韩股_抓取诊断")
+        If Not WorksheetExists(CStr(sheetName)) Then GoTo NextSheet
+        Dim ws As Worksheet: Set ws = ThisWorkbook.Sheets(CStr(sheetName))
+        Dim r As Long, lastRow As Long
+        lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+        For r = 3 To lastRow
+            If CStr(ws.Cells(r, 4).Value) = "FX_MISSING" Then CountFxMissingDiagnostics = CountFxMissingDiagnostics + 1
+        Next r
+NextSheet:
+    Next sheetName
+End Function
+
+
+Private Function CheckKeyFieldsPresence(ByRef checkedFields As Long) As Long
+    Dim marketPrefix As Variant, spec As Variant
+    For Each marketPrefix In Array("A股", "美股", "港股", "韩股")
+        For Each spec In Array( _
+            Array("_资产负债表", Array("总资产", "资产总计", "Total assets")), _
+            Array("_资产负债表", Array("总负债", "负债合计", "Total liabilities")), _
+            Array("_资产负债表", Array("股东权益", "所有者权益", "Total equity", "Shareholders equity", "Stockholders equity")), _
+            Array("_利润表", Array("营业收入", "主营业务收入", "Revenue", "Revenues", "Total revenue")), _
+            Array("_利润表", Array("净利润", "Net income", "Net Income")), _
+            Array("_现金流量表", Array("经营活动现金流", "经营活动产生的现金流量净额", "Net cash provided by operating activities", "Operating cash flow")) _
+        )
+            Dim sheetName As String: sheetName = CStr(marketPrefix) & CStr(spec(0))
+            If WorksheetExists(sheetName) Then
+                Dim ws As Worksheet: Set ws = ThisWorkbook.Sheets(sheetName)
+                If ws.Cells(ws.Rows.Count, 1).End(xlUp).Row >= 3 Then
+                    checkedFields = checkedFields + 1
+                    Dim avoidTokens As Variant
+                    avoidTokens = Array()
+                    If CStr(spec(0)) = "_资产负债表" And _
+                       QaContainsAny(LCase$(JoinVariantText(spec(1))), Array("负债", "liabilities")) Then
+                        avoidTokens = Array("权益", "equity", "equities", "流动", "current", "非流动", "non-current", "noncurrent")
+                    End If
+                    If CStr(spec(0)) = "_资产负债表" And _
+                       QaContainsAny(LCase$(JoinVariantText(spec(1))), Array("权益", "equity")) Then
+                        avoidTokens = Array("实收", "资本", "公积", "未分配", "少数", "preferred", "capital")
+                    End If
+                    Dim foundRow As Long: foundRow = FindQaRowByAliases(ws, spec(1), avoidTokens)
+                    If foundRow = 0 Or Not RowHasAnyNumericData(ws, foundRow) Then _
+                        CheckKeyFieldsPresence = CheckKeyFieldsPresence + 1
+                End If
+            End If
+        Next spec
+    Next marketPrefix
+End Function
+
+
+Private Function FindQaRowByAliases(ByVal ws As Worksheet, ByVal aliases As Variant, ByVal avoidTokens As Variant) As Long
+    Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    Dim r As Long
+    For r = 3 To lastRow
+        Dim labelText As String
+        labelText = LCase$(CStr(ws.Cells(r, 1).Text) & " " & _
+                           CStr(ws.Cells(r, 2).Text) & " " & _
+                           CStr(ws.Cells(r, 3).Text))
+        If QaContainsAny(labelText, aliases) And Not QaContainsAny(labelText, avoidTokens) Then
+            FindQaRowByAliases = r
+            Exit Function
+        End If
+    Next r
+End Function
+
+
+Private Function QaContainsAny(ByVal haystackLower As String, ByVal needles As Variant) As Boolean
+    On Error GoTo EmptyNeedles
+    Dim needle As Variant
+    For Each needle In needles
+        If Len(CStr(needle)) > 0 Then
+            If InStr(1, haystackLower, LCase$(CStr(needle)), vbTextCompare) > 0 Then
+                QaContainsAny = True
+                Exit Function
+            End If
+        End If
+    Next needle
+EmptyNeedles:
+End Function
+
+
+Private Function JoinVariantText(ByVal values As Variant) As String
+    On Error GoTo EH
+    Dim item As Variant
+    For Each item In values
+        JoinVariantText = JoinVariantText & " " & CStr(item)
+    Next item
+    Exit Function
+EH:
+    JoinVariantText = CStr(values)
+End Function
+
+
+Private Function RowHasAnyNumericData(ByVal ws As Worksheet, ByVal rowNum As Long) As Boolean
+    If rowNum <= 0 Then Exit Function
+    Dim startCol As Long: startCol = StandardDataStartCol(ws)
+    Dim lastCol As Long: lastCol = ws.Cells(2, ws.Columns.Count).End(xlToLeft).Column
+    Dim c As Long, tmp As Double
+    For c = startCol To lastCol
+        If QaNumericCell(ws.Cells(rowNum, c), tmp) Then
+            RowHasAnyNumericData = True
+            Exit Function
+        End If
+    Next c
+End Function
+
+
+Private Function QaNumericCell(ByVal cell As Range, ByRef outValue As Double) As Boolean
+    If IsError(cell.Value) Then Exit Function
+    Dim s As String: s = Trim$(CStr(cell.Value))
+    If Len(s) = 0 Then Exit Function
+    s = Replace(s, ",", "")
+    s = Replace(s, " ", "")
+    If Not IsNumeric(s) Then Exit Function
+    outValue = CDbl(s)
+    QaNumericCell = True
+End Function
+
 
 Private Function MarketIndicatorSheetName(ByVal market As String) As String
     Select Case UCase$(Trim$(market))

@@ -428,7 +428,7 @@ End Function
 
 Private Function StockAnalysisHttpGet(ByVal strUrl As String, Optional ByVal cacheKey As String = "") As String
     Dim result As THttpResult
-    StockAnalysisHttpGet = RunCachedHttpGet(strUrl, cacheKey, "STOCKANALYSIS_KR", 24, result)
+    StockAnalysisHttpGet = RunCachedHttpGet(strUrl, cacheKey, "STOCKANALYSIS_KR", GetTtlHoursForSource("STOCKANALYSIS_KR"), result)
 End Function
 
 

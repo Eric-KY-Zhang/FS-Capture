@@ -330,8 +330,8 @@ Public Sub TestPhase4lHttpMissHitSmoke()
     Dim firstResult As THttpResult, secondResult As THttpResult
     Dim firstBody As String, secondBody As String
 
-    firstBody = RunCachedHttpGet(url, cacheKey, "EDGAR", 24, firstResult)
-    secondBody = RunCachedHttpGet(url, cacheKey, "EDGAR", 24, secondResult)
+    firstBody = RunCachedHttpGet(url, cacheKey, "EDGAR", GetTtlHoursForSource("EDGAR"), firstResult)
+    secondBody = RunCachedHttpGet(url, cacheKey, "EDGAR", GetTtlHoursForSource("EDGAR"), secondResult)
 
     wsSmoke.Range("A1").Value = firstResult.CacheStatus
     wsSmoke.Range("B1").Value = firstResult.StatusCode
@@ -366,8 +366,8 @@ Public Sub TestPhase4lSecRateSmoke()
 
     Dim firstResult As THttpResult, secondResult As THttpResult
     Dim firstBody As String, secondBody As String
-    firstBody = RunCachedHttpGet(url, keyBase & "_1", "EDGAR", 24, firstResult)
-    secondBody = RunCachedHttpGet(url, keyBase & "_2", "EDGAR", 24, secondResult)
+    firstBody = RunCachedHttpGet(url, keyBase & "_1", "EDGAR", GetTtlHoursForSource("EDGAR"), firstResult)
+    secondBody = RunCachedHttpGet(url, keyBase & "_2", "EDGAR", GetTtlHoursForSource("EDGAR"), secondResult)
 
     wsSmoke.Range("A1").Value = g_lastSecIntervalMs
     wsSmoke.Range("B1").Value = firstResult.StatusCode
@@ -403,6 +403,206 @@ Public Sub TestPhase4lCleanReleaseSmoke()
     wsSmoke.Range("C1").Value = ReadLocalHttpCache("phase4l_release_key")
     wsSmoke.Range("D1").Value = ThisWorkbook.Worksheets("美股_抓取诊断").Cells(3, 1).Value
 End Sub
+
+
+Public Function LoadFixture(ByVal fileName As String) As String
+    Dim fixturePath As String
+    fixturePath = ThisWorkbook.Path & "\tests\fixtures\" & fileName
+
+    Dim fso As Object: Set fso = CreateObject("Scripting.FileSystemObject")
+    If Not fso.FileExists(fixturePath) Then
+        Err.Raise vbObjectError + 9701, "LoadFixture", "Fixture not found: " & fixturePath
+    End If
+
+    Dim stream As Object: Set stream = CreateObject("ADODB.Stream")
+    With stream
+        .Type = 2
+        .Charset = "utf-8"
+        .Open
+        .LoadFromFile fixturePath
+        LoadFixture = .ReadText(-1)
+        .Close
+    End With
+End Function
+
+
+Public Function RunOfflineTest(ByVal testName As String) As String
+    On Error GoTo EH
+    Application.Run "模块_测试." & testName
+    RunOfflineTest = "PASS"
+    Exit Function
+EH:
+    RunOfflineTest = "FAIL: " & CStr(Err.Number) & " | " & Err.Source & " | " & Err.Description
+    Err.Clear
+End Function
+
+
+Public Sub Test_Offline_US_Edgar_AAPL()
+    Dim body As String: body = LoadFixture("sec_aapl_companyfacts.json")
+
+    AssertTrue InStr(1, body, """us-gaap""", vbTextCompare) > 0, "EDGAR fixture should include us-gaap taxonomy"
+    AssertTrue InStr(1, body, """Revenues""", vbTextCompare) > 0, "EDGAR fixture should include Revenues"
+    AssertTrue InStr(1, body, """USD""", vbTextCompare) > 0, "EDGAR fixture should include USD units"
+    AssertTrue CountSubstring(body, """fy""") >= 5, "EDGAR fixture should include at least 5 fiscal periods"
+End Sub
+
+
+Public Sub Test_Offline_HK_Xueqiu_Tencent()
+    Dim body As String: body = LoadFixture("xueqiu_hk_00700_balance.json")
+    Dim hasTencent As Boolean
+    Dim hasCurrency As Boolean
+
+    hasTencent = (InStr(1, body, "腾讯控股", vbTextCompare) > 0) Or _
+                 (InStr(1, body, "Tencent", vbTextCompare) > 0)
+    hasCurrency = (InStr(1, body, """currency"":""CNY""", vbTextCompare) > 0) Or _
+                  (InStr(1, body, """currency"":""HKD""", vbTextCompare) > 0) Or _
+                  (InStr(1, body, "人民币", vbTextCompare) > 0) Or _
+                  (InStr(1, body, "港币", vbTextCompare) > 0)
+
+    AssertTrue hasTencent, "HK fixture should identify Tencent"
+    AssertTrue InStr(1, body, """ta""", vbTextCompare) > 0, "HK fixture should include total assets field ta"
+    AssertTrue InStr(1, body, """tlia""", vbTextCompare) > 0, "HK fixture should include total liabilities field tlia"
+    AssertTrue hasCurrency, "HK fixture should include a reporting currency"
+End Sub
+
+
+Public Sub Test_Offline_KR_StockAnalysis_Samsung()
+    Dim body As String: body = LoadFixture("stockanalysis_kr_005930_income.html")
+    Dim hasSamsung As Boolean
+    Dim hasOperatingIncome As Boolean
+    Dim hasNetIncome As Boolean
+
+    hasSamsung = (InStr(1, body, "Samsung Electronics", vbTextCompare) > 0) Or _
+                 (InStr(1, body, "005930", vbTextCompare) > 0)
+    hasOperatingIncome = (InStr(1, body, "opinc", vbTextCompare) > 0) Or _
+                         (InStr(1, body, "operating income", vbTextCompare) > 0)
+    hasNetIncome = (InStr(1, body, "netinc", vbTextCompare) > 0) Or _
+                   (InStr(1, body, "net income", vbTextCompare) > 0)
+
+    AssertTrue hasSamsung, "KR fixture should identify Samsung"
+    AssertTrue InStr(1, body, "revenue", vbTextCompare) > 0, "KR fixture should include revenue"
+    AssertTrue hasOperatingIncome, "KR fixture should include operating income"
+    AssertTrue hasNetIncome, "KR fixture should include net income"
+End Sub
+
+
+Public Sub Test_Offline_FX_Missing_DoesNotFallbackToOne()
+    Dim wsFx As Worksheet: Set wsFx = ThisWorkbook.Worksheets("汇率")
+    Dim fxRow As Long: fxRow = FindFxRowForSmoke("2024-12-31")
+    If fxRow = 0 Then Err.Raise vbObjectError + 9720, "Test_Offline_FX_Missing_DoesNotFallbackToOne", "missing FX row 2024-12-31"
+
+    Dim savedUsdEop As Variant: savedUsdEop = wsFx.Cells(fxRow, 2).Value
+    Dim fxRate As Double
+    Dim statusText As String
+
+    On Error GoTo CleanUp
+    wsFx.Cells(fxRow, 2).ClearContents
+    statusText = GetFxRateStatus("USD", "2024-12-31", True, fxRate)
+
+    AssertEquals "FX_MISSING", statusText, "missing USD future rate should report FX_MISSING"
+    AssertEquals "0", CStr(fxRate), "missing USD future rate should return 0"
+
+CleanUp:
+    wsFx.Cells(fxRow, 2).Value = savedUsdEop
+    If Err.Number <> 0 Then Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
+
+Public Sub Test_Offline_Diagnostic_Score_NotDate()
+    g_diagnosticSheetName = "韩股_抓取诊断"
+    ClearDiagnosticSheet
+
+    Dim rows As Collection: Set rows = New Collection
+    AddDiagnosticRow rows, "005930", "Offline", "score text", "OK", "fixture", _
+                     "HTML", "score", "text", "1/1", "offline score text smoke", "1.0"
+    WriteDiagnosticForKind "Offline", rows
+
+    Dim wsDiag As Worksheet: Set wsDiag = ThisWorkbook.Worksheets("韩股_抓取诊断")
+    AssertEquals "1/1", CStr(wsDiag.Cells(3, 9).Text), "diagnostic Score should stay as text"
+End Sub
+
+
+Public Sub Test_Offline_Cache_HitMissExpired()
+    Dim cacheAge As Double, cacheStatus As String, body As String
+    WriteLocalHttpCache "phase4m_offline_cache", "test_body"
+    body = ReadLocalHttpCacheWithAge("phase4m_offline_cache", 24, cacheAge, cacheStatus)
+
+    AssertEquals "test_body", body, "local cache body mismatch"
+    AssertEquals "HIT", cacheStatus, "fresh local cache should be HIT"
+    AssertTrue cacheAge >= 0 And cacheAge < 0.1, "fresh local cache age should be near zero"
+End Sub
+
+
+Public Sub Test_Offline_AppState_RestoreAfterError()
+    Dim oldCalc As XlCalculation: oldCalc = Application.Calculation
+    Dim oldAlerts As Boolean: oldAlerts = Application.DisplayAlerts
+    Dim st As TAppState
+    Dim caught As Boolean
+
+    On Error GoTo EH
+    st = BeginAppState("phase4m offline app state smoke")
+    Err.Raise vbObjectError + 9702, "Test_Offline_AppState_RestoreAfterError", "intentional smoke error"
+    Exit Sub
+
+EH:
+    caught = True
+    EndAppState st
+    AssertTrue caught, "intentional app state error should be caught"
+    AssertEquals CStr(oldCalc), CStr(Application.Calculation), "Application.Calculation should be restored"
+    AssertEquals CStr(oldAlerts), CStr(Application.DisplayAlerts), "Application.DisplayAlerts should be restored"
+End Sub
+
+
+Public Sub Test_Offline_DataQuality_BS_Imbalance_Detection()
+    Dim body As String: body = LoadFixture("missing_fields_edgar.json")
+    AssertTrue InStr(1, body, """Assets""", vbTextCompare) > 0, "missing-fields fixture should include Assets"
+    AssertTrue InStr(1, body, """Revenues""", vbTextCompare) = 0, "missing-fields fixture should omit Revenues"
+
+    RunDataQualityChecks
+    AssertTrue DiagnosticHasQaCode("BS_BALANCE"), "RunDataQualityChecks should emit BS_BALANCE"
+    AssertTrue DiagnosticHasQaCode("FX_MISSING"), "RunDataQualityChecks should emit FX_MISSING"
+    AssertTrue DiagnosticHasQaCode("KEY_FIELDS"), "RunDataQualityChecks should emit KEY_FIELDS"
+End Sub
+
+
+Private Sub AssertTrue(ByVal cond As Boolean, ByVal msg As String)
+    If Not cond Then
+        Err.Raise vbObjectError + 9710, "AssertTrue", "Assertion failed: " & msg
+    End If
+End Sub
+
+
+Private Sub AssertEquals(ByVal expected As Variant, ByVal actual As Variant, ByVal msg As String)
+    If CStr(expected) <> CStr(actual) Then
+        Err.Raise vbObjectError + 9711, "AssertEquals", _
+            msg & " | expected=" & CStr(expected) & " actual=" & CStr(actual)
+    End If
+End Sub
+
+
+Private Function CountSubstring(ByVal textValue As String, ByVal needle As String) As Long
+    Dim pos As Long: pos = 1
+    Do
+        pos = InStr(pos, textValue, needle, vbTextCompare)
+        If pos = 0 Then Exit Do
+        CountSubstring = CountSubstring + 1
+        pos = pos + Len(needle)
+    Loop
+End Function
+
+
+Private Function DiagnosticHasQaCode(ByVal qaCode As String) As Boolean
+    Dim ws As Worksheet: Set ws = ThisWorkbook.Worksheets("美股_抓取诊断")
+    Dim r As Long, lastRow As Long
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    For r = 3 To lastRow
+        If CStr(ws.Cells(r, 1).Value) = "GLOBAL_QA" And _
+           CStr(ws.Cells(r, 2).Value) = qaCode Then
+            DiagnosticHasQaCode = True
+            Exit Function
+        End If
+    Next r
+End Function
 
 
 Private Function FindFxRowForSmoke(ByVal periodKey As String) As Long

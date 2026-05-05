@@ -1,0 +1,6 @@
+# Fixture payloads may be copied from local samples and can contain environment-specific data.
+*.json
+*.html
+*.txt
+!README.md
+!.gitignore
