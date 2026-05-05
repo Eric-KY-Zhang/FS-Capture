@@ -2396,10 +2396,12 @@ End Sub
 '   - 自动跳过空的分市场表
 Public Sub BuildCrossMarketIndicatorSheet()
     Const TARGET_SHEET As String = "跨市场_指标表"
-    Dim oldDisplayAlerts As Boolean: oldDisplayAlerts = Application.DisplayAlerts
-    Dim oldScreenUpdating As Boolean: oldScreenUpdating = Application.ScreenUpdating
+    Dim appState As TAppState
+    Dim hasAppState As Boolean
     Dim errNum As Long, errDesc As String, errSource As String
     On Error GoTo CleanUp
+    appState = BeginAppState("正在合并跨市场指标表...")
+    hasAppState = True
 
     Dim wsTarget As Worksheet
     On Error Resume Next
@@ -2411,8 +2413,6 @@ Public Sub BuildCrossMarketIndicatorSheet()
             TARGET_SHEET & " sheet 不存在, 请重装模板"
     End If
 
-    Application.ScreenUpdating = False
-    Application.DisplayAlerts = False
     On Error Resume Next
     wsTarget.UsedRange.UnMerge
     Err.Clear
@@ -2553,9 +2553,17 @@ CleanUp:
     errDesc = Err.Description
     errSource = Err.Source
     Err.Clear
-    Application.DisplayAlerts = oldDisplayAlerts
-    Application.ScreenUpdating = oldScreenUpdating
-    If errNum <> 0 Then Err.Raise errNum, errSource, errDesc
+    If hasAppState Then
+        EndAppState appState
+    Else
+        Application.StatusBar = False
+        Application.ScreenUpdating = True
+        Application.DisplayAlerts = True
+    End If
+    If errNum <> 0 Then
+        Application.StatusBar = "合并跨市场指标表出错: " & errDesc
+        Err.Raise errNum, errSource, errDesc
+    End If
 End Sub
 
 

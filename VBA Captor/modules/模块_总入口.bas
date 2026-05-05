@@ -9,12 +9,16 @@ Option Explicit
 Public Sub 一键A股(Optional ByVal blnSilent As Boolean = False)
     Dim dtTime As Double: dtTime = Timer
     Dim runErrDesc As String
+    Dim appState As TAppState
+    Dim hasAppState As Boolean
 
     g_silentMode = True
     g_globalFails = 0
     g_globalLog = ""
     g_diagnosticAppendOnly = False
     On Error GoTo CleanUp
+    appState = BeginAppState("正在抓取 A 股...")
+    hasAppState = True
 
     Application.StatusBar = "[A股 1/4] 抓取资产负债表..."
     模块_抓资产负债表.Main
@@ -33,8 +37,13 @@ CleanUp:
     End If
     g_silentMode = False
     g_diagnosticAppendOnly = False
-    Application.StatusBar = False
-    Application.ScreenUpdating = True
+    If hasAppState Then
+        EndAppState appState
+    Else
+        Application.StatusBar = False
+        Application.ScreenUpdating = True
+    End If
+    If Len(runErrDesc) > 0 Then Application.StatusBar = "一键 A 股出错: " & runErrDesc
 
     If Not blnSilent Then ShowMarketRunSummary "A股", dtTime, runErrDesc
 End Sub
@@ -43,11 +52,15 @@ End Sub
 Public Sub 一键美股(Optional ByVal blnSilent As Boolean = False)
     Dim dtTime As Double: dtTime = Timer
     Dim runErrDesc As String
+    Dim appState As TAppState
+    Dim hasAppState As Boolean
 
     g_silentMode = True
     g_globalFails = 0
     g_globalLog = ""
     On Error GoTo CleanUp
+    appState = BeginAppState("正在抓取 美股...")
+    hasAppState = True
     g_diagnosticSheetName = "美股_抓取诊断"
     ClearDiagnosticSheet
     g_diagnosticAppendOnly = True
@@ -69,8 +82,13 @@ CleanUp:
     End If
     g_silentMode = False
     g_diagnosticAppendOnly = False
-    Application.StatusBar = False
-    Application.ScreenUpdating = True
+    If hasAppState Then
+        EndAppState appState
+    Else
+        Application.StatusBar = False
+        Application.ScreenUpdating = True
+    End If
+    If Len(runErrDesc) > 0 Then Application.StatusBar = "一键 美股出错: " & runErrDesc
 
     If Not blnSilent Then ShowMarketRunSummary "美股", dtTime, runErrDesc
 End Sub
@@ -79,11 +97,15 @@ End Sub
 Public Sub 一键港股(Optional ByVal blnSilent As Boolean = False)
     Dim dtTime As Double: dtTime = Timer
     Dim runErrDesc As String
+    Dim appState As TAppState
+    Dim hasAppState As Boolean
 
     g_silentMode = True
     g_globalFails = 0
     g_globalLog = ""
     On Error GoTo CleanUp
+    appState = BeginAppState("正在抓取 港股...")
+    hasAppState = True
     g_diagnosticSheetName = "港股_抓取诊断"
     ClearDiagnosticSheet
     g_diagnosticAppendOnly = True
@@ -105,8 +127,13 @@ CleanUp:
     End If
     g_silentMode = False
     g_diagnosticAppendOnly = False
-    Application.StatusBar = False
-    Application.ScreenUpdating = True
+    If hasAppState Then
+        EndAppState appState
+    Else
+        Application.StatusBar = False
+        Application.ScreenUpdating = True
+    End If
+    If Len(runErrDesc) > 0 Then Application.StatusBar = "一键 港股出错: " & runErrDesc
 
     If Not blnSilent Then ShowMarketRunSummary "港股", dtTime, runErrDesc
 End Sub
@@ -115,11 +142,15 @@ End Sub
 Public Sub 一键韩股(Optional ByVal blnSilent As Boolean = False)
     Dim dtTime As Double: dtTime = Timer
     Dim runErrDesc As String
+    Dim appState As TAppState
+    Dim hasAppState As Boolean
 
     g_silentMode = True
     g_globalFails = 0
     g_globalLog = ""
     On Error GoTo CleanUp
+    appState = BeginAppState("正在抓取 韩股...")
+    hasAppState = True
     g_diagnosticSheetName = "韩股_抓取诊断"
     ClearDiagnosticSheet
     g_diagnosticAppendOnly = True
@@ -141,8 +172,13 @@ CleanUp:
     End If
     g_silentMode = False
     g_diagnosticAppendOnly = False
-    Application.StatusBar = False
-    Application.ScreenUpdating = True
+    If hasAppState Then
+        EndAppState appState
+    Else
+        Application.StatusBar = False
+        Application.ScreenUpdating = True
+    End If
+    If Len(runErrDesc) > 0 Then Application.StatusBar = "一键 韩股出错: " & runErrDesc
 
     If Not blnSilent Then ShowMarketRunSummary "韩股", dtTime, runErrDesc
 End Sub
