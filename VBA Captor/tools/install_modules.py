@@ -86,6 +86,7 @@ BUTTONS = [
     ("BtnRunAll",       "一键全抓 4 市场",      "模块_总入口.一键全抓",            "N2:Q3",  COVER_NAVY,     PRIMARY_FG,   13, True),
     ("BtnBuildCrossInd", "一键抓取跨市场指标表", "模块_总入口.一键跨市场指标表",    "N4:Q5",  A_LIGHT_FILL,   SECONDARY_FG, 10, True),
     ("BtnHideAll",      "显示/隐藏 所有市场数据", "模块_总入口.切换所有分市场tabs", "N6:Q7",  A_LIGHT_FILL,   SECONDARY_FG, 11, True),
+    ("BtnClearAllData", "一键清空所有数据",      "模块_总入口.一键清空所有数据",    "N8:Q9",  A_LIGHT_FILL,   SECONDARY_FG, 11, True),
     ("BtnClearCache",   "清空 HTTP 缓存",       "模块_工具函数.ClearLocalCache",   "N12:Q13", A_LIGHT_FILL,   SECONDARY_FG, 11, True),
     ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A9:C10", COVER_NAVY,     PRIMARY_FG,   14, True),
     ("BtnRunUS",        "一键 美股",           "模块_总入口.一键美股",            "D9:F10", US_FILL,        US_FG,        14, True),
@@ -639,6 +640,7 @@ def layout_sample_pool(ws_pool):
         ("N2:Q3", "一键全抓 4 市场", COVER_NAVY, "FFFFFF", 13),
         ("N4:Q5", "一键抓取跨市场指标表", A_LIGHT_FILL, SECONDARY_FG, 10),
         ("N6:Q7", "显示/隐藏 所有市场数据", A_LIGHT_FILL, SECONDARY_FG, 11),
+        ("N8:Q9", "一键清空所有数据", A_LIGHT_FILL, SECONDARY_FG, 11),
         ("N12:Q13", "清空 HTTP 缓存", A_LIGHT_FILL, SECONDARY_FG, 11),
     ]
     for addr, caption, fill_hex, font_color_hex, font_size in placeholders:

@@ -265,6 +265,83 @@ Public Sub UnhideCrossMarketIndicator()
 End Sub
 
 
+Public Sub 一键清空所有数据(Optional ByVal blnSilent As Boolean = False)
+    Dim oldAlerts As Boolean: oldAlerts = Application.DisplayAlerts
+    Dim oldScreenUpdating As Boolean: oldScreenUpdating = Application.ScreenUpdating
+    Dim clearedCount As Long
+    Dim runErrDesc As String
+    Dim sheetName As Variant
+
+    On Error GoTo CleanUp
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    Application.StatusBar = "清空生成的报表数据..."
+
+    For Each sheetName In Array( _
+        "A股_资产负债表", "A股_利润表", "A股_现金流量表", "A股_指标表", _
+        "美股_资产负债表", "美股_利润表", "美股_现金流量表", "美股_指标表", _
+        "港股_资产负债表", "港股_利润表", "港股_现金流量表", "港股_指标表", _
+        "韩股_资产负债表", "韩股_利润表", "韩股_现金流量表", "韩股_指标表", _
+        "跨市场_指标表")
+        clearedCount = clearedCount + ClearSheetContentsIfExists(CStr(sheetName))
+    Next sheetName
+
+    clearedCount = clearedCount + ClearDiagnosticRowsIfExists("美股_抓取诊断")
+    clearedCount = clearedCount + ClearDiagnosticRowsIfExists("港股_抓取诊断")
+    clearedCount = clearedCount + ClearDiagnosticRowsIfExists("韩股_抓取诊断")
+
+CleanUp:
+    If Err.Number <> 0 Then
+        runErrDesc = Err.Description
+        Err.Clear
+    End If
+    Application.StatusBar = False
+    Application.DisplayAlerts = oldAlerts
+    Application.ScreenUpdating = oldScreenUpdating
+
+    If Not blnSilent Then
+        If Len(runErrDesc) > 0 Then
+            MsgBox "清空数据失败:" & vbCrLf & runErrDesc, _
+                   vbExclamation, "上市公司财务数据查询"
+        Else
+            MsgBox "已清空生成的报表数据" & vbCrLf & _
+                   "样本池公司、参数、汇率和 HTTP 缓存已保留。", _
+                   vbInformation, "上市公司财务数据查询"
+        End If
+    End If
+End Sub
+
+
+Private Function ClearSheetContentsIfExists(ByVal sheetName As String) As Long
+    On Error Resume Next
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Worksheets(sheetName)
+    If Not ws Is Nothing Then
+        ws.UsedRange.ClearContents
+        ClearSheetContentsIfExists = 1
+    End If
+    Err.Clear
+    On Error GoTo 0
+End Function
+
+
+Private Function ClearDiagnosticRowsIfExists(ByVal sheetName As String) As Long
+    On Error Resume Next
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Worksheets(sheetName)
+    If Not ws Is Nothing Then
+        Dim lastRow As Long
+        lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+        If lastRow >= 3 Then
+            ws.Range(ws.Cells(3, 1), ws.Cells(lastRow, 11)).ClearContents
+        End If
+        ClearDiagnosticRowsIfExists = 1
+    End If
+    Err.Clear
+    On Error GoTo 0
+End Function
+
+
 Private Function MarketHasPoolRows(ByVal marketKey As String) As Boolean
     Dim codeCol As Long
     Select Case UCase$(Trim$(marketKey))
@@ -329,7 +406,7 @@ Private Sub ShowMarketRunSummary(ByVal marketName As String, ByVal dtTime As Dou
         msg = msg & vbCrLf & vbCrLf & _
               "失败 " & g_globalFails & " 条:" & g_globalLog
     Else
-        msg = msg & vbCrLf & "全部成功 ✓"
+        msg = msg & vbCrLf & "全部成功"
     End If
     msg = msg & runErrDesc
 
@@ -453,7 +530,7 @@ CleanUp:
         msg = msg & vbCrLf & vbCrLf & _
               "失败 " & g_globalFails & " 条:" & g_globalLog
     Else
-        msg = msg & vbCrLf & "全部成功 ✓"
+        msg = msg & vbCrLf & "全部成功"
     End If
     msg = msg & runErrDesc
 

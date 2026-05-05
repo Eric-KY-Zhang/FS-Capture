@@ -70,6 +70,7 @@ def main() -> int:
         ws_pool = wb.Worksheets("样本池")
         expected_buttons = {
             "BtnBuildCrossInd": ("N4:Q5", "一键抓取跨市场指标表"),
+            "BtnClearAllData": ("N8:Q9", "一键清空所有数据"),
             "BtnClearCache": ("N12:Q13", "清空 HTTP 缓存"),
         }
         for name, (addr, caption) in expected_buttons.items():
