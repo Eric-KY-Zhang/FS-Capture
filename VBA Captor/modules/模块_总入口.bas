@@ -304,7 +304,7 @@ CleanUp:
             MsgBox "清空数据失败:" & vbCrLf & runErrDesc, _
                    vbExclamation, "上市公司财务数据查询"
         Else
-            MsgBox "已清空生成的报表数据" & vbCrLf & _
+            MsgBox "已清空生成的报表数据和格式" & vbCrLf & _
                    "样本池公司、参数、汇率和 HTTP 缓存已保留。", _
                    vbInformation, "上市公司财务数据查询"
         End If
@@ -317,7 +317,8 @@ Private Function ClearSheetContentsIfExists(ByVal sheetName As String) As Long
     Dim ws As Worksheet
     Set ws = ThisWorkbook.Worksheets(sheetName)
     If Not ws Is Nothing Then
-        ws.UsedRange.ClearContents
+        ws.Cells.UnMerge
+        ws.UsedRange.Clear
         ClearSheetContentsIfExists = 1
     End If
     Err.Clear
@@ -331,9 +332,9 @@ Private Function ClearDiagnosticRowsIfExists(ByVal sheetName As String) As Long
     Set ws = ThisWorkbook.Worksheets(sheetName)
     If Not ws Is Nothing Then
         Dim lastRow As Long
-        lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+        lastRow = ws.UsedRange.Row + ws.UsedRange.Rows.Count - 1
         If lastRow >= 3 Then
-            ws.Range(ws.Cells(3, 1), ws.Cells(lastRow, 11)).ClearContents
+            ws.Range(ws.Cells(3, 1), ws.Cells(lastRow, 11)).Clear
         End If
         ClearDiagnosticRowsIfExists = 1
     End If
