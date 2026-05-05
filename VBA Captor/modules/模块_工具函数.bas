@@ -53,6 +53,32 @@ Public g_dictTickerToCIK As Object
 Public Const FX_SHEET As String = "汇率"
 Public Const FX_DATA_ROW As Long = 2
 
+#If VBA7 Then
+Private Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+#Else
+Private Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+#End If
+
+' Phase 4l Step 1: HTTP/cache 结构化遥测
+Public Type THttpResult
+    Body As String
+    StatusCode As Long
+    StatusText As String
+    Source As String
+    UrlHash As String
+    CacheKey As String
+    CacheStatus As String
+    CacheAgeHours As Double
+    ElapsedMs As Long
+    RetryCount As Long
+    ErrorStage As String
+    ErrorText As String
+End Type
+
+Public g_lastHttpResult As THttpResult
+Private g_lastSecRequestMs As Double
+Public g_lastSecIntervalMs As Double
+
 
 ' --------- 自动化/一键全抓用: 控制各抓数入口是否弹窗 ---------
 Public Sub SetSilentMode(ByVal blnSilent As Boolean)
@@ -147,19 +173,20 @@ Public Sub EnsureDiagnosticSheet()
 
     Dim headers As Variant
     headers = Array("公司", "报表", "输出指标", "状态", "数据源", _
-                    "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注", "FX_Rate")
+                    "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注", "FX_Rate", _
+                    "CacheStatus", "CacheAgeHours", "HTTPStatus", "ElapsedMs", "RetryCount", "ErrorStage")
 
     On Error Resume Next
-    ws.Range(ws.Cells(1, 1), ws.Cells(1, 11)).UnMerge
+    ws.Range(ws.Cells(1, 1), ws.Cells(1, 17)).UnMerge
     Err.Clear
     On Error GoTo 0
 
     ws.Cells(1, 1).Value = Replace(diagName, "_", "") & " (每次跑数后自动刷新)"
     Dim oldDisplayAlerts As Boolean: oldDisplayAlerts = Application.DisplayAlerts
     Application.DisplayAlerts = False
-    ws.Range(ws.Cells(1, 1), ws.Cells(1, 11)).Merge
+    ws.Range(ws.Cells(1, 1), ws.Cells(1, 17)).Merge
     Application.DisplayAlerts = oldDisplayAlerts
-    With ws.Range(ws.Cells(1, 1), ws.Cells(1, 11))
+    With ws.Range(ws.Cells(1, 1), ws.Cells(1, 17))
         .Font.Name = "微软雅黑"
         .Font.Size = 12
         .Font.Bold = True
@@ -194,11 +221,18 @@ Public Sub EnsureDiagnosticSheet()
     ws.Columns("I").ColumnWidth = 10
     ws.Columns("J").ColumnWidth = 58
     ws.Columns("K").ColumnWidth = 12
+    ws.Columns("L").ColumnWidth = 12
+    ws.Columns("M").ColumnWidth = 10
+    ws.Columns("N").ColumnWidth = 10
+    ws.Columns("O").ColumnWidth = 10
+    ws.Columns("P").ColumnWidth = 8
+    ws.Columns("Q").ColumnWidth = 14
     ws.Range("A:A").NumberFormat = "@"
     ws.Range("I:I").NumberFormat = "@"
+    ws.Range("L:Q").NumberFormat = "@"
     ws.Rows(1).RowHeight = 22
     ws.Rows(2).RowHeight = 20
-    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(2, 11)))
+    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(2, 17)))
 
     On Error Resume Next
     ws.Visible = xlSheetHidden
@@ -212,7 +246,7 @@ Public Sub ClearDiagnosticSheet()
     Dim ws As Worksheet: Set ws = ThisWorkbook.Sheets(CurrentDiagnosticSheetName())
     Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
     If lastRow < 1000 Then lastRow = 1000
-    ws.Range(ws.Cells(3, 1), ws.Cells(lastRow, 11)).ClearContents
+    ws.Range(ws.Cells(3, 1), ws.Cells(lastRow, 17)).ClearContents
 End Sub
 
 
@@ -238,11 +272,72 @@ Public Sub AddDiagnosticRow(ByVal collRows As Collection, _
                             ByVal unitText As String, _
                             ByVal scoreText As String, _
                             ByVal noteText As String, _
-                            Optional ByVal fxRateText As String = "1.0")
+                            Optional ByVal fxRateText As String = "1.0", _
+                            Optional ByVal cacheStatus As String = "", _
+                            Optional ByVal cacheAgeHours As Variant, _
+                            Optional ByVal httpStatus As Variant, _
+                            Optional ByVal elapsedMs As Variant, _
+                            Optional ByVal retryCount As Variant, _
+                            Optional ByVal errorStage As String = "")
     If collRows Is Nothing Then Exit Sub
+    Dim diagCacheStatus As String: diagCacheStatus = cacheStatus
+    Dim diagCacheAge As String
+    Dim diagHttpStatus As String
+    Dim diagElapsed As String
+    Dim diagRetry As String
+    Dim diagErrorStage As String: diagErrorStage = errorStage
+
+    If IsMissing(cacheAgeHours) Then
+        diagCacheAge = DiagnosticCacheAgeText(g_lastHttpResult)
+    Else
+        diagCacheAge = CStr(cacheAgeHours)
+    End If
+    If IsMissing(httpStatus) Then
+        diagHttpStatus = DiagnosticHttpStatusText(g_lastHttpResult)
+    Else
+        diagHttpStatus = CStr(httpStatus)
+    End If
+    If IsMissing(elapsedMs) Then
+        diagElapsed = DiagnosticElapsedText(g_lastHttpResult)
+    Else
+        diagElapsed = CStr(elapsedMs)
+    End If
+    If IsMissing(retryCount) Then
+        diagRetry = DiagnosticRetryText(g_lastHttpResult)
+    Else
+        diagRetry = CStr(retryCount)
+    End If
+    If Len(diagCacheStatus) = 0 Then diagCacheStatus = g_lastHttpResult.CacheStatus
+    If Len(diagErrorStage) = 0 Then diagErrorStage = g_lastHttpResult.ErrorStage
+
     collRows.Add Array(ticker, strKind, label, statusText, sourceText, _
-                       taxonomyText, fieldText, unitText, DiagnosticScoreText(scoreText), noteText, fxRateText)
+                       taxonomyText, fieldText, unitText, DiagnosticScoreText(scoreText), noteText, fxRateText, _
+                       diagCacheStatus, diagCacheAge, diagHttpStatus, diagElapsed, diagRetry, diagErrorStage)
 End Sub
+
+
+Private Function DiagnosticCacheAgeText(ByRef result As THttpResult) As String
+    If Len(result.CacheStatus) = 0 Or result.CacheAgeHours < 0 Then Exit Function
+    DiagnosticCacheAgeText = Format$(result.CacheAgeHours, "0.00")
+End Function
+
+
+Private Function DiagnosticHttpStatusText(ByRef result As THttpResult) As String
+    If Len(result.CacheStatus) = 0 And result.StatusCode = 0 Then Exit Function
+    DiagnosticHttpStatusText = CStr(result.StatusCode)
+End Function
+
+
+Private Function DiagnosticElapsedText(ByRef result As THttpResult) As String
+    If result.ElapsedMs <= 0 Then Exit Function
+    DiagnosticElapsedText = CStr(result.ElapsedMs)
+End Function
+
+
+Private Function DiagnosticRetryText(ByRef result As THttpResult) As String
+    If Len(result.CacheStatus) = 0 And result.RetryCount = 0 Then Exit Function
+    DiagnosticRetryText = CStr(result.RetryCount)
+End Function
 
 
 Private Function DiagnosticScoreText(ByVal scoreText As String) As String
@@ -268,31 +363,33 @@ Public Sub WriteDiagnosticForKind(ByVal strKind As String, ByVal collRows As Col
     If startRow < 3 Then startRow = 3
 
     Dim arrOut As Variant
-    ReDim arrOut(1 To collRows.Count, 1 To 11)
+    ReDim arrOut(1 To collRows.Count, 1 To 17)
 
     Dim i As Long, j As Long, rowData As Variant
     For i = 1 To collRows.Count
         rowData = collRows.Item(i)
-        For j = 0 To 10
+        For j = 0 To 16
             If j <= UBound(rowData) Then
                 arrOut(i, j + 1) = rowData(j)
             Else
-                arrOut(i, j + 1) = "1.0"
+                arrOut(i, j + 1) = ""
             End If
         Next j
         arrOut(i, 9) = DiagnosticScoreText(CStr(arrOut(i, 9)))
+        If Len(CStr(arrOut(i, 11))) = 0 Then arrOut(i, 11) = "1.0"
     Next i
 
     ws.Range(ws.Cells(startRow, 9), ws.Cells(startRow + collRows.Count - 1, 9)).NumberFormat = "@"
-    ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 11)).Value = arrOut
-    With ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 11))
+    ws.Range(ws.Cells(startRow, 12), ws.Cells(startRow + collRows.Count - 1, 17)).NumberFormat = "@"
+    ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 17)).Value = arrOut
+    With ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 17))
         .Font.Name = "微软雅黑"
         .Font.Size = 9
         .VerticalAlignment = xlCenter
     End With
     ws.Range(ws.Cells(startRow, 9), ws.Cells(startRow + collRows.Count - 1, 9)).HorizontalAlignment = xlRight
     ws.Range(ws.Cells(startRow, 11), ws.Cells(startRow + collRows.Count - 1, 11)).HorizontalAlignment = xlRight
-    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(startRow + collRows.Count - 1, 11)))
+    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(startRow + collRows.Count - 1, 17)))
 End Sub
 
 
@@ -319,14 +416,21 @@ Public Sub AddDiagnosticFxMissing(ByVal ticker As String, _
     ws.Cells(startRow, 9).Value = ""
     ws.Cells(startRow, 10).Value = "汇率缺失,统一RMB 模式下该 cell 留空,请检查汇率 sheet 或重跑 EnsureFxRateCached; period=" & periodEnd
     ws.Cells(startRow, 11).Value = 0
+    ws.Range(ws.Cells(startRow, 12), ws.Cells(startRow, 17)).NumberFormat = "@"
+    ws.Cells(startRow, 12).Value = g_lastHttpResult.CacheStatus
+    ws.Cells(startRow, 13).Value = DiagnosticCacheAgeText(g_lastHttpResult)
+    ws.Cells(startRow, 14).Value = DiagnosticHttpStatusText(g_lastHttpResult)
+    ws.Cells(startRow, 15).Value = DiagnosticElapsedText(g_lastHttpResult)
+    ws.Cells(startRow, 16).Value = DiagnosticRetryText(g_lastHttpResult)
+    ws.Cells(startRow, 17).Value = g_lastHttpResult.ErrorStage
 
-    With ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow, 11))
+    With ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow, 17))
         .Font.Name = "微软雅黑"
         .Font.Size = 9
         .VerticalAlignment = xlCenter
     End With
     ws.Cells(startRow, 11).HorizontalAlignment = xlRight
-    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(startRow, 11)))
+    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(startRow, 17)))
 End Sub
 
 
@@ -969,36 +1073,281 @@ End Function
 
 ' --------- Phase 4h Step 5: 本地 HTTP 响应缓存 (24h TTL, 不缓存失败响应) ---------
 Public Function CachedEdgarHttpGet(ByVal strUrl As String, ByVal cacheKey As String) As String
-    Dim cached As String: cached = ReadLocalHttpCache(cacheKey)
-    If Len(cached) > 0 Then
-        CachedEdgarHttpGet = cached
-        Exit Function
-    End If
-
-    Dim response As String: response = EdgarHttpGet(strUrl)
-    WriteLocalHttpCache cacheKey, response
-    CachedEdgarHttpGet = response
+    Dim result As THttpResult
+    CachedEdgarHttpGet = RunCachedHttpGet(strUrl, cacheKey, "EDGAR", 24, result)
 End Function
 
 
 Public Function CachedXueqiuHttpGet(ByVal strUrl As String, _
                                      ByVal strCookie As String, _
                                      ByVal cacheKey As String) As String
-    Dim cached As String: cached = ReadLocalHttpCache(cacheKey)
-    If Len(cached) > 0 Then
-        CachedXueqiuHttpGet = cached
+    Dim result As THttpResult
+    CachedXueqiuHttpGet = RunCachedHttpGet(strUrl, cacheKey, "XUEQIU", 24, result, strCookie)
+End Function
+
+
+Public Function RunCachedHttpGet(ByVal strUrl As String, _
+                                 ByVal cacheKey As String, _
+                                 ByVal sourceName As String, _
+                                 ByVal ttlHours As Long, _
+                                 ByRef result As THttpResult, _
+                                 Optional ByVal strCookie As String = "") As String
+    Dim startTime As Double: startTime = Timer
+    ResetHttpResult result
+    result.Source = UCase$(Trim$(sourceName))
+    result.CacheKey = cacheKey
+    result.UrlHash = ComputeShortHash(strUrl)
+    result.CacheAgeHours = -1
+
+    On Error GoTo CacheReadError
+    Dim cacheAge As Double, cacheStatus As String
+    Dim cacheBody As String
+    cacheBody = ReadLocalHttpCacheWithAge(cacheKey, ttlHours, cacheAge, cacheStatus)
+    On Error GoTo 0
+    If Len(cacheBody) > 0 Then
+        result.Body = cacheBody
+        result.CacheStatus = "HIT"
+        result.CacheAgeHours = cacheAge
+        result.StatusCode = 0
+        result.StatusText = "CACHE_HIT"
+        result.ElapsedMs = ElapsedMsSince(startTime)
+        g_lastHttpResult = result
+        RunCachedHttpGet = cacheBody
         Exit Function
     End If
 
-    Dim response As String: response = XueqiuHttpGet(strUrl, strCookie)
-    WriteLocalHttpCache cacheKey, response
-    CachedXueqiuHttpGet = response
+    result.CacheStatus = cacheStatus
+    If Len(result.CacheStatus) = 0 Then result.CacheStatus = "MISS"
+    result.CacheAgeHours = cacheAge
+
+    Dim body As String
+    body = HttpGetWithRetry(strUrl, result.Source, result, strCookie)
+    result.Body = body
+    If result.StatusCode <> 200 Or Len(body) = 0 Then
+        result.ElapsedMs = ElapsedMsSince(startTime)
+        g_lastHttpResult = result
+        Err.Raise vbObjectError + 961, "RunCachedHttpGet", _
+            result.StatusText & ": " & result.ErrorText
+    End If
+    If result.StatusCode = 200 And Len(body) > 0 Then
+        On Error Resume Next
+        WriteLocalHttpCache cacheKey, body
+        If Err.Number <> 0 Then
+            result.CacheStatus = "WRITE_ERROR"
+            result.ErrorStage = "CACHE_WRITE"
+            result.ErrorText = Left$(Err.Description, 200)
+            Err.Clear
+        End If
+        On Error GoTo 0
+    End If
+    result.ElapsedMs = ElapsedMsSince(startTime)
+    g_lastHttpResult = result
+    RunCachedHttpGet = body
+    Exit Function
+
+CacheReadError:
+    result.CacheStatus = "READ_ERROR"
+    result.CacheAgeHours = -1
+    result.ErrorStage = "CACHE_READ"
+    result.ErrorText = Left$(Err.Description, 200)
+    Err.Clear
+    On Error GoTo 0
+    body = HttpGetWithRetry(strUrl, result.Source, result, strCookie)
+    result.Body = body
+    If result.StatusCode <> 200 Or Len(body) = 0 Then
+        result.ElapsedMs = ElapsedMsSince(startTime)
+        g_lastHttpResult = result
+        Err.Raise vbObjectError + 961, "RunCachedHttpGet", _
+            result.StatusText & ": " & result.ErrorText
+    End If
+    result.ElapsedMs = ElapsedMsSince(startTime)
+    g_lastHttpResult = result
+    RunCachedHttpGet = body
 End Function
+
+
+Public Function HttpGetWithRetry(ByVal strUrl As String, _
+                                 ByVal sourceName As String, _
+                                 ByRef result As THttpResult, _
+                                 Optional ByVal strCookie As String = "") As String
+    Dim retryDelays As Variant: retryDelays = Array(500, 1000, 2000)
+    Dim maxRetries As Long: maxRetries = UBound(retryDelays) + 1
+    Dim attempt As Long
+    Dim body As String, errNum As Long, errDesc As String, statusCode As Long
+    Randomize
+
+    For attempt = 0 To maxRetries
+        If sourceName = "EDGAR" Then EnforceSecRateLimit
+        body = ""
+        statusCode = 0
+        errNum = 0
+        errDesc = ""
+
+        On Error Resume Next
+        Select Case sourceName
+            Case "EDGAR"
+                body = EdgarHttpGet(strUrl)
+            Case "XUEQIU"
+                body = XueqiuHttpGet(strUrl, strCookie)
+            Case "STOCKANALYSIS_KR", "STOCKANALYSIS_US", "STOCKANALYSIS"
+                body = StockAnalysisHttpGet(strUrl)
+            Case Else
+                Err.Raise vbObjectError + 960, "HttpGetWithRetry", "unknown source: " & sourceName
+        End Select
+        errNum = Err.Number
+        errDesc = Err.Description
+        Err.Clear
+        On Error GoTo 0
+
+        If errNum = 0 Then
+            result.StatusCode = 200
+            result.StatusText = "OK"
+            result.RetryCount = attempt
+            result.ErrorStage = ""
+            result.ErrorText = ""
+            HttpGetWithRetry = body
+            Exit Function
+        End If
+
+        statusCode = ParseHttpStatusCode(errDesc)
+        result.StatusCode = statusCode
+        result.RetryCount = attempt
+        result.ErrorStage = "HTTP"
+        result.ErrorText = Left$(errDesc, 200)
+
+        If HttpStatusNoRetry(statusCode) Then
+            result.StatusText = "HTTP_" & CStr(statusCode) & "_NO_RETRY"
+            HttpGetWithRetry = ""
+            Exit Function
+        End If
+
+        If Not HttpStatusRetryable(statusCode) Or attempt >= maxRetries Then Exit For
+
+        Dim delayMs As Long
+        delayMs = CLng(retryDelays(attempt)) + CLng(Int(Rnd() * 300))
+        Sleep delayMs
+    Next attempt
+
+    result.StatusText = "RETRY_EXHAUSTED"
+    If result.StatusCode = 0 Then result.StatusText = "HTTP_ERROR"
+    result.ErrorStage = "HTTP"
+    HttpGetWithRetry = ""
+End Function
+
+
+Public Function StockAnalysisHttpGet(ByVal strUrl As String) As String
+    Dim objWinHttp As Object, arrByte() As Byte
+    Set objWinHttp = CreateObject("WinHttp.WinHttpRequest.5.1")
+    With objWinHttp
+        .Open "GET", strUrl, False
+        .SetRequestHeader "User-Agent", _
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " & _
+            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        .SetRequestHeader "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        .SetRequestHeader "Accept-Language", "en-US,en;q=0.9,zh-CN;q=0.8"
+        .SetRequestHeader "Accept-Encoding", "identity"
+        .SetTimeouts 10000, 10000, 30000, 60000
+        .Send
+        .WaitForResponse 60
+        If .Status < 200 Or .Status >= 300 Then
+            Err.Raise vbObjectError + 746, "StockAnalysisHttpGet", _
+                "HTTP " & .Status & " for " & strUrl
+        End If
+        arrByte = .ResponseBody
+    End With
+    StockAnalysisHttpGet = ByteToStr(arrByte, "utf-8")
+End Function
+
+
+Private Sub ResetHttpResult(ByRef result As THttpResult)
+    result.Body = ""
+    result.StatusCode = 0
+    result.StatusText = ""
+    result.Source = ""
+    result.UrlHash = ""
+    result.CacheKey = ""
+    result.CacheStatus = ""
+    result.CacheAgeHours = -1
+    result.ElapsedMs = 0
+    result.RetryCount = 0
+    result.ErrorStage = ""
+    result.ErrorText = ""
+End Sub
+
+
+Private Function ComputeShortHash(ByVal textValue As String) As String
+    ComputeShortHash = Right$("000000000000" & LocalCacheStableHash("url:" & textValue), 12)
+End Function
+
+
+Private Function ElapsedMsSince(ByVal startTime As Double) As Long
+    Dim elapsed As Double: elapsed = Timer - startTime
+    If elapsed < 0 Then elapsed = elapsed + 86400#
+    ElapsedMsSince = CLng(elapsed * 1000#)
+End Function
+
+
+Private Function ParseHttpStatusCode(ByVal errDesc As String) As Long
+    Dim pos As Long: pos = InStr(1, errDesc, "HTTP ", vbTextCompare)
+    If pos > 0 Then
+        ParseHttpStatusCode = CLng(Val(Mid$(errDesc, pos + 5)))
+        Exit Function
+    End If
+    pos = InStr(1, errDesc, "(404)", vbTextCompare)
+    If pos > 0 Then ParseHttpStatusCode = 404
+End Function
+
+
+Private Function HttpStatusRetryable(ByVal statusCode As Long) As Boolean
+    Select Case statusCode
+        Case 408, 429, 500, 502, 503, 504
+            HttpStatusRetryable = True
+    End Select
+End Function
+
+
+Private Function HttpStatusNoRetry(ByVal statusCode As Long) As Boolean
+    Select Case statusCode
+        Case 400 To 407, 409 To 428, 430 To 499
+            HttpStatusNoRetry = True
+    End Select
+End Function
+
+
+Private Sub EnforceSecRateLimit()
+    Const SEC_MIN_INTERVAL_MS As Long = 110
+    Dim nowMs As Double: nowMs = Timer * 1000#
+    Dim elapsed As Double
+    If g_lastSecRequestMs > 0 Then
+        elapsed = nowMs - g_lastSecRequestMs
+        If elapsed < 0 Then elapsed = elapsed + 86400000#
+        If elapsed < SEC_MIN_INTERVAL_MS Then
+            Sleep CLng(SEC_MIN_INTERVAL_MS - elapsed + 15)
+        End If
+        nowMs = Timer * 1000#
+        g_lastSecIntervalMs = nowMs - g_lastSecRequestMs
+        If g_lastSecIntervalMs < 0 Then g_lastSecIntervalMs = g_lastSecIntervalMs + 86400000#
+    Else
+        g_lastSecIntervalMs = 0
+    End If
+    g_lastSecRequestMs = Timer * 1000#
+End Sub
 
 
 Public Function ReadLocalHttpCache(ByVal cacheKey As String, _
                                    Optional ByVal ttlHours As Long = 24) As String
-    ReadLocalHttpCache = ""
+    Dim cacheAge As Double, cacheStatus As String
+    ReadLocalHttpCache = ReadLocalHttpCacheWithAge(cacheKey, ttlHours, cacheAge, cacheStatus)
+End Function
+
+
+Public Function ReadLocalHttpCacheWithAge(ByVal cacheKey As String, _
+                                          ByVal ttlHours As Long, _
+                                          ByRef cacheAgeHours As Double, _
+                                          ByRef cacheStatus As String) As String
+    ReadLocalHttpCacheWithAge = ""
+    cacheAgeHours = -1
+    cacheStatus = "MISS"
     cacheKey = Trim$(cacheKey)
     If Len(cacheKey) = 0 Then Exit Function
     If ttlHours <= 0 Or ttlHours > 168 Then ttlHours = 24
@@ -1009,9 +1358,14 @@ Public Function ReadLocalHttpCache(ByVal cacheKey As String, _
 
     Dim ageHours As Double
     ageHours = (Now - fso.GetFile(path).DateLastModified) * 24#
-    If ageHours < 0 Or ageHours >= ttlHours Then Exit Function
+    cacheAgeHours = ageHours
+    If ageHours < 0 Or ageHours >= ttlHours Then
+        cacheStatus = "EXPIRED"
+        Exit Function
+    End If
 
-    ReadLocalHttpCache = ReadUtf8TextFile(path)
+    cacheStatus = "HIT"
+    ReadLocalHttpCacheWithAge = ReadUtf8TextFile(path)
 End Function
 
 
@@ -1031,6 +1385,103 @@ Public Sub ClearLocalCache()
     Dim dirPath As String: dirPath = LocalHttpCacheDir()
     If fso.FolderExists(dirPath) Then fso.DeleteFolder dirPath, True
     If Not g_silentMode Then MsgBox "本地 HTTP 缓存已清空。", vbInformation, "清空缓存"
+End Sub
+
+
+' Phase 4l Step 3: 发布前清理隐私/诊断/缓存,不清样本池公司和报表格式。
+Public Sub CleanReleaseWorkbook(Optional ByVal blnSilent As Boolean = False)
+    Dim appState As TAppState
+    Dim hasAppState As Boolean
+    Dim oldSilent As Boolean: oldSilent = g_silentMode
+    Dim suppressUi As Boolean: suppressUi = (blnSilent Or g_silentMode)
+    Dim runErrDesc As String
+
+    On Error GoTo CleanUp
+    appState = BeginAppState("发布清理: 清 cookie / 诊断 / HTTP 缓存...")
+    hasAppState = True
+
+    Dim wsPool As Worksheet: Set wsPool = ThisWorkbook.Worksheets("样本池")
+    ClearCookieCellIfSafe wsPool.Range("E5")       ' 当前雪球 cookie
+    ClearCookieCellIfSafe wsPool.Range("B5")       ' 旧版遗留 cookie 位置
+
+    ClearReleaseDiagnosticHistory "美股_抓取诊断"
+    ClearReleaseDiagnosticHistory "港股_抓取诊断"
+    ClearReleaseDiagnosticHistory "韩股_抓取诊断"
+
+    ClearLocalCacheForRelease
+
+CleanUp:
+    If Err.Number <> 0 Then
+        runErrDesc = Err.Description
+        Err.Clear
+    End If
+    g_silentMode = oldSilent
+    If hasAppState Then EndAppState appState
+
+    If Len(runErrDesc) > 0 Then
+        If Not suppressUi Then _
+            MsgBox "发布清理失败:" & vbCrLf & runErrDesc, vbExclamation, "上市公司财务数据查询"
+        Err.Raise vbObjectError + 971, "CleanReleaseWorkbook", runErrDesc
+    End If
+
+    If Not suppressUi Then
+        MsgBox "发布清理完成。" & vbCrLf & _
+               "已清空雪球 cookie、抓取诊断历史和本地 HTTP 缓存。" & vbCrLf & _
+               "如需分享工作簿,请再手工检查并清除 Office 作者/个人信息元数据。", _
+               vbInformation, "上市公司财务数据查询"
+    End If
+End Sub
+
+
+Private Sub ClearCookieCellIfSafe(ByVal target As Range)
+    Dim oldAlerts As Boolean: oldAlerts = Application.DisplayAlerts
+    On Error GoTo CleanUp
+    Application.DisplayAlerts = False
+    If target.MergeCells Then
+        Dim area As Range: Set area = target.MergeArea
+        If area.Cells(1, 1).Address(False, False) = target.Address(False, False) Then
+            area.ClearContents
+        End If
+    Else
+        target.ClearContents
+    End If
+
+CleanUp:
+    Application.DisplayAlerts = oldAlerts
+    If Err.Number <> 0 Then Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
+
+Private Sub ClearLocalCacheForRelease()
+    Dim fso As Object: Set fso = CreateObject("Scripting.FileSystemObject")
+    Dim dirPath As String: dirPath = LocalHttpCacheDir()
+    If Not fso.FolderExists(dirPath) Then Exit Sub
+
+    On Error Resume Next
+    fso.DeleteFile dirPath & Application.PathSeparator & "*.*", True
+    fso.DeleteFolder dirPath, True
+    Dim deleteErr As Long: deleteErr = Err.Number
+    Dim deleteDesc As String: deleteDesc = Err.Description
+    Err.Clear
+    On Error GoTo 0
+    If deleteErr <> 0 And fso.FolderExists(dirPath) Then
+        Dim folder As Object: Set folder = fso.GetFolder(dirPath)
+        If folder.Files.Count > 0 Or folder.SubFolders.Count > 0 Then _
+            Err.Raise deleteErr, "CleanReleaseWorkbook", deleteDesc
+    End If
+End Sub
+
+
+Private Sub ClearReleaseDiagnosticHistory(ByVal sheetName As String)
+    On Error Resume Next
+    Dim ws As Worksheet: Set ws = ThisWorkbook.Worksheets(sheetName)
+    If Not ws Is Nothing Then
+        Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+        If lastRow < 1000 Then lastRow = 1000
+        ws.Range(ws.Cells(3, 1), ws.Cells(lastRow, 17)).ClearContents
+    End If
+    Err.Clear
+    On Error GoTo 0
 End Sub
 
 

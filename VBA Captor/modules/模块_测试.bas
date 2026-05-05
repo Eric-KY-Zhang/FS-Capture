@@ -316,6 +316,95 @@ CleanUp:
 End Sub
 
 
+Public Sub TestPhase4lHttpMissHitSmoke()
+    Dim wsSmoke As Worksheet
+    Set wsSmoke = GetOrClearSmokeSheet("_phase4l_http_smoke")
+
+    Dim oldSilent As Boolean: oldSilent = g_silentMode
+    g_silentMode = True
+    ClearLocalCache
+    g_silentMode = oldSilent
+
+    Dim url As String: url = "https://data.sec.gov/submissions/CIK0000320193.json"
+    Dim cacheKey As String: cacheKey = "phase4l_AAPL_sec_companyfacts"
+    Dim firstResult As THttpResult, secondResult As THttpResult
+    Dim firstBody As String, secondBody As String
+
+    firstBody = RunCachedHttpGet(url, cacheKey, "EDGAR", 24, firstResult)
+    secondBody = RunCachedHttpGet(url, cacheKey, "EDGAR", 24, secondResult)
+
+    wsSmoke.Range("A1").Value = firstResult.CacheStatus
+    wsSmoke.Range("B1").Value = firstResult.StatusCode
+    wsSmoke.Range("C1").Value = firstResult.ElapsedMs
+    wsSmoke.Range("D1").Value = secondResult.CacheStatus
+    wsSmoke.Range("E1").Value = secondResult.StatusCode
+    wsSmoke.Range("F1").Value = secondResult.ElapsedMs
+    wsSmoke.Range("G1").Value = Len(firstBody)
+    wsSmoke.Range("H1").Value = Len(secondBody)
+
+    g_diagnosticSheetName = "美股_抓取诊断"
+    ClearDiagnosticSheet
+    Dim rows As Collection: Set rows = New Collection
+    AddDiagnosticRow rows, "AAPL", "HTTP", "Phase4l telemetry smoke", "OK", "EDGAR", _
+                     "SEC", "CIK0000320193", "JSON", "1/1", "phase4l cache HIT diagnostic smoke", "1.0"
+    WriteDiagnosticForKind "HTTP", rows
+End Sub
+
+
+Public Sub TestPhase4lSecRateSmoke()
+    Dim wsSmoke As Worksheet
+    Set wsSmoke = GetOrClearSmokeSheet("_phase4l_sec_smoke")
+
+    Dim oldSilent As Boolean: oldSilent = g_silentMode
+    g_silentMode = True
+    ClearLocalCache
+    g_silentMode = oldSilent
+
+    Dim url As String: url = "https://data.sec.gov/submissions/CIK0000320193.json"
+    Dim keyBase As String
+    keyBase = "phase4l_sec_rate_" & Format$(Now, "yyyymmddhhmmss") & "_" & CStr(CLng(Timer * 1000#))
+
+    Dim firstResult As THttpResult, secondResult As THttpResult
+    Dim firstBody As String, secondBody As String
+    firstBody = RunCachedHttpGet(url, keyBase & "_1", "EDGAR", 24, firstResult)
+    secondBody = RunCachedHttpGet(url, keyBase & "_2", "EDGAR", 24, secondResult)
+
+    wsSmoke.Range("A1").Value = g_lastSecIntervalMs
+    wsSmoke.Range("B1").Value = firstResult.StatusCode
+    wsSmoke.Range("C1").Value = secondResult.StatusCode
+    wsSmoke.Range("D1").Value = firstResult.CacheStatus
+    wsSmoke.Range("E1").Value = secondResult.CacheStatus
+    wsSmoke.Range("F1").Value = Len(firstBody)
+    wsSmoke.Range("G1").Value = Len(secondBody)
+End Sub
+
+
+Public Sub TestPhase4lCleanReleaseSmoke()
+    Dim wsSmoke As Worksheet
+    Set wsSmoke = GetOrClearSmokeSheet("_phase4l_release_smoke")
+
+    Dim wsPool As Worksheet: Set wsPool = ThisWorkbook.Worksheets("样本池")
+
+    g_diagnosticSheetName = "美股_抓取诊断"
+    ClearDiagnosticSheet
+    Dim rows As Collection: Set rows = New Collection
+    AddDiagnosticRow rows, "AAPL", "Release", "diagnostic row", "OK", "EDGAR", _
+                     "SEC", "Assets", "USD", "1/1", "phase4l release smoke", "1.0"
+    WriteDiagnosticForKind "Release", rows
+
+    WriteLocalHttpCache "phase4l_release_key", "{""release"":true}"
+    Dim oldSilent As Boolean: oldSilent = g_silentMode
+    g_silentMode = True
+    Call CleanReleaseWorkbook(True)
+    g_silentMode = oldSilent
+
+    wsSmoke.Range("A1").Value = wsPool.Range("E5").Value
+    wsSmoke.Range("B1").Value = ""
+    wsSmoke.Range("C1").Value = ReadLocalHttpCache("phase4l_release_key")
+    wsSmoke.Range("D1").Value = ThisWorkbook.Worksheets("美股_抓取诊断").Cells(3, 1).Value
+End Sub
+
+
 Private Function FindFxRowForSmoke(ByVal periodKey As String) As Long
     Dim wsFx As Worksheet: Set wsFx = ThisWorkbook.Worksheets("汇率")
     Dim r As Long, lastRow As Long

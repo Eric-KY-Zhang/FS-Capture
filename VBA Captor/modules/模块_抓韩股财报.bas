@@ -427,33 +427,8 @@ End Function
 
 
 Private Function StockAnalysisHttpGet(ByVal strUrl As String, Optional ByVal cacheKey As String = "") As String
-    Dim cached As String: cached = ReadLocalHttpCache(cacheKey)
-    If Len(cached) > 0 Then
-        StockAnalysisHttpGet = cached
-        Exit Function
-    End If
-
-    Dim objWinHttp As Object, arrByte() As Byte
-    Set objWinHttp = CreateObject("WinHttp.WinHttpRequest.5.1")
-    With objWinHttp
-        .SetTimeouts 30000, 60000, 60000, 60000
-        .Open "GET", strUrl, False
-        .SetRequestHeader "User-Agent", _
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " & _
-            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        .SetRequestHeader "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-        .SetRequestHeader "Accept-Language", "en-US,en;q=0.9,zh-CN;q=0.8"
-        .SetRequestHeader "Accept-Encoding", "identity"
-        .Send
-        .WaitForResponse 60
-        If .Status < 200 Or .Status >= 300 Then
-            Err.Raise vbObjectError + 746, "StockAnalysisHttpGet", _
-                "HTTP " & .Status & " for " & strUrl
-        End If
-        arrByte = .ResponseBody
-    End With
-    StockAnalysisHttpGet = KRByteToStr(arrByte, "utf-8")
-    WriteLocalHttpCache cacheKey, StockAnalysisHttpGet
+    Dim result As THttpResult
+    StockAnalysisHttpGet = RunCachedHttpGet(strUrl, cacheKey, "STOCKANALYSIS_KR", 24, result)
 End Function
 
 

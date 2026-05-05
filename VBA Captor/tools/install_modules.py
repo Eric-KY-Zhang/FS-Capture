@@ -979,16 +979,16 @@ def _make_corp_info_sheet(wb, name):
 
 def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
     """创建空抓取诊断 sheet。
-    Row 1 = 大标题(合并 A1:K1, 深蓝白字), Row 2 = 11 列表头, Row 3+ 由 VBA 写
+    Row 1 = 大标题(合并 A1:Q1, 深蓝白字), Row 2 = 17 列表头, Row 3+ 由 VBA 写
     冻结 Row 2; 列宽 + 表头颜色与 VBA 端 EnsureDiagnosticSheet() 保持一致 (避免双方互踩)。
     """
     ws = wb.Worksheets.Add(After=wb.Sheets(wb.Sheets.Count))
     ws.Name = name
 
-    # Row 1: 标题, 合并 A1:K1
+    # Row 1: 标题, 合并 A1:Q1
     ws.Range("A1").Value = f"{name.replace('_', '')} (每次跑数后自动刷新)"
-    ws.Range("A1:K1").Merge()
-    title = ws.Range("A1:K1")
+    ws.Range("A1:Q1").Merge()
+    title = ws.Range("A1:Q1")
     title.Font.Name = "微软雅黑"
     title.Font.Size = 12
     title.Font.Bold = True
@@ -997,9 +997,10 @@ def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
     title.HorizontalAlignment = -4108
     title.VerticalAlignment = -4108
 
-    # Row 2: 11 列表头
+    # Row 2: 17 列表头
     headers = ["公司", "报表", "输出指标", "状态", "数据源",
-               "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注", "FX_Rate"]
+               "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注", "FX_Rate",
+               "CacheStatus", "CacheAgeHours", "HTTPStatus", "ElapsedMs", "RetryCount", "ErrorStage"]
     for j, txt in enumerate(headers, start=1):
         c = ws.Cells(2, j)
         c.Value = txt
@@ -1011,11 +1012,12 @@ def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
         c.HorizontalAlignment = -4108
         c.VerticalAlignment = -4108
 
-    widths = [14, 16, 30, 18, 18, 14, 42, 14, 10, 58, 12]
+    widths = [14, 16, 30, 18, 18, 14, 42, 14, 10, 58, 12, 12, 10, 10, 10, 8, 14]
     for j, w in enumerate(widths, start=1):
         ws.Columns(j).ColumnWidth = w
     ws.Columns("A").NumberFormat = "@"
     ws.Columns("I").NumberFormat = "@"
+    ws.Columns("L:Q").NumberFormat = "@"
     ws.Rows(1).RowHeight = 22
     ws.Rows(2).RowHeight = 20
 
@@ -1031,19 +1033,20 @@ def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
 
 
 def _refresh_diagnostic_headers(ws):
-    """Phase 4g Step 1: self-heal diagnostic header to 11 columns without touching row 3+."""
+    """Phase 4l Step 1: self-heal diagnostic header to 17 columns without touching row 3+."""
     headers = ["公司", "报表", "输出指标", "状态", "数据源",
-               "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注", "FX_Rate"]
-    widths = [14, 16, 30, 18, 18, 14, 42, 14, 10, 58, 12]
+               "Taxonomy", "命中字段", "Unit", "Score", "匹配方式+备注", "FX_Rate",
+               "CacheStatus", "CacheAgeHours", "HTTPStatus", "ElapsedMs", "RetryCount", "ErrorStage"]
+    widths = [14, 16, 30, 18, 18, 14, 42, 14, 10, 58, 12, 12, 10, 10, 10, 8, 14]
 
     try:
-        ws.Range(ws.Cells(1, 1), ws.Cells(1, 11)).UnMerge()
+        ws.Range(ws.Cells(1, 1), ws.Cells(1, 17)).UnMerge()
     except Exception:
         pass
 
     ws.Cells(1, 1).Value = f"{ws.Name.replace('_', '')} (每次跑数后自动刷新)"
-    ws.Range(ws.Cells(1, 1), ws.Cells(1, 11)).Merge()
-    title = ws.Range(ws.Cells(1, 1), ws.Cells(1, 11))
+    ws.Range(ws.Cells(1, 1), ws.Cells(1, 17)).Merge()
+    title = ws.Range(ws.Cells(1, 1), ws.Cells(1, 17))
     title.Font.Name = "微软雅黑"
     title.Font.Size = 12
     title.Font.Bold = True
@@ -1066,6 +1069,7 @@ def _refresh_diagnostic_headers(ws):
         ws.Columns(j).ColumnWidth = w
     ws.Columns("A").NumberFormat = "@"
     ws.Columns("I").NumberFormat = "@"
+    ws.Columns("L:Q").NumberFormat = "@"
     ws.Rows(1).RowHeight = 22
     ws.Rows(2).RowHeight = 20
 
@@ -1294,7 +1298,7 @@ def ensure_market_sheets(wb):
                 ws_diag.Visible = 0  # xlSheetHidden
             except Exception:
                 pass
-            print(f"  ~ sheet 已存在 (表头已升级到 11 列): {diag_name}")
+            print(f"  ~ sheet 已存在 (表头已升级到 17 列): {diag_name}")
         else:
             ws_diag = _make_diagnostic_sheet(wb, diag_name)
             try:

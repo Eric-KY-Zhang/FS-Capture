@@ -334,7 +334,7 @@ Private Function ClearDiagnosticRowsIfExists(ByVal sheetName As String) As Long
         Dim lastRow As Long
         lastRow = ws.UsedRange.Row + ws.UsedRange.Rows.Count - 1
         If lastRow >= 3 Then
-            ws.Range(ws.Cells(3, 1), ws.Cells(lastRow, 11)).Clear
+            ws.Range(ws.Cells(3, 1), ws.Cells(lastRow, 17)).Clear
         End If
         ClearDiagnosticRowsIfExists = 1
     End If

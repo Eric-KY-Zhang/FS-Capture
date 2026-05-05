@@ -1,6 +1,7 @@
 """Phase 4h workbook state inspector.
 
 # Phase 4j.1: 移除已删除的跨市场 BS/IS/CF sheet + 跨市场对比按钮检查
+# Phase 4l: 同步诊断 sheet 17 列
 """
 
 from __future__ import annotations

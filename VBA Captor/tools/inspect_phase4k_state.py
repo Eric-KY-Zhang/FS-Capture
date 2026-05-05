@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# Phase 4l: 同步诊断 sheet 17 列
+
 from pathlib import Path
 
 import win32com.client as win32
@@ -35,12 +37,17 @@ def main() -> int:
         log("=== Phase 4k state inspect ===")
 
         log("\n[1] diagnostic Score column text format")
+        expected_diag_tail = ["CacheStatus", "CacheAgeHours", "HTTPStatus", "ElapsedMs", "RetryCount", "ErrorStage"]
         for sheet_name in ("美股_抓取诊断", "港股_抓取诊断", "韩股_抓取诊断"):
             ws = wb.Worksheets(sheet_name)
             fmt = str(ws.Range("I3").NumberFormat)
             log(f"{sheet_name} I3 NumberFormat={fmt!r}")
             if fmt != "@":
                 failures.append(f"{sheet_name} Score column is not text formatted")
+            tail_headers = [str(ws.Cells(2, col).Value) for col in range(12, 18)]
+            log(f"{sheet_name} L:Q headers={tail_headers}")
+            if tail_headers != expected_diag_tail:
+                failures.append(f"{sheet_name} diagnostic telemetry headers are not 17-column Phase 4l headers")
 
         excel.Run("模块_测试.TestPhase4kScoreSmoke")
         ws_kr_diag = wb.Worksheets("韩股_抓取诊断")
