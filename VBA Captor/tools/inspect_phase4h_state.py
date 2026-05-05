@@ -122,9 +122,9 @@ def main() -> int:
             failures.append("local cache read/write smoke failed")
 
         print("\n[5] stockanalysis fallback smoke", flush=True)
-        ws_pool.Range("E13:F80").ClearContents()
-        ws_pool.Range("E13").Value = "BABA"
-        ws_pool.Range("F13").Value = "阿里巴巴"
+        ws_pool.Range("D14:E80").ClearContents()
+        ws_pool.Range("D14").Value = "BABA"
+        ws_pool.Range("E14").Value = "阿里巴巴"
         ws_pool.Range("E3").Value = 2025
         ws_pool.Range("E4").Value = "全部"
         ws_pool.Range("E5").Value = "invalid_cookie_for_phase4h"

@@ -18,20 +18,21 @@ Option Explicit
 
 ' --------- 样本池约定 (兄弟模块共享)
 '   Row 2-6: 全局配置区 (E3=year, E4=quarter, E5:N5=雪球 cookie, E6=显示币种)
-'   Row 7-12: 分市场标题 / 按钮 / 数据表头
-'   Row 13+: 股票数据
-'   列    : A:B=A股, E:F=美股, I:J=港股, M:N=韩股
+'   Row 7-12: 分市场标题 / 按钮
+'   Row 13: 数据表头
+'   Row 14+: 股票数据
+'   列    : A:B=A股, D:E=美股, G:H=港股, J:K=韩股
 '   URL 不再存 sheet, A 股抓数模块内部按代码+年份自拼 URL
-Public Const POOL_DATA_START_ROW As Long = 13
+Public Const POOL_DATA_START_ROW As Long = 14
 Public Const POOL_A_CODE_COL As Long = 1
 Public Const POOL_A_NAME_COL As Long = 2
-Public Const POOL_US_CODE_COL As Long = 5
-Public Const POOL_US_NAME_COL As Long = 6
-Public Const POOL_HK_CODE_COL As Long = 9
-Public Const POOL_HK_NAME_COL As Long = 10
-Public Const POOL_KR_CODE_COL As Long = 13
-Public Const POOL_KR_NAME_COL As Long = 14
-Public Const POOL_LAST_COL As Long = 14       ' 新布局数据区到 N 列
+Public Const POOL_US_CODE_COL As Long = 4
+Public Const POOL_US_NAME_COL As Long = 5
+Public Const POOL_HK_CODE_COL As Long = 7
+Public Const POOL_HK_NAME_COL As Long = 8
+Public Const POOL_KR_CODE_COL As Long = 10
+Public Const POOL_KR_NAME_COL As Long = 11
+Public Const POOL_LAST_COL As Long = 13       ' 新布局视觉区到 M 列
 Public Const POOL_MARKET_COL As Long = 3      ' legacy helper only: 旧 A:C 布局市场列
 
 ' --------- 全局状态 (用于一键全抓的静默调用 + 汇总错误) ---------
