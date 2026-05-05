@@ -1145,7 +1145,7 @@ def _make_fx_sheet(wb, name="汇率"):
 
 
 def _write_fx_legend(ws_fx):
-    """Phase 4i Step 3: 在汇率 sheet J10+ 追加数据源与取数逻辑说明区。"""
+    """Phase 4i Step 3 / v1.0 重写: 汇率 sheet J10+ 数据来源与折算说明 (商务化用户视角)"""
     start_row = 10
     try:
         if str(ws_fx.Range("A10").Value or "").strip() == "数据源与取数逻辑":
@@ -1159,9 +1159,10 @@ def _write_fx_legend(ws_fx):
         pass
     ws_fx.Range("J10:Q40").Clear()
 
+    # 主标题 (深蓝条)
     header = ws_fx.Range("J10:Q10")
     header.Merge()
-    header.Value = "汇率数据来源与折算说明"
+    header.Value = "汇率数据说明"
     header.Font.Name = "微软雅黑"
     header.Font.Size = 14
     header.Font.Bold = True
@@ -1170,32 +1171,49 @@ def _write_fx_legend(ws_fx):
     header.HorizontalAlignment = -4108
     header.VerticalAlignment = -4108
 
+    # 副标题
+    subheader = ws_fx.Range("J11:Q11")
+    subheader.Merge()
+    subheader.Value = "本表记录跨市场报表折算成人民币时使用的汇率,供审阅、留痕和复算参考"
+    subheader.Font.Name = "微软雅黑"
+    subheader.Font.Size = 10
+    subheader.Font.Italic = True
+    subheader.Font.Color = rgb_long("595959")
+    subheader.Interior.Color = rgb_long("FFFFFF")
+    subheader.HorizontalAlignment = -4131
+    subheader.VerticalAlignment = -4108
+    subheader.IndentLevel = 1
+
     rows = [
-        ("汇率数据来源", "工具会通过本地脚本从公开渠道获取 USD/HKD/KRW 对人民币的历史汇率;首次取数后会本地暂存 24 小时,降低重复抓数的网络消耗。"),
-        ("  USDCNY", "美元兑人民币。"),
-        ("  HKDCNY", "港币兑人民币。"),
-        ("  KRWCNY", "韩元兑人民币。"),
+        ("汇率数据来源", ""),
+        ("  USDCNY", "美元兑人民币(用于美股报表换算)。"),
+        ("  HKDCNY", "港币兑人民币(用于港股报表换算)。"),
+        ("  KRWCNY", "韩元兑人民币(用于韩股报表换算)。"),
+        ("  数据获取方式", "工具自动从公开历史行情中获取报告期对应汇率;首次取数后会在本地保存 24 小时,避免重复获取。"),
         ("", ""),
-        ("字段定义", ""),
-        ("  期末汇率", "用于资产负债表,反映报告期最后一天的折算价值。"),
-        ("  期间均值汇率", "用于利润表 / 现金流量表,反映整个报告期内损益和现金流的平均折算。"),
+        ("两类汇率口径", ""),
+        ("  期末汇率", "报告期最后一日的汇率;按审计准则用于资产负债表项的人民币折算。"),
+        ("  期间均值汇率", "报告期内每日汇率的算术平均;按审计准则用于利润表与现金流量表的人民币折算。"),
         ("", ""),
-        ("应用规则", ""),
-        ("  E6 = 原币", "各公司按报告币种显示,不做人民币折算。"),
-        ("  E6 = 统一RMB", "非人民币口径会按报告期汇率折算成人民币,便于横向对比。"),
-        ("  RMB / CNY", "本身就是人民币口径,无需折算。"),
-        ("  手工调整汇率", "如需人工修正,可直接改 B-G 列;已生成的报表需要重新点击对应『一键 X 股』按钮后才会反映。"),
+        ("折算规则", ""),
+        ("  样本池 E6 = 原币", "按各公司原始报告币种显示,不做任何人民币折算。"),
+        ("  样本池 E6 = 统一RMB", "非人民币的报告币种自动按报告期汇率折算,便于跨市场横向比较。"),
+        ("  人民币本币", "报告币种本身为 RMB / CNY 时不做任何折算。"),
         ("", ""),
-        ("本地暂存", ""),
-        ("  24 小时复用", "同一报告期、同一币种在 24 小时内重复使用已取到的汇率,让重复跑数更快。"),
-        ("  清空 HTTP 缓存", "样本池 O11:P12 按钮;清空后下次跑数会重新取汇率和财报数据。"),
+        ("手工调整汇率", ""),
+        ("  操作方法", "如对自动取得的汇率有疑义,可直接修改本表 B-G 列对应单元格(蓝色字体);已生成的报表需要重跑相应『一键 X 股』按钮后,新汇率才会反映到数值上。"),
+        ("  备注列", "H 列『备注/override』可填写汇率来源说明,便于审计留痕。"),
         ("", ""),
-        ("注意事项", ""),
-        ("  报表已生成后", "如需重新换汇请重跑对应『一键 X 股』按钮。"),
-        ("  E5 登录凭证", "汇率本身不需要 E5;E5 主要影响港股和部分中概美股备用数据源。"),
+        ("本地暂存说明", ""),
+        ("  24 小时有效期", "同一报告期、同一币种的汇率,24 小时内不重复获取,让连续跑数更快。"),
+        ("  清空暂存", "样本池工具栏『清空 HTTP 缓存』按钮;清空后下次跑数会重新获取最新汇率与财报数据。"),
+        ("", ""),
+        ("使用注意事项", ""),
+        ("  汇率缺失提示", "若某报告期或币种汇率获取失败,『统一RMB』模式下对应数值会显示为空,并在诊断表标记 FX_MISSING(默认隐藏);此时请检查该报告期是否在历史汇率发布期内。"),
+        ("  审计追溯", "本表保留所有报告期使用的汇率,可作为人民币折算的工作底稿留档。"),
     ]
 
-    for idx, (label, desc) in enumerate(rows, start=start_row + 1):
+    for idx, (label, desc) in enumerate(rows, start=start_row + 2):
         a = ws_fx.Cells(idx, 10)
         b = ws_fx.Cells(idx, 11)
         a.Value = label
@@ -1206,6 +1224,7 @@ def _write_fx_legend(ws_fx):
         b.Font.Size = 11
         a.Font.Bold = True if label and not label.startswith("  ") else False
         b.Font.Bold = False
+        a.Font.Color = rgb_long("1F3864") if label and not label.startswith("  ") else rgb_long("000000")
         a.HorizontalAlignment = -4131
         b.HorizontalAlignment = -4131
         a.VerticalAlignment = -4108
@@ -1214,16 +1233,18 @@ def _write_fx_legend(ws_fx):
         b.WrapText = True
         if label and not label.startswith("  "):
             a.Interior.Color = rgb_long("D9E1F2")
-            b.Interior.Color = rgb_long("F3F6FB")
+            b.Interior.Color = rgb_long("D9E1F2")
         elif label:
             a.Interior.Color = rgb_long("FFFFFF")
             b.Interior.Color = rgb_long("FFFFFF")
 
-    ws_fx.Columns("J").ColumnWidth = 18
-    ws_fx.Columns("K").ColumnWidth = 60
-    ws_fx.Range("J11:K32").WrapText = True
-    for row in range(10, 33):
-        ws_fx.Rows(row).RowHeight = 22
+    ws_fx.Columns("J").ColumnWidth = 22
+    ws_fx.Columns("K").ColumnWidth = 70
+    ws_fx.Range("J10:K40").WrapText = True
+    ws_fx.Rows(10).RowHeight = 28
+    ws_fx.Rows(11).RowHeight = 22
+    for row in range(12, 40):
+        ws_fx.Rows(row).RowHeight = 24
 
 
 def install_currency_toggle_cell(ws_pool):
@@ -1410,114 +1431,136 @@ def update_intro_sheet(wb):
                 ws.Columns(col).ColumnWidth = width
         return row + len(data) + 2
 
-    # Cover
+    # Cover (v1.0 release)
     merge_write("A1:H1", "上市公司财务数据查询", size=24, bold=True, font_hex=white, fill_hex=deep_blue, align=-4108)
-    merge_write("A2:E2", "Multi-Market Financial Data Tool", size=14, bold=False, font_hex=white, fill_hex=deep_blue, align=-4108)
-    merge_write("F2:H2", "Phase 4j", size=10, bold=True, font_hex=white, fill_hex=deep_blue, align=-4108)
-    merge_write("A3:E3", "面向财务 / 审计专业人士的本地 Excel 同业对标工具", size=10, font_hex=white, fill_hex=deep_blue, align=-4108)
-    merge_write("F3:H3", "修订日期: 2026-05-04", size=10, font_hex=white, fill_hex=deep_blue, align=-4108)
-    ws.Rows(1).RowHeight = 36
+    merge_write("A2:E2", "面向财务、审计与投研团队的多市场同业对标工具", size=12, bold=False, font_hex=white, fill_hex=deep_blue, align=-4108)
+    merge_write("F2:H2", "Version 1.0", size=11, bold=True, font_hex=white, fill_hex=deep_blue, align=-4108)
+    merge_write("A3:E3", "支持 A 股 / 美股 / 港股 / 韩股 4 大市场,自动抓取财报、统一标准指标、跨市场可比展示", size=10, font_hex=white, fill_hex=deep_blue, align=-4108)
+    merge_write("F3:H3", "修订日期: 2026-05-05", size=10, font_hex=white, fill_hex=deep_blue, align=-4108)
+    ws.Rows(1).RowHeight = 38
     ws.Rows(2).RowHeight = 22
-    ws.Rows(3).RowHeight = 18
+    ws.Rows(3).RowHeight = 20
 
     # TOC
-    merge_write("A5:H5", "目录", size=13, bold=True, font_hex="1F4E79", fill_hex=light_blue, align=-4108)
+    merge_write("A5:H5", "目  录", size=13, bold=True, font_hex="1F4E79", fill_hex=light_blue, align=-4108)
     toc = [
-        ("§ 1", "项目概览", "R14"),
-        ("§ 2", "快速开始", "R21"),
-        ("§ 3", "输出 sheet 说明", "R32"),
-        ("§ 4", "数据源声明", "R43"),
-        ("§ 5", "汇率换算说明", "R51"),
-        ("§ 6", "常见问题", "R61"),
-        ("§ 7", "版本历史", "R75"),
+        ("§ 1", "工具概览与适用场景", ""),
+        ("§ 2", "快速开始(5 步上手)", ""),
+        ("§ 3", "输出表说明", ""),
+        ("§ 4", "数据来源说明", ""),
+        ("§ 5", "原币 / 人民币切换说明", ""),
+        ("§ 6", "常见问题与处置建议", ""),
+        ("§ 7", "版本历史", ""),
+        ("§ 8", "联系方式与免责声明", ""),
     ]
     for idx, (sec, title, target) in enumerate(toc, start=6):
         ws.Cells(idx, 2).Value = sec
         ws.Cells(idx, 3).Value = title
         ws.Cells(idx, 4).Value = target
         style_range(ws.Range(f"B{idx}:D{idx}"), size=10, fill_hex="FFFFFF")
-    apply_borders("B6:D12")
+    apply_borders("B6:D13")
 
-    row = 14
-    row = section(row, "§ 1 项目概览")
+    row = 15
+    row = section(row, "§ 1 工具概览与适用场景")
     row = paragraph(
         row,
-        "本工具用于对比 A 股、港股、美股、韩股上市公司的财务表现。用户在样本池录入公司后,工作簿会自动整理资产负债表、利润表、现金流量表和关键指标,并自动生成跨市场指标对比视图。它适合做同业初筛、审计分析底稿准备、跨市场口径差异识别和管理层问询前的数据准备。",
-        height=42,
+        "本工具是一份基于 Excel + VBA 的本地化同业对标工作底稿。用户在『样本池』录入公司代码后,工具会自动从各市场公开数据源获取财报,统一整理为资产负债表、利润表、现金流量表和 18 项标准财务指标,并生成跨市场可比视图。",
+        height=44,
+    )
+    row = paragraph(
+        row,
+        "典型应用场景:同业初筛、上市公司财务尽调、审计抽样的工作底稿准备、跨市场口径差异识别、管理层问询前的快速数据整理。",
+        height=32,
     )
     row = table(
         row,
-        ("市场", "状态", "数据源"),
+        ("市场", "覆盖", "公开数据来源"),
         [
-            ("A股", "已支持", "新浪财经"),
-            ("美股", "已支持", "美国上市公司披露数据;必要时使用中概股备用数据源"),
-            ("港股", "已支持", "雪球港股财务数据"),
-            ("韩股", "已支持", "公开韩股财务报表页面"),
+            ("A 股", "深市 / 沪市 主板 / 创业板 / 科创板", "新浪财经历史财报"),
+            ("美股", "纽交所 / 纳斯达克(含中概股)", "美国上市公司披露数据;中概股有备用来源"),
+            ("港股", "香港主板 / 创业板", "雪球港股财务数据"),
+            ("韩股", "韩国 KRX 上市公司", "公开韩股财务报表"),
         ],
+        widths_override={"B": 18, "C": 32, "D": 50},
     )
 
-    row = section(row, "§ 2 快速开始")
+    row = section(row, "§ 2 快速开始(5 步上手)")
     quick_steps = [
-        ("1", "在『样本池』E3 选择年度,E4 选择季度。年度留空时,工具尽量使用可取得的最新报告期。"),
-        ("2", "如需港股或部分中概美股,在 E5 填入雪球登录凭证;E6 选择『原币』或『统一RMB』。"),
-        ("3", "第 14 行起按市场录入公司:A:B=A股,D:E=美股,G:H=港股,J:K=韩股。"),
-        ("4", "点击对应市场的一键按钮。抓数完成后,对应市场的 4 张正式报表会自动显示。"),
-        ("5", "点击『一键全抓 4 市场』后,跨市场_指标表会自动刷新。"),
-        ("6", "跑数后『跨市场_指标表』自动展示 18 项标准指标的 4 市场对比。"),
+        ("1", "选择期间", "在『样本池』E3 填年度(eg 2025;留空 = 自动取最新可用期间);E4 选择季度(全部 / Q1 / Q2 / Q3 / Q4)。"),
+        ("2", "配置凭证", "若需要港股或部分中概美股的备用来源,把雪球账号的 xq_a_token 复制到 E5(其他市场可不填)。"),
+        ("3", "选择展示币种", "E6 默认『原币』,显示各公司原报告币种;切换到『统一RMB』后,所有数值自动按报告期汇率折算成人民币。"),
+        ("4", "录入公司", "从第 14 行开始,按市场分栏录入代码和简称:A 股(A-B 列)/ 美股(D-E 列)/ 港股(G-H 列)/ 韩股(J-K 列)。每行一家公司。"),
+        ("5", "一键抓数", "点击右侧『一键全抓 4 市场』,工具会按顺序抓取 4 大市场数据,完成后自动展开各市场 sheet 并刷新跨市场指标表。也可单独点击『一键 X 股』只更新某一市场。"),
     ]
-    row = table(row, ("步骤", "操作"), quick_steps, widths_override={"C": 58})
+    row = table(row, ("步骤", "动作", "说明"), quick_steps, widths_override={"B": 8, "C": 16, "D": 76})
 
-    row = section(row, "§ 3 输出 sheet 说明")
+    row = section(row, "§ 3 输出表说明")
     output_rows = [
-        ("样本池", "录入公司、选择年度和显示币种,并通过按钮完成抓数和跨市场对比。"),
-        ("跨市场_指标表", "18 项标准指标的跨市场合并视图,用于快速比较盈利、周转、现金流和增长。"),
-        ("A股 / 美股 / 港股 / 韩股 16 张分市场表", "各市场原始写表结果,保留市场披露口径。"),
-        ("抓取诊断", "默认隐藏;仅排查数据来源、单位或字段缺口时使用。日常分析无需打开。"),
-        ("汇率", "记录外币报表折算成人民币时使用的报告期汇率。"),
+        ("样本池", "可见", "录入公司、设置参数与执行抓数的工作面板。"),
+        ("跨市场_指标表", "可见", "4 大市场 18 项标准指标的合并对比视图,用于快速识别盈利能力、运营效率、现金生成、增长性的跨市场差异。"),
+        ("A股 / 美股 / 港股 / 韩股报表", "可见", "每市场 4 张报表(资产负债表 / 利润表 / 现金流量表 / 指标表),保留各市场原始披露口径。"),
+        ("抓取诊断", "默认隐藏", "记录抓数过程的字段命中情况、汇率使用、缓存状态。仅在排查数据缺口或追溯审计底稿时使用,日常分析无需打开。"),
+        ("汇率", "可见", "记录外币报表折算成人民币时使用的具体汇率;可作为人民币口径折算的工作底稿。"),
     ]
-    row = table(row, ("Tab", "用途"), output_rows, widths_override={"B": 30, "C": 64})
+    row = table(row, ("表名", "可见性", "用途"), output_rows, widths_override={"B": 32, "C": 12, "D": 60})
 
-    row = section(row, "§ 4 数据源声明")
+    row = section(row, "§ 4 数据来源说明")
     source_rows = [
-        ("A股", "新浪财经公开财报数据。"),
-        ("美股", "美国上市公司披露数据为主;中概股缺口按既有规则使用备用数据源。"),
-        ("港股", "雪球港股财务数据;通常需要有效登录凭证。"),
-        ("韩股", "公开韩股财务报表页面;不需要雪球登录凭证。"),
-        ("汇率", "公开历史汇率数据,本地记录到『汇率』sheet。"),
+        ("A 股财报", "新浪财经历史财报。"),
+        ("美股财报", "美国上市公司披露数据为主路径;若主路径在某些公司无法返回完整字段(常见于中概股 20-F 申报人),工具会自动切换到雪球作为备用数据源。"),
+        ("港股财报", "雪球港股财务数据。需要在 E5 配置一个有效的雪球登录凭证;凭证过期会出现取数失败,届时请重新登录雪球并复制新凭证到 E5。"),
+        ("韩股财报", "公开韩股财务报表页面,不需要登录凭证。"),
+        ("汇率", "USDCNY / HKDCNY / KRWCNY 历史汇率,从公开行情数据获取,本地记录在『汇率』sheet 中。"),
     ]
-    row = table(row, ("对象", "说明"), source_rows, widths_override={"B": 18, "C": 70})
-    row = paragraph(row, "登录凭证只保存在本地工作簿中。过期后请重新复制到样本池 E5。", height=24)
+    row = table(row, ("数据对象", "来源说明"), source_rows, widths_override={"B": 18, "C": 84})
+    row = paragraph(
+        row,
+        "数据安全:所有抓数全部在本地完成,雪球登录凭证仅保存在工作簿单元格中,不会上传到任何远端服务。如需要把工作簿分享给同事或客户,请在分享前清空 E5(或运行内置的『发布版清理』宏)。",
+        height=44,
+    )
 
-    row = section(row, "§ 5 汇率换算说明")
+    row = section(row, "§ 5 原币 / 人民币切换说明")
     fx_rows = [
-        ("E6 = 原币", "各市场按报告币种或市场默认单位显示,不做 RMB 换算。"),
-        ("E6 = 统一RMB", "非人民币报告币种按报告期汇率折算:资产负债表用期末汇率,利润表 / 现金流量表用期间均值。"),
-        ("RMB / CNY", "报告币种为人民币时无需折算。"),
-        ("手工改汇率", "已写表公式不会自动反向刷新;需要重跑对应写表或合表按钮。"),
+        ("E6 = 原币", "默认状态。各公司按原报告币种显示(美股 USD / 港股 HKD 或 CNY / 韩股 KRW / A 股 RMB),不做任何换算。适合保留各市场披露原貌。"),
+        ("E6 = 统一RMB", "工具会把所有非人民币的报告币种自动按报告期汇率折算成人民币:资产负债表用『期末汇率』,利润表与现金流量表用『期间均值汇率』。便于跨市场金额量级直接比较。"),
+        ("人民币口径", "报告币种本身为 RMB / CNY 的公司(eg A 股、大陆港股)无需折算,系统自动跳过汇率计算。"),
+        ("汇率手动调整", "如对自动获取的汇率有异议,可直接修改『汇率』sheet 中对应单元格;修改后需要重跑对应市场的『一键 X 股』按钮,新汇率才会反映到报表数值上。"),
+        ("汇率缺失", "若某报告期或币种汇率获取失败,『统一RMB』模式下相关单元格显示为空,并在抓取诊断 sheet 标记 FX_MISSING(避免误用人民币数值);此时请检查报告期是否在历史汇率发布区间。"),
     ]
-    row = table(row, ("规则", "说明"), fx_rows, widths_override={"B": 20, "C": 68})
+    row = table(row, ("规则", "说明"), fx_rows, widths_override={"B": 22, "C": 80})
 
-    row = section(row, "§ 6 常见问题")
+    row = section(row, "§ 6 常见问题与处置建议")
     faq_rows = [
-        ("Q1: 港股或中概美股取数失败怎么办?", "先检查 E5 登录凭证是否过期。重新登录后复制新的 xq_a_token,再重跑对应市场。"),
-        ("Q2: 切换 E6 后数字变了是否正常?", "正常。『统一RMB』会把外币报告币种折算成人民币,用于跨市场可比。"),
-        ("Q3: 跨市场指标表何时刷新?", "点击『一键全抓 4 市场』后自动刷新;也可以单独运行 BuildCrossMarketIndicatorSheet。"),
-        ("Q4: 为什么只保留跨市场指标表?", "BS/IS/CF 保留在分市场表中按原披露口径查看;跨市场对比聚焦 18 项标准指标。"),
-        ("Q5: 老版样本池升级会丢数据吗?", "不会。已有公司代码和简称会迁移到第 14 行起;安装脚本只重画上方配置区和按钮区。"),
+        ("Q1", "港股或中概美股取数失败,该怎么办?", "雪球登录凭证(E5)过期是最常见原因。请重新登录雪球网页版,复制 xq_a_token 到 E5,然后重跑相应市场的『一键 X 股』。"),
+        ("Q2", "切换『原币 / 统一RMB』后数字变了是正常的吗?", "正常。『统一RMB』会把外币报告币种按汇率折算成人民币,用于跨市场可比展示。原币和统一RMB 的差异本质是汇率乘数。"),
+        ("Q3", "为什么韩股某些数字看起来异常大或异常小?", "韩股原报告单位通常是亿韩元;切换到统一RMB 后约为韩元金额 ÷ 200。若数字明显异常,请先核对汇率 sheet 是否有 KRWCNY 数据,以及抓取诊断中是否出现 FX_MISSING 标记。"),
+        ("Q4", "跨市场指标表什么时候会刷新?", "点击『一键全抓 4 市场』后自动刷新;也可以使用样本池上的『合并跨市场指标表』按钮单独刷新(已抓取的数据不会重抓)。"),
+        ("Q5", "工具会重复抓数吗?会不会被数据源限速?", "工具内置 24 小时本地暂存:相同公司、相同期间在 24 小时内重复使用,不会重新发起请求。SEC EDGAR 等公开数据源有自动限流(≥110ms 间隔),不会触发对方反爬限制。"),
+        ("Q6", "数据来源页面如果改版了怎么办?", "工具内置 8 项离线测试覆盖各市场字段映射,以及实时诊断表记录每次抓数的命中情况。若发现数据来源页面结构变化导致字段抓取异常,请联系作者更新字段映射规则。"),
+        ("Q7", "升级新版本会丢失我已经录入的样本池公司吗?", "不会。安装脚本只刷新配置区和操作区,已录入的公司代码会自动迁移到第 14 行起。"),
+        ("Q8", "可以把工作簿分享给同事吗?", "可以。但分享前请运行内置的『发布版清理』宏(在 VBA 编辑器中调用 CleanReleaseWorkbook),会清空登录凭证、抓数历史和本地暂存,确保不泄露个人凭证。"),
     ]
-    row = table(row, ("问题", "处理建议"), faq_rows, widths_override={"B": 30, "C": 64})
+    row = table(row, ("编号", "问题", "建议"), faq_rows, widths_override={"B": 8, "C": 36, "D": 64})
 
     row = section(row, "§ 7 版本历史")
     history_rows = [
-        ("Phase 4b", "2026-05", "A股宽表基础模板与 VBA 注入流程。"),
-        ("Phase 4c-4d", "2026-05", "扩展美股、港股、韩股数据源。"),
-        ("Phase 4f", "2026-05", "RMB toggle 与本地汇率缓存。"),
-        ("Phase 4g", "2026-05", "跨市场指标合表与分市场 tab 显隐。"),
-        ("Phase 4h", "2026-05", "跨市场 BS/IS/CF 合表、实时币种切换、本地暂存和中概备用数据源。"),
-        ("Phase 4i", "2026-05", "样本池布局、使用说明和汇率说明区 UX 抛光。"),
-        ("Phase 4j", "2026-05", "审计视角说明、重点 sheet 视觉标准化和样本池布局重整。"),
+        ("v1.0", "2026-05-05", "正式发布版。覆盖 A 股 / 美股 / 港股 / 韩股 4 大市场;含跨市场指标合并表、原币 / 人民币实时切换、本地暂存、抓取诊断、数据质量自动检查、离线回归测试。"),
+        ("Phase 4j-4n", "2026-05-04 至 -05", "样本池视觉重构、用户视角文档商务化、汇率缺失保护、HTTP 诊断遥测、重试退避、数据质量 QA、cache 分源 TTL、AppStateGuard 状态守护。"),
+        ("Phase 4f-4i", "2026-05-04", "RMB 换算 hook、跨市场指标合并、实时币种切换、本地暂存、UX 抛光。"),
+        ("Phase 4b-4e", "2026-05-02 至 -03", "美股 EDGAR / 雪球字段映射、港股雪球数据接入、韩股 stockanalysis 数据接入、四市场分栏样本池。"),
+        ("V2.x", "~2026-04", "前身:基于新浪 A 股的单市场宽表工具。"),
     ]
-    row = table(row, ("版本", "日期", "主线交付"), history_rows, widths_override={"B": 16, "C": 14, "D": 72})
+    row = table(row, ("版本", "日期", "主线交付"), history_rows, widths_override={"B": 16, "C": 18, "D": 72})
+
+    row = section(row, "§ 8 联系方式与免责声明")
+    contact_rows = [
+        ("作者", "Eric Zhang"),
+        ("邮箱", "214978902@qq.com"),
+        ("发行版本", "v1.0(2026-05-05)"),
+        ("使用许可", "个人 / 内部审计、研究用途;数据来源遵循各源站 Fair Use / Terms。"),
+        ("免责声明", "本工具仅整理公开披露数据,不构成投资建议;数据质量取决于源站披露。使用前请自行核对关键数值。"),
+    ]
+    row = table(row, ("项目", "内容"), contact_rows, widths_override={"B": 16, "C": 86})
 
     ws.Range(f"A1:H{row + 2}").WrapText = True
     try:
