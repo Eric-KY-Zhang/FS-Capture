@@ -420,6 +420,8 @@ End Sub
 Public Sub 一键全抓(Optional ByVal blnSilent As Boolean = False)
     Dim dtTime As Double: dtTime = Timer
     Dim hasAnyMarket As Boolean
+    Dim appState As TAppState
+    Dim hasAppState As Boolean
 
     ' 重置全局累计
     g_silentMode = True
@@ -427,6 +429,9 @@ Public Sub 一键全抓(Optional ByVal blnSilent As Boolean = False)
     g_globalLog = ""
 
     On Error GoTo CleanUp
+    appState = BeginAppState("一键全抓准备中...")
+    hasAppState = True
+
     g_diagnosticSheetName = "美股_抓取诊断"
     ClearDiagnosticSheet
     g_diagnosticSheetName = "港股_抓取诊断"
@@ -519,8 +524,12 @@ CleanUp:
 
     g_silentMode = False
     g_diagnosticAppendOnly = False
-    Application.StatusBar = False
-    Application.ScreenUpdating = True
+    If hasAppState Then
+        EndAppState appState
+    Else
+        Application.StatusBar = False
+        Application.ScreenUpdating = True
+    End If
 
     Dim msg As String
     msg = "一键全抓完成 (A股 + 美股 + 港股 + 韩股)" & vbCrLf & _

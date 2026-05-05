@@ -195,6 +195,7 @@ Public Sub EnsureDiagnosticSheet()
     ws.Columns("J").ColumnWidth = 58
     ws.Columns("K").ColumnWidth = 12
     ws.Range("A:A").NumberFormat = "@"
+    ws.Range("I:I").NumberFormat = "@"
     ws.Rows(1).RowHeight = 22
     ws.Rows(2).RowHeight = 20
     Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(2, 11)))
@@ -240,8 +241,19 @@ Public Sub AddDiagnosticRow(ByVal collRows As Collection, _
                             Optional ByVal fxRateText As String = "1.0")
     If collRows Is Nothing Then Exit Sub
     collRows.Add Array(ticker, strKind, label, statusText, sourceText, _
-                       taxonomyText, fieldText, unitText, scoreText, noteText, fxRateText)
+                       taxonomyText, fieldText, unitText, DiagnosticScoreText(scoreText), noteText, fxRateText)
 End Sub
+
+
+Private Function DiagnosticScoreText(ByVal scoreText As String) As String
+    If Len(scoreText) = 0 Then
+        DiagnosticScoreText = ""
+    ElseIf Left$(scoreText, 1) = "'" Then
+        DiagnosticScoreText = scoreText
+    Else
+        DiagnosticScoreText = "'" & scoreText
+    End If
+End Function
 
 
 Public Sub WriteDiagnosticForKind(ByVal strKind As String, ByVal collRows As Collection)
@@ -268,8 +280,10 @@ Public Sub WriteDiagnosticForKind(ByVal strKind As String, ByVal collRows As Col
                 arrOut(i, j + 1) = "1.0"
             End If
         Next j
+        arrOut(i, 9) = DiagnosticScoreText(CStr(arrOut(i, 9)))
     Next i
 
+    ws.Range(ws.Cells(startRow, 9), ws.Cells(startRow + collRows.Count - 1, 9)).NumberFormat = "@"
     ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 11)).Value = arrOut
     With ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow + collRows.Count - 1, 11))
         .Font.Name = "微软雅黑"
@@ -279,6 +293,40 @@ Public Sub WriteDiagnosticForKind(ByVal strKind As String, ByVal collRows As Col
     ws.Range(ws.Cells(startRow, 9), ws.Cells(startRow + collRows.Count - 1, 9)).HorizontalAlignment = xlRight
     ws.Range(ws.Cells(startRow, 11), ws.Cells(startRow + collRows.Count - 1, 11)).HorizontalAlignment = xlRight
     Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(startRow + collRows.Count - 1, 11)))
+End Sub
+
+
+Public Sub AddDiagnosticFxMissing(ByVal ticker As String, _
+                                  ByVal label As String, _
+                                  ByVal periodEnd As String, _
+                                  ByVal currencyCode As String, _
+                                  ByVal statusText As String)
+    EnsureDiagnosticSheet
+    Dim ws As Worksheet: Set ws = ThisWorkbook.Sheets(CurrentDiagnosticSheetName())
+    Dim startRow As Long
+    startRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 1
+    If startRow < 3 Then startRow = 3
+
+    ws.Cells(startRow, 1).Value = ticker
+    ws.Cells(startRow, 2).Value = "FX_CONVERSION"
+    ws.Cells(startRow, 3).Value = label
+    ws.Cells(startRow, 4).Value = statusText
+    ws.Cells(startRow, 5).Value = "FX_Sheet"
+    ws.Cells(startRow, 6).Value = ""
+    ws.Cells(startRow, 7).Value = UCase$(Trim$(currencyCode))
+    ws.Cells(startRow, 8).Value = ""
+    ws.Cells(startRow, 9).NumberFormat = "@"
+    ws.Cells(startRow, 9).Value = ""
+    ws.Cells(startRow, 10).Value = "汇率缺失,统一RMB 模式下该 cell 留空,请检查汇率 sheet 或重跑 EnsureFxRateCached; period=" & periodEnd
+    ws.Cells(startRow, 11).Value = 0
+
+    With ws.Range(ws.Cells(startRow, 1), ws.Cells(startRow, 11))
+        .Font.Name = "微软雅黑"
+        .Font.Size = 9
+        .VerticalAlignment = xlCenter
+    End With
+    ws.Cells(startRow, 11).HorizontalAlignment = xlRight
+    Call SetBorderLine(ws.Range(ws.Cells(1, 1), ws.Cells(startRow, 11)))
 End Sub
 
 
@@ -692,20 +740,31 @@ End Function
 '     RMB / CNY → 1 (不查 sheet, 不抓数)
 '     命中缓存  → 缓存值
 '     未命中    → 调 模块_抓汇率.EnsureFxRateCached 拉数, 写 sheet, 再读
-'     失败      → 0 (Step 4 调用方需 fallback 到 1#)
+'     失败      → 0
 '
 '   用户可手填 汇率 sheet 单元格 override 系统值; 只要 IsNumeric And > 0 就保留
 '   注: 参数名避免用 "currency" (与 VBA 数据类型 Currency 冲突可能引起编译歧义)
 Public Function GetFxRate(ByVal curCode As String, ByVal periodEnd As String, ByVal useEop As Boolean) As Double
+    Dim outRate As Double
+    Call GetFxRateStatus(curCode, periodEnd, useEop, outRate)
+    GetFxRate = outRate
+End Function
+
+
+' Phase 4k Step 3: 带状态的汇率读取,供写表逻辑区分"真实 1.0"与"缺失"
+Public Function GetFxRateStatus(ByVal curCode As String, ByVal periodEnd As String, _
+                                ByVal useEop As Boolean, ByRef outRate As Double) As String
+    outRate = 0#
     Dim c As String: c = UCase$(Trim$(curCode))
     If c = "RMB" Or c = "CNY" Then
-        GetFxRate = 1#
+        outRate = 1#
+        GetFxRateStatus = "RMB_BASE"
         Exit Function
     End If
 
     Dim col As Long: col = LookupFxColForCurrency(c, useEop)
     If col = 0 Then
-        GetFxRate = 0
+        GetFxRateStatus = "FX_MISSING"
         Exit Function
     End If
 
@@ -714,7 +773,7 @@ Public Function GetFxRate(ByVal curCode As String, ByVal periodEnd As String, By
     Set ws = ThisWorkbook.Sheets(FX_SHEET)
     On Error GoTo 0
     If ws Is Nothing Then
-        GetFxRate = 0
+        GetFxRateStatus = "FX_MISSING"
         Exit Function
     End If
 
@@ -723,45 +782,102 @@ Public Function GetFxRate(ByVal curCode As String, ByVal periodEnd As String, By
     Dim v As Variant
     If rowIdx > 0 Then
         v = ws.Cells(rowIdx, col).Value
-        If IsNumeric(v) Then
-            If CDbl(v) > 0 Then
-                GetFxRate = CDbl(v)
-                Exit Function
-            End If
+        If FxValueIsPositive(v) Then
+            outRate = CDbl(v)
+            GetFxRateStatus = "OK"
+        Else
+            GetFxRateStatus = "FX_MISSING"
         End If
+        Exit Function
     End If
 
-    ' Cache miss → 拉数. 跨模块调用走 Application.Run (dot syntax 对中文模块名编译不通)
+    ' Period row missing → 拉数. 已有行但该币种缺值时不自动补,避免 corrupt 汇率被静默覆盖。
     Dim ok As Boolean
     On Error Resume Next
     ok = CBool(Application.Run("模块_抓汇率.EnsureFxRateCached", periodEnd, c))
     If Err.Number <> 0 Then
         Err.Clear
         On Error GoTo 0
-        GetFxRate = 0
+        GetFxRateStatus = "FX_FETCH_FAILED"
         Exit Function
     End If
     On Error GoTo 0
 
     If Not ok Then
-        GetFxRate = 0
+        GetFxRateStatus = "FX_FETCH_FAILED"
         Exit Function
     End If
 
     ' 拉完再读
     rowIdx = LookupFxRowByPeriod(ws, periodEnd)
     If rowIdx = 0 Then
-        GetFxRate = 0
+        GetFxRateStatus = "FX_MISSING"
         Exit Function
     End If
     v = ws.Cells(rowIdx, col).Value
-    If IsNumeric(v) Then
-        If CDbl(v) > 0 Then
-            GetFxRate = CDbl(v)
-            Exit Function
-        End If
+    If FxValueIsPositive(v) Then
+        outRate = CDbl(v)
+        GetFxRateStatus = "OK"
+    Else
+        GetFxRateStatus = "FX_MISSING"
     End If
-    GetFxRate = 0
+End Function
+
+
+' Phase 4k Step 4: 公式实时从汇率 sheet 读取,手改汇率后随重算更新。
+Public Function GetFxFromSheet(ByVal currencyCode As String, _
+                               ByVal periodEnd As Variant, _
+                               ByVal rateKind As String) As Variant
+    On Error GoTo EH
+    Application.Volatile True
+
+    Dim curCode As String: curCode = UCase$(Trim$(CStr(currencyCode)))
+    If curCode = "RMB" Or curCode = "CNY" Then
+        GetFxFromSheet = 1#
+        Exit Function
+    End If
+
+    Dim kind As String: kind = UCase$(Trim$(CStr(rateKind)))
+    Dim useEop As Boolean
+    Select Case kind
+        Case "EOP"
+            useEop = True
+        Case "AVG"
+            useEop = False
+        Case Else
+            GetFxFromSheet = CVErr(xlErrNA)
+            Exit Function
+    End Select
+
+    Dim col As Long: col = LookupFxColForCurrency(curCode, useEop)
+    If col = 0 Then
+        GetFxFromSheet = CVErr(xlErrNA)
+        Exit Function
+    End If
+
+    Dim ws As Object: Set ws = ThisWorkbook.Sheets(FX_SHEET)
+    Dim rowIdx As Long: rowIdx = LookupFxRowByPeriod(ws, FxPeriodKeyFromValue(periodEnd))
+    If rowIdx = 0 Then
+        GetFxFromSheet = CVErr(xlErrNA)
+        Exit Function
+    End If
+
+    Dim v As Variant: v = ws.Cells(rowIdx, col).Value
+    If FxValueIsPositive(v) Then
+        GetFxFromSheet = CDbl(v)
+    Else
+        GetFxFromSheet = CVErr(xlErrNA)
+    End If
+    Exit Function
+EH:
+    GetFxFromSheet = CVErr(xlErrNA)
+End Function
+
+
+Private Function FxValueIsPositive(ByVal v As Variant) As Boolean
+    If IsNumeric(v) Then
+        FxValueIsPositive = (CDbl(v) > 0)
+    End If
 End Function
 
 
@@ -773,14 +889,27 @@ Private Function LookupFxRowByPeriod(ByVal ws As Object, ByVal periodEnd As Stri
         LookupFxRowByPeriod = 0
         Exit Function
     End If
-    Dim target As String: target = Trim$(periodEnd)
+    Dim target As String: target = FxPeriodKeyFromValue(periodEnd)
     For r = FX_DATA_ROW To lastRow
-        If Trim$(CStr(ws.Cells(r, 1).Value)) = target Then
+        If FxPeriodKeyFromValue(ws.Cells(r, 1).Value) = target Then
             LookupFxRowByPeriod = r
             Exit Function
         End If
     Next r
     LookupFxRowByPeriod = 0
+End Function
+
+
+Private Function FxPeriodKeyFromValue(ByVal periodValue As Variant) As String
+    On Error GoTo Fallback
+    If IsDate(periodValue) Then
+        FxPeriodKeyFromValue = Format$(CDate(periodValue), "yyyy-mm-dd")
+    Else
+        FxPeriodKeyFromValue = Trim$(CStr(periodValue))
+    End If
+    Exit Function
+Fallback:
+    FxPeriodKeyFromValue = Trim$(CStr(periodValue))
 End Function
 
 
@@ -1438,12 +1567,17 @@ NextHeaderCompany:
                                             curCode = CStr(dictReportingCurrency(strCode))
                                     End If
                                     Dim fx As Double
-                                    fx = GetFxRate(curCode, strPeriod, useEopForBS)
-                                    If fx > 0 Then
-                                        writeVal = CDbl(rawVal) * fx
-                                    Else
-                                        writeVal = rawVal
-                                    End If
+                                    Dim fxStatus As String
+                                    fxStatus = GetFxRateStatus(curCode, strPeriod, useEopForBS, fx)
+                                    Select Case fxStatus
+                                        Case "OK", "RMB_BASE"
+                                            writeVal = CDbl(rawVal) * fx
+                                        Case "FX_MISSING", "FX_FETCH_FAILED"
+                                            writeVal = ""
+                                            AddDiagnosticFxMissing strCode, strInd, strPeriod, curCode, fxStatus
+                                        Case Else
+                                            writeVal = ""
+                                    End Select
                                     arrOut(k, intCol + j - 1) = writeVal
                                 Else
                                     arrOut(k, intCol + j - 1) = writeVal
@@ -1494,13 +1628,21 @@ NextDataCompany:
                         End If
                         Dim targetDataCol As Long: targetDataCol = intCol + j - 1
                         Dim rawRef As String: rawRef = .Cells(rawDataStartRow + k - 1, targetDataCol).Address(False, False)
-                        Dim fxForFormula As Double
-                        fxForFormula = GetFxRate(formulaCur, strPeriod, useEopForBS)
-                        If fxForFormula <= 0 Then fxForFormula = 1#
-                        Dim fxText As String: fxText = Replace(Trim$(Str$(fxForFormula)), ",", ".")
+                        Dim periodRef As String: periodRef = .Cells(2, targetDataCol).Address(True, False)
+                        Dim rateKind As String: rateKind = IIf(useEopForBS, "EOP", "AVG")
+                        Dim formulaFx As Double
+                        Dim formulaFxStatus As String
+                        If displayMode = "统一RMB" And IsNumeric(arrRawData(k, targetDataCol - metaCols)) Then
+                            formulaFxStatus = GetFxRateStatus(formulaCur, strPeriod, useEopForBS, formulaFx)
+                            If formulaFxStatus = "FX_MISSING" Or formulaFxStatus = "FX_FETCH_FAILED" Then
+                                AddDiagnosticFxMissing strCode, CStr(arrIndicators(k)), strPeriod, formulaCur, formulaFxStatus
+                            End If
+                        End If
+                        Dim formulaCurEscaped As String: formulaCurEscaped = Replace(formulaCur, """", """""")
                         .Cells(2 + k, targetDataCol).Formula = "=IF(" & rawRef & "="""",""""," & _
                             "IF('样本池'!$E$6=""原币""," & rawRef & "," & _
-                            "IF(ISNUMBER(" & rawRef & ")," & rawRef & "*" & fxText & "," & rawRef & ")))"
+                            "IF(ISNUMBER(" & rawRef & "),IFERROR(" & rawRef & "*GetFxFromSheet(""" & formulaCurEscaped & """," & _
+                            periodRef & ",""" & rateKind & """),"""")," & rawRef & ")))"
                     Next j
 NextFormulaCompany:
                 Next i

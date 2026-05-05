@@ -1015,6 +1015,7 @@ def _make_diagnostic_sheet(wb, name="美股_抓取诊断"):
     for j, w in enumerate(widths, start=1):
         ws.Columns(j).ColumnWidth = w
     ws.Columns("A").NumberFormat = "@"
+    ws.Columns("I").NumberFormat = "@"
     ws.Rows(1).RowHeight = 22
     ws.Rows(2).RowHeight = 20
 
@@ -1064,6 +1065,7 @@ def _refresh_diagnostic_headers(ws):
     for j, w in enumerate(widths, start=1):
         ws.Columns(j).ColumnWidth = w
     ws.Columns("A").NumberFormat = "@"
+    ws.Columns("I").NumberFormat = "@"
     ws.Rows(1).RowHeight = 22
     ws.Rows(2).RowHeight = 20
 

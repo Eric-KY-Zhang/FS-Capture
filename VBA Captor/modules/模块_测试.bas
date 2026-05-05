@@ -176,6 +176,169 @@ Public Sub TestPhase4hToggleSmoke()
 End Sub
 
 
+Public Sub TestPhase4kScoreSmoke()
+    g_diagnosticSheetName = "韩股_抓取诊断"
+    ClearDiagnosticSheet
+
+    Dim rows As Collection: Set rows = New Collection
+    AddDiagnosticRow rows, "005930", "BalanceSheet", "Score smoke", "OK_STOCKANALYSIS", _
+                     "stockanalysis.com", "HTML", "Total Assets", "KRW billions", _
+                     "1/1", "phase4k score text smoke", "1.0"
+    WriteDiagnosticForKind "BalanceSheet", rows
+End Sub
+
+
+Public Sub TestPhase4kFxMissingSmoke()
+    Dim wsPool As Worksheet: Set wsPool = ThisWorkbook.Worksheets("样本池")
+    Dim wsFx As Worksheet: Set wsFx = ThisWorkbook.Worksheets("汇率")
+    Dim savedDisplayMode As Variant: savedDisplayMode = wsPool.Range("E6").Value
+
+    Dim fxRow As Long: fxRow = FindFxRowForSmoke("2024-12-31")
+    If fxRow = 0 Then Err.Raise vbObjectError + 9401, "TestPhase4kFxMissingSmoke", "missing FX row 2024-12-31"
+    Dim savedKrwAvg As Variant: savedKrwAvg = wsFx.Cells(fxRow, 7).Value
+
+    On Error GoTo CleanUp
+    wsFx.Cells(fxRow, 7).ClearContents
+    wsPool.Range("E6").Value = "统一RMB"
+    g_diagnosticSheetName = "韩股_抓取诊断"
+    ClearDiagnosticSheet
+
+    Dim wsSmoke As Worksheet
+    Set wsSmoke = GetOrClearSmokeSheet("_phase4k_fx_missing_smoke")
+
+    Dim arrCodes(1 To 1) As String
+    arrCodes(1) = "005930"
+    Dim arrPeriods(1 To 1) As String
+    arrPeriods(1) = "2024-12-31"
+    Dim arrIndicators(1 To 1) As String
+    arrIndicators(1) = "Revenue"
+
+    Dim dictCompanyName As Object: Set dictCompanyName = CreateObject("Scripting.Dictionary")
+    dictCompanyName.Add "005930", "Samsung"
+    Dim dictCategory As Object: Set dictCategory = CreateObject("Scripting.Dictionary")
+    dictCategory.Add "Revenue", "Smoke"
+    Dim dictData As Object: Set dictData = CreateObject("Scripting.Dictionary")
+    Dim dictCompany As Object: Set dictCompany = CreateObject("Scripting.Dictionary")
+    Dim dictPer As Object: Set dictPer = CreateObject("Scripting.Dictionary")
+    dictPer.Add "Revenue", 100#
+    dictCompany.Add "2024-12-31", dictPer
+    dictData.Add "005930", dictCompany
+    Dim dictCurrency As Object: Set dictCurrency = CreateObject("Scripting.Dictionary")
+    dictCurrency.Add "005930", "KRW"
+
+    WriteWideTable wsSmoke, arrCodes, dictCompanyName, dictData, arrPeriods, arrIndicators, dictCategory, _
+                   perCompanyPeriods:=False, dictReportingCurrency:=dictCurrency, statementKind:="Income", _
+                   useRawDumpLayer:=True
+    wsSmoke.Calculate
+    If IsError(wsSmoke.Range("C3").Value) Then
+        wsSmoke.Range("ZZ1").Value = "ERROR"
+    ElseIf Len(CStr(wsSmoke.Range("C3").Value)) = 0 Then
+        wsSmoke.Range("ZZ1").Value = "BLANK"
+    Else
+        wsSmoke.Range("ZZ1").Value = CStr(wsSmoke.Range("C3").Value)
+    End If
+    wsSmoke.Range("ZZ2").Value = CountDiagnosticStatus("韩股_抓取诊断", "FX_MISSING")
+
+CleanUp:
+    wsFx.Cells(fxRow, 7).Value = savedKrwAvg
+    wsPool.Range("E6").Value = savedDisplayMode
+    If Err.Number <> 0 Then Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
+
+Public Sub TestPhase4kLiveFxSmoke()
+    Dim wsPool As Worksheet: Set wsPool = ThisWorkbook.Worksheets("样本池")
+    Dim wsFx As Worksheet: Set wsFx = ThisWorkbook.Worksheets("汇率")
+    Dim savedDisplayMode As Variant: savedDisplayMode = wsPool.Range("E6").Value
+
+    Dim fxRow As Long: fxRow = FindFxRowForSmoke("2024-12-31")
+    If fxRow = 0 Then Err.Raise vbObjectError + 9402, "TestPhase4kLiveFxSmoke", "missing FX row 2024-12-31"
+    Dim savedUsdEop As Variant: savedUsdEop = wsFx.Cells(fxRow, 2).Value
+    If Not IsNumeric(savedUsdEop) Or CDbl(savedUsdEop) <= 0 Then _
+        Err.Raise vbObjectError + 9403, "TestPhase4kLiveFxSmoke", "missing USD EOP rate"
+
+    On Error GoTo CleanUp
+    wsPool.Range("E6").Value = "统一RMB"
+    Dim wsSmoke As Worksheet
+    Set wsSmoke = GetOrClearSmokeSheet("_phase4k_live_fx_smoke")
+
+    Dim arrCodes(1 To 10) As String
+    Dim arrPeriods(1 To 5) As String
+    Dim arrIndicators(1 To 18) As String
+    Dim i As Long, j As Long
+    For i = 1 To 10
+        arrCodes(i) = "USD" & Format$(i, "00")
+    Next i
+    For j = 1 To 5
+        arrPeriods(j) = "2024-12-31"
+    Next j
+    For i = 1 To 18
+        arrIndicators(i) = "Metric" & Format$(i, "00")
+    Next i
+
+    Dim dictCompanyName As Object: Set dictCompanyName = CreateObject("Scripting.Dictionary")
+    Dim dictCategory As Object: Set dictCategory = CreateObject("Scripting.Dictionary")
+    Dim dictData As Object: Set dictData = CreateObject("Scripting.Dictionary")
+    Dim dictCurrency As Object: Set dictCurrency = CreateObject("Scripting.Dictionary")
+    For i = 1 To 18
+        dictCategory.Add arrIndicators(i), "Smoke"
+    Next i
+    For i = 1 To 10
+        dictCompanyName.Add arrCodes(i), "USD Smoke " & CStr(i)
+        dictCurrency.Add arrCodes(i), "USD"
+        Dim dictCompany As Object: Set dictCompany = CreateObject("Scripting.Dictionary")
+        Dim dictPer As Object: Set dictPer = CreateObject("Scripting.Dictionary")
+        For j = 1 To 18
+            dictPer.Add arrIndicators(j), CDbl(100 + i + j)
+        Next j
+        dictCompany.Add "2024-12-31", dictPer
+        dictData.Add arrCodes(i), dictCompany
+    Next i
+
+    WriteWideTable wsSmoke, arrCodes, dictCompanyName, dictData, arrPeriods, arrIndicators, dictCategory, _
+                   perCompanyPeriods:=False, dictReportingCurrency:=dictCurrency, statementKind:="BalanceSheet", _
+                   useRawDumpLayer:=True
+    wsSmoke.Calculate
+    Dim beforeVal As Variant: beforeVal = wsSmoke.Range("C3").Value
+    Dim t As Double: t = Timer
+    wsFx.Cells(fxRow, 2).Value = CDbl(savedUsdEop) + 0.5
+    wsSmoke.Calculate
+    Dim elapsed As Double: elapsed = Timer - t
+    Dim afterVal As Variant: afterVal = wsSmoke.Range("C3").Value
+    wsSmoke.Range("ZZ1").Value = beforeVal
+    wsSmoke.Range("ZZ2").Value = afterVal
+    wsSmoke.Range("ZZ3").Value = elapsed
+
+CleanUp:
+    wsFx.Cells(fxRow, 2).Value = savedUsdEop
+    wsPool.Range("E6").Value = savedDisplayMode
+    If Err.Number <> 0 Then Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
+
+Private Function FindFxRowForSmoke(ByVal periodKey As String) As Long
+    Dim wsFx As Worksheet: Set wsFx = ThisWorkbook.Worksheets("汇率")
+    Dim r As Long, lastRow As Long
+    lastRow = wsFx.Cells(wsFx.Rows.Count, 1).End(xlUp).Row
+    For r = 2 To lastRow
+        If Format$(wsFx.Cells(r, 1).Value, "yyyy-mm-dd") = periodKey Then
+            FindFxRowForSmoke = r
+            Exit Function
+        End If
+    Next r
+End Function
+
+
+Private Function CountDiagnosticStatus(ByVal sheetName As String, ByVal statusText As String) As Long
+    Dim ws As Worksheet: Set ws = ThisWorkbook.Worksheets(sheetName)
+    Dim r As Long, lastRow As Long
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    For r = 3 To lastRow
+        If CStr(ws.Cells(r, 4).Value) = statusText Then CountDiagnosticStatus = CountDiagnosticStatus + 1
+    Next r
+End Function
+
+
 Private Function GetOrClearSmokeSheet(ByVal sheetName As String) As Worksheet
     Dim ws As Worksheet
     On Error Resume Next
