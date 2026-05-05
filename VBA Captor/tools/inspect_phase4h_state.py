@@ -69,21 +69,25 @@ def main() -> int:
         print("\n[2] buttons and toggles", flush=True)
         ws_pool = wb.Worksheets("样本池")
         expected_buttons = {
-            "BtnClearCache": ("N10:Q11", "清空 HTTP 缓存"),
+            "BtnBuildCrossInd": ("N4:Q5", "一键抓取跨市场指标表"),
+            "BtnClearCache": ("N12:Q13", "清空 HTTP 缓存"),
         }
         for name, (addr, caption) in expected_buttons.items():
             try:
                 shape = ws_pool.Shapes(name)
                 top_left = str(shape.TopLeftCell.Address).replace("$", "")
                 bottom_right = str(shape.BottomRightCell.Address).replace("$", "")
-                print(f"{name}: {top_left}:{bottom_right}, caption={shape.TextFrame2.TextRange.Text}, action={shape.OnAction}")
+                actual_addr = f"{top_left}:{bottom_right}"
+                print(f"{name}: {actual_addr}, caption={shape.TextFrame2.TextRange.Text}, action={shape.OnAction}")
+                if actual_addr != addr:
+                    failures.append(f"{name} address mismatch: expected {addr}, got {actual_addr}")
                 if str(shape.TextFrame2.TextRange.Text) != caption:
                     failures.append(f"{name} caption mismatch")
             except Exception as exc:
                 failures.append(f"missing button {name}: {exc}")
         removed_buttons = {
             "BtnBuildCrossAll", "BtnHideCrossMarket",
-            "BtnBuildCrossInd", "BtnBuildCrossBS", "BtnBuildCrossIS", "BtnBuildCrossCF",
+            "BtnBuildCrossBS", "BtnBuildCrossIS", "BtnBuildCrossCF",
             "BtnRunBalance", "BtnRunProfit", "BtnRunCash", "BtnRunInd",
             "BtnRunUSBalance", "BtnRunUSProfit", "BtnRunUSCash", "BtnRunUSInd",
             "BtnRunHKBalance", "BtnRunHKProfit", "BtnRunHKCash", "BtnRunHKInd",
@@ -95,7 +99,7 @@ def main() -> int:
                 failures.append(f"removed button still present: {name}")
             except Exception:
                 pass
-        print("manual fallback toggle removed; old cross-market and single-table buttons absent")
+        print("manual fallback toggle removed; old cross-market BS/IS/CF and single-table buttons absent")
 
         print("\n[3] E6 realtime toggle smoke", flush=True)
         saved_b6 = ws_pool.Range("E6").Value

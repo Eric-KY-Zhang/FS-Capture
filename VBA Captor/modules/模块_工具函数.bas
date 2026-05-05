@@ -1172,6 +1172,42 @@ Public Function ParseCorpInfoHtml(ByVal strHtml As String, ByVal objHtml As Obje
 End Function
 
 
+Private Sub MergeRangeWithoutAlerts(ByVal targetRange As Range)
+    Dim oldAlerts As Boolean: oldAlerts = Application.DisplayAlerts
+    Dim errNum As Long, errDesc As String, errSource As String
+    On Error GoTo CleanUp
+    Err.Clear
+    Application.DisplayAlerts = False
+    targetRange.Merge
+
+CleanUp:
+    errNum = Err.Number
+    errDesc = Err.Description
+    errSource = Err.Source
+    Err.Clear
+    Application.DisplayAlerts = oldAlerts
+    If errNum <> 0 Then Err.Raise errNum, errSource, errDesc
+End Sub
+
+
+Private Sub UnMergeRangeWithoutAlerts(ByVal targetRange As Range)
+    Dim oldAlerts As Boolean: oldAlerts = Application.DisplayAlerts
+    Dim errNum As Long, errDesc As String, errSource As String
+    On Error GoTo CleanUp
+    Err.Clear
+    Application.DisplayAlerts = False
+    targetRange.UnMerge
+
+CleanUp:
+    errNum = Err.Number
+    errDesc = Err.Description
+    errSource = Err.Source
+    Err.Clear
+    Application.DisplayAlerts = oldAlerts
+    If errNum <> 0 Then Err.Raise errNum, errSource, errDesc
+End Sub
+
+
 ' --------- 写宽表 ---------
 '   ws                : 目标 Worksheet
 '   arrCodes          : 公司代码数组 (一维, 1-based, 顺序按样本池)
@@ -1243,7 +1279,8 @@ Public Sub WriteWideTable(ByVal ws As Worksheet, _
     With ws
         ' 解除上次跑产生的合并 (含 R1 跨期合并)
         On Error Resume Next
-        ws.UsedRange.UnMerge
+        UnMergeRangeWithoutAlerts ws.UsedRange
+        Err.Clear
         On Error GoTo 0
 
         Dim lastRow As Long, lastCol As Long
@@ -1316,7 +1353,7 @@ Public Sub WriteWideTable(ByVal ws As Worksheet, _
 
             ' 合并 R1 这家公司占的 N 列
             If periodCount > 1 Then
-                .Range(.Cells(1, intCol), .Cells(1, intCol + periodCount - 1)).Merge
+                MergeRangeWithoutAlerts .Range(.Cells(1, intCol), .Cells(1, intCol + periodCount - 1))
             End If
             With .Cells(1, intCol)
                 .Font.Name = "微软雅黑"
@@ -1575,6 +1612,11 @@ End Function
 ' --------- 生成只含 18 个标准指标的指标表 ---------
 '   market: "A" / "US" / "HK" / "KR"; 从对应资产负债表复制公司/报告期表头, 再填标准指标公式
 Public Sub BuildStandardIndicatorSheet(ByVal market As String)
+    Dim oldDisplayAlerts As Boolean: oldDisplayAlerts = Application.DisplayAlerts
+    Dim oldScreenUpdating As Boolean: oldScreenUpdating = Application.ScreenUpdating
+    Dim errNum As Long, errDesc As String, errSource As String
+    On Error GoTo CleanUp
+
     Dim marketKey As String: marketKey = UCase$(Trim$(market))
     Dim targetSheet As String, sourceSheet As String
     If marketKey = "US" Then
@@ -1605,9 +1647,11 @@ Public Sub BuildStandardIndicatorSheet(ByVal market As String)
     End If
 
     Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
     On Error Resume Next
     wsTarget.UsedRange.UnMerge
-    On Error GoTo 0
+    Err.Clear
+    On Error GoTo CleanUp
     wsTarget.Cells.Clear
 
     wsTarget.Range("A1").Value = "指标类型"
@@ -1673,7 +1717,15 @@ Public Sub BuildStandardIndicatorSheet(ByVal market As String)
     ActiveWindow.FreezePanes = True
     wsTarget.Cells(1, 1).Select
     RefreshA1CurrencyComment wsTarget, targetSheet
-    Application.ScreenUpdating = True
+
+CleanUp:
+    errNum = Err.Number
+    errDesc = Err.Description
+    errSource = Err.Source
+    Err.Clear
+    Application.DisplayAlerts = oldDisplayAlerts
+    Application.ScreenUpdating = oldScreenUpdating
+    If errNum <> 0 Then Err.Raise errNum, errSource, errDesc
 End Sub
 
 
@@ -1684,10 +1736,16 @@ End Sub
 '   - 自动跳过空的分市场表
 Public Sub BuildCrossMarketIndicatorSheet()
     Const TARGET_SHEET As String = "跨市场_指标表"
+    Dim oldDisplayAlerts As Boolean: oldDisplayAlerts = Application.DisplayAlerts
+    Dim oldScreenUpdating As Boolean: oldScreenUpdating = Application.ScreenUpdating
+    Dim errNum As Long, errDesc As String, errSource As String
+    On Error GoTo CleanUp
+
     Dim wsTarget As Worksheet
     On Error Resume Next
     Set wsTarget = ThisWorkbook.Sheets(TARGET_SHEET)
-    On Error GoTo 0
+    Err.Clear
+    On Error GoTo CleanUp
     If wsTarget Is Nothing Then
         Err.Raise vbObjectError + 580, "BuildCrossMarketIndicatorSheet", _
             TARGET_SHEET & " sheet 不存在, 请重装模板"
@@ -1697,7 +1755,8 @@ Public Sub BuildCrossMarketIndicatorSheet()
     Application.DisplayAlerts = False
     On Error Resume Next
     wsTarget.UsedRange.UnMerge
-    On Error GoTo 0
+    Err.Clear
+    On Error GoTo CleanUp
     wsTarget.Cells.Clear
 
     wsTarget.Range("A1").Value = "指标类型"
@@ -1721,9 +1780,7 @@ Public Sub BuildCrossMarketIndicatorSheet()
 
     If collCompanies.Count = 0 Then
         wsTarget.Range("A3").Value = "(还没有任何分市场指标表数据, 请先点 一键X股 跑数后再合并)"
-        Application.DisplayAlerts = True
-        Application.ScreenUpdating = True
-        Exit Sub
+        GoTo CleanUp
     End If
 
     Dim targetCol As Long: targetCol = 4
@@ -1814,7 +1871,8 @@ Public Sub BuildCrossMarketIndicatorSheet()
 
     On Error Resume Next
     If Not wsTarget.Range("A1").Comment Is Nothing Then wsTarget.Range("A1").Comment.Delete
-    On Error GoTo 0
+    Err.Clear
+    On Error GoTo CleanUp
     Dim displayMode As String: displayMode = ReadDisplayCurrency()
     Dim commentText As String
     commentText = "跨市场指标合表 (公司数=" & collCompanies.Count & ")" & vbCrLf & _
@@ -1824,8 +1882,14 @@ Public Sub BuildCrossMarketIndicatorSheet()
     wsTarget.Range("A1").AddComment commentText
     wsTarget.Range("A1").Comment.Shape.TextFrame.AutoSize = True
 
-    Application.DisplayAlerts = True
-    Application.ScreenUpdating = True
+CleanUp:
+    errNum = Err.Number
+    errDesc = Err.Description
+    errSource = Err.Source
+    Err.Clear
+    Application.DisplayAlerts = oldDisplayAlerts
+    Application.ScreenUpdating = oldScreenUpdating
+    If errNum <> 0 Then Err.Raise errNum, errSource, errDesc
 End Sub
 
 

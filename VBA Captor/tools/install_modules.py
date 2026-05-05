@@ -84,8 +84,9 @@ KR_FG = "FFFFFF"
 
 BUTTONS = [
     ("BtnRunAll",       "一键全抓 4 市场",      "模块_总入口.一键全抓",            "N2:Q3",  COVER_NAVY,     PRIMARY_FG,   13, True),
-    ("BtnHideAll",      "显示/隐藏 所有市场数据", "模块_总入口.切换所有分市场tabs", "N5:Q6",  A_LIGHT_FILL,   SECONDARY_FG, 11, True),
-    ("BtnClearCache",   "清空 HTTP 缓存",       "模块_工具函数.ClearLocalCache",   "N10:Q11", A_LIGHT_FILL,   SECONDARY_FG, 11, True),
+    ("BtnBuildCrossInd", "一键抓取跨市场指标表", "模块_总入口.一键跨市场指标表",    "N4:Q5",  A_LIGHT_FILL,   SECONDARY_FG, 10, True),
+    ("BtnHideAll",      "显示/隐藏 所有市场数据", "模块_总入口.切换所有分市场tabs", "N6:Q7",  A_LIGHT_FILL,   SECONDARY_FG, 11, True),
+    ("BtnClearCache",   "清空 HTTP 缓存",       "模块_工具函数.ClearLocalCache",   "N12:Q13", A_LIGHT_FILL,   SECONDARY_FG, 11, True),
     ("BtnRunA",         "一键 A 股",           "模块_总入口.一键A股",             "A9:C10", COVER_NAVY,     PRIMARY_FG,   14, True),
     ("BtnRunUS",        "一键 美股",           "模块_总入口.一键美股",            "D9:F10", US_FILL,        US_FG,        14, True),
     ("BtnRunHK",        "一键 港股",           "模块_总入口.一键港股",            "G9:I10", HK_FILL,        HK_FG,        14, True),
@@ -102,7 +103,6 @@ DECOMMISSIONED_BUTTONS = [
     "BtnRunInfo",
     "BtnBuildCrossAll",
     "BtnHideCrossMarket",
-    "BtnBuildCrossInd",
     "BtnBuildCrossBS",
     "BtnBuildCrossIS",
     "BtnBuildCrossCF",
@@ -637,8 +637,9 @@ def layout_sample_pool(ws_pool):
         ("G11:I12", "显示/隐藏 港股数据", HK_LIGHT_FILL, "375623", 11),
         ("J11:M12", "显示/隐藏 韩股数据", KR_LIGHT_FILL, "5B2B82", 11),
         ("N2:Q3", "一键全抓 4 市场", COVER_NAVY, "FFFFFF", 13),
-        ("N5:Q6", "显示/隐藏 所有市场数据", A_LIGHT_FILL, SECONDARY_FG, 11),
-        ("N10:Q11", "清空 HTTP 缓存", A_LIGHT_FILL, SECONDARY_FG, 11),
+        ("N4:Q5", "一键抓取跨市场指标表", A_LIGHT_FILL, SECONDARY_FG, 10),
+        ("N6:Q7", "显示/隐藏 所有市场数据", A_LIGHT_FILL, SECONDARY_FG, 11),
+        ("N12:Q13", "清空 HTTP 缓存", A_LIGHT_FILL, SECONDARY_FG, 11),
     ]
     for addr, caption, fill_hex, font_color_hex, font_size in placeholders:
         rng = ws_pool.Range(addr)
@@ -653,7 +654,7 @@ def layout_sample_pool(ws_pool):
         rng.VerticalAlignment = -4108
         rng.WrapText = True
 
-    for addr, caption in (("N4:Q4", "全局显示"), ("N9:Q9", "工具")):
+    for addr, caption in (("N11:Q11", "工具"),):
         rng = ws_pool.Range(addr)
         rng.Merge()
         rng.Value = caption
@@ -664,11 +665,11 @@ def layout_sample_pool(ws_pool):
         rng.Interior.Color = rgb_long(SECTION_LABEL_FILL)
         rng.HorizontalAlignment = -4108
         rng.VerticalAlignment = -4108
-    _apply_range_border(ws_pool.Range("N2:Q12"), "B7C9E2", 2, False)
+    _apply_range_border(ws_pool.Range("N2:Q13"), "B7C9E2", 2, False)
 
     try:
         set_cell_comment(
-            ws_pool.Range("N10"),
+            ws_pool.Range("N12"),
             "删除 .cache/ 目录中的 24h 本地 HTTP 响应缓存。\n"
             "下次抓数会重新发起 HTTP 请求,用于强制刷新或排查数据陈旧问题。\n"
             "日常无需点击。"

@@ -265,6 +265,62 @@ Public Sub UnhideCrossMarketIndicator()
 End Sub
 
 
+Private Function MarketHasPoolRows(ByVal marketKey As String) As Boolean
+    Dim codeCol As Long
+    Select Case UCase$(Trim$(marketKey))
+        Case "A": codeCol = POOL_A_CODE_COL
+        Case "US": codeCol = POOL_US_CODE_COL
+        Case "HK": codeCol = POOL_HK_CODE_COL
+        Case "KR": codeCol = POOL_KR_CODE_COL
+        Case Else: Exit Function
+    End Select
+
+    Dim wsPool As Worksheet: Set wsPool = ThisWorkbook.Sheets("样本池")
+    Dim lastRow As Long
+    lastRow = wsPool.Cells(wsPool.Rows.Count, codeCol).End(xlUp).Row
+    If lastRow < POOL_DATA_START_ROW Then Exit Function
+
+    Dim r As Long, codeText As String
+    For r = POOL_DATA_START_ROW To lastRow
+        codeText = Trim$(CStr(wsPool.Cells(r, codeCol).Value))
+        If Len(codeText) > 0 And codeText <> "代码" Then
+            MarketHasPoolRows = True
+            Exit Function
+        End If
+    Next r
+End Function
+
+
+Public Sub 一键跨市场指标表(Optional ByVal blnSilent As Boolean = False)
+    Dim dtTime As Double: dtTime = Timer
+    Dim runErrDesc As String
+    On Error GoTo CleanUp
+
+    Application.StatusBar = "刷新跨市场指标表..."
+    BuildCrossMarketIndicatorSheet
+    UnhideCrossMarketIndicator
+
+CleanUp:
+    If Err.Number <> 0 Then
+        runErrDesc = Err.Description
+        Err.Clear
+    End If
+    Application.StatusBar = False
+    Application.ScreenUpdating = True
+
+    If Not blnSilent Then
+        If Len(runErrDesc) > 0 Then
+            MsgBox "跨市场指标表刷新失败:" & vbCrLf & runErrDesc, _
+                   vbExclamation, "上市公司财务数据查询"
+        Else
+            MsgBox "跨市场指标表刷新完成" & vbCrLf & _
+                   "用时: " & Format(Timer - dtTime, "0.0 秒"), _
+                   vbInformation, "上市公司财务数据查询"
+        End If
+    End If
+End Sub
+
+
 Private Sub ShowMarketRunSummary(ByVal marketName As String, ByVal dtTime As Double, ByVal runErrDesc As String)
     Dim msg As String
     msg = "一键" & marketName & "完成" & vbCrLf & _
@@ -285,6 +341,7 @@ End Sub
 
 Public Sub 一键全抓(Optional ByVal blnSilent As Boolean = False)
     Dim dtTime As Double: dtTime = Timer
+    Dim hasAnyMarket As Boolean
 
     ' 重置全局累计
     g_silentMode = True
@@ -300,90 +357,73 @@ Public Sub 一键全抓(Optional ByVal blnSilent As Boolean = False)
     ClearDiagnosticSheet
     g_diagnosticAppendOnly = True
 
-    ' A 股资产负债表
-    Application.StatusBar = "[1/16] 抓取A股资产负债表..."
-    DoEvents
-    模块_抓资产负债表.Main
+    If MarketHasPoolRows("A") Then
+        hasAnyMarket = True
+        Application.StatusBar = "[A股 1/4] 抓取资产负债表..."
+        DoEvents
+        模块_抓资产负债表.Main
+        Application.StatusBar = "[A股 2/4] 抓取利润表..."
+        DoEvents
+        模块_抓利润表.Main
+        Application.StatusBar = "[A股 3/4] 抓取现金流量表..."
+        DoEvents
+        模块_抓现金流量表.Main
+        Application.StatusBar = "[A股 4/4] 生成指标表..."
+        DoEvents
+        模块_抓指标表.Main
+        UnhideMarketTabs "A"
+    End If
 
-    ' A 股利润表
-    Application.StatusBar = "[2/16] 抓取A股利润表..."
-    DoEvents
-    模块_抓利润表.Main
+    If MarketHasPoolRows("US") Then
+        hasAnyMarket = True
+        Application.StatusBar = "[美股 1/4] 抓取资产负债表..."
+        DoEvents
+        模块_抓美股资产负债表.Main
+        Application.StatusBar = "[美股 2/4] 抓取利润表..."
+        DoEvents
+        模块_抓美股利润表.Main
+        Application.StatusBar = "[美股 3/4] 抓取现金流量表..."
+        DoEvents
+        模块_抓美股现金流量表.Main
+        Application.StatusBar = "[美股 4/4] 生成指标表..."
+        DoEvents
+        模块_抓美股指标表.Main
+        UnhideMarketTabs "US"
+    End If
 
-    ' A 股现金流量表
-    Application.StatusBar = "[3/16] 抓取A股现金流量表..."
-    DoEvents
-    模块_抓现金流量表.Main
+    If MarketHasPoolRows("HK") Then
+        hasAnyMarket = True
+        Application.StatusBar = "[港股 1/4] 抓取资产负债表..."
+        DoEvents
+        模块_抓港股资产负债表.Main
+        Application.StatusBar = "[港股 2/4] 抓取利润表..."
+        DoEvents
+        模块_抓港股利润表.Main
+        Application.StatusBar = "[港股 3/4] 抓取现金流量表..."
+        DoEvents
+        模块_抓港股现金流量表.Main
+        Application.StatusBar = "[港股 4/4] 生成指标表..."
+        DoEvents
+        模块_抓港股指标表.Main
+        UnhideMarketTabs "HK"
+    End If
 
-    ' A 股指标表
-    Application.StatusBar = "[4/16] 生成A股指标表..."
-    DoEvents
-    模块_抓指标表.Main
-
-    ' 美股资产负债表
-    Application.StatusBar = "[5/16] 抓取美股资产负债表..."
-    DoEvents
-    模块_抓美股资产负债表.Main
-
-    ' 美股利润表
-    Application.StatusBar = "[6/16] 抓取美股利润表..."
-    DoEvents
-    模块_抓美股利润表.Main
-
-    ' 美股现金流量表
-    Application.StatusBar = "[7/16] 抓取美股现金流量表..."
-    DoEvents
-    模块_抓美股现金流量表.Main
-
-    ' 美股指标表
-    Application.StatusBar = "[8/16] 生成美股指标表..."
-    DoEvents
-    模块_抓美股指标表.Main
-
-    ' 港股资产负债表
-    Application.StatusBar = "[9/16] 抓取港股资产负债表..."
-    DoEvents
-    模块_抓港股资产负债表.Main
-
-    ' 港股利润表
-    Application.StatusBar = "[10/16] 抓取港股利润表..."
-    DoEvents
-    模块_抓港股利润表.Main
-
-    ' 港股现金流量表
-    Application.StatusBar = "[11/16] 抓取港股现金流量表..."
-    DoEvents
-    模块_抓港股现金流量表.Main
-
-    ' 港股指标表
-    Application.StatusBar = "[12/16] 生成港股指标表..."
-    DoEvents
-    模块_抓港股指标表.Main
-
-    ' 韩股资产负债表
-    Application.StatusBar = "[13/16] 抓取韩股资产负债表..."
-    DoEvents
-    模块_抓韩股资产负债表.Main
-
-    ' 韩股利润表
-    Application.StatusBar = "[14/16] 抓取韩股利润表..."
-    DoEvents
-    模块_抓韩股利润表.Main
-
-    ' 韩股现金流量表
-    Application.StatusBar = "[15/16] 抓取韩股现金流量表..."
-    DoEvents
-    模块_抓韩股现金流量表.Main
-
-    ' 韩股指标表
-    Application.StatusBar = "[16/16] 生成韩股指标表..."
-    DoEvents
-    模块_抓韩股指标表.Main
-
-    UnhideMarketTabs "A"
-    UnhideMarketTabs "US"
-    UnhideMarketTabs "HK"
-    UnhideMarketTabs "KR"
+    If MarketHasPoolRows("KR") Then
+        hasAnyMarket = True
+        Application.StatusBar = "[韩股 1/4] 抓取资产负债表..."
+        DoEvents
+        模块_抓韩股资产负债表.Main
+        Application.StatusBar = "[韩股 2/4] 抓取利润表..."
+        DoEvents
+        模块_抓韩股利润表.Main
+        Application.StatusBar = "[韩股 3/4] 抓取现金流量表..."
+        DoEvents
+        模块_抓韩股现金流量表.Main
+        Application.StatusBar = "[韩股 4/4] 生成指标表..."
+        DoEvents
+        模块_抓韩股指标表.Main
+        UnhideMarketTabs "KR"
+    End If
 
     ' Phase 4j.1: 一键全抓后只刷新跨市场指标表
     On Error Resume Next
@@ -407,7 +447,9 @@ CleanUp:
     Dim msg As String
     msg = "一键全抓完成 (A股 + 美股 + 港股 + 韩股)" & vbCrLf & _
           "总用时: " & Format(Timer - dtTime, "0.0 秒")
-    If g_globalFails > 0 Then
+    If Not hasAnyMarket Then
+        msg = msg & vbCrLf & "未检测到样本池公司, 未执行抓数。"
+    ElseIf g_globalFails > 0 Then
         msg = msg & vbCrLf & vbCrLf & _
               "失败 " & g_globalFails & " 条:" & g_globalLog
     Else
