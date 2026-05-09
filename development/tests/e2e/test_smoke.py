@@ -59,5 +59,17 @@ def test_us_aapl_2024() -> None:
     _assert_downloaded_reports(reports)
 
 
-def test_kr_smoke_requires_user_dart_key() -> None:
-    pytest.skip("KR e2e requires a user-provided DART API key")
+def test_kr_005930_2024() -> None:
+    """Samsung Electronics 2024 annual report via DART OpenAPI.
+
+    Requires a valid DART API key in config.toml (or via Settings dialog).
+    """
+    plugin = get_plugin(Exchange.KR)
+    ticker = plugin.resolve_name("005930")
+    assert ticker.name
+    company = plugin.fetch_company(ticker)
+    assert company.currency == "KRW"
+    out = Path.cwd() / "e2e_output"
+    reports = plugin.download_reports(ticker, Period(year=2024, type=PeriodType.ANNUAL), out)
+    assert any(report.kind == "annual_report" for report in reports)
+    _assert_downloaded_reports(reports)
