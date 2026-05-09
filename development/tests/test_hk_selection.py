@@ -1,0 +1,105 @@
+from __future__ import annotations
+
+import datetime as dt
+import unittest
+
+from app.core.models import Exchange, Period, PeriodType, Ticker
+from plugins.hk import reports as hk_reports
+from plugins.hk.reports import _select_main as select_hk_main
+
+
+def _row(
+    title: str,
+    filing_date: str,
+    *,
+    url: str,
+    file_size: int = 2_000_000,
+    code: str = "00700",
+) -> dict:
+    return {
+        "url": url,
+        "title": title,
+        "headline": "Financial Statements/ESG Information - [Annual Report]",
+        "doc_type": "Annual Report",
+        "filing_date": dt.date.fromisoformat(filing_date),
+        "stock_codes": (code.zfill(5),),
+        "source_id": url.rsplit("/", 1)[-1],
+        "file_size": file_size,
+    }
+
+
+class HKReportSelectionTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._original_verify = hk_reports.verify_pdf_year_and_kind
+        hk_reports.verify_pdf_year_and_kind = lambda url, _year, _kind: url in {
+            "https://example.com/tencent-annual.pdf",
+            "https://example.com/alibaba-annual.pdf",
+            "https://example.com/hsbc-main.pdf",
+            "https://example.com/aia-annual.pdf",
+            "https://example.com/china-mobile-annual.pdf",
+        }
+
+    def tearDown(self) -> None:
+        hk_reports.verify_pdf_year_and_kind = self._original_verify
+
+    def test_tencent_annual_prefers_main_report(self) -> None:
+        ticker = Ticker(exchange=Exchange.HK, code="00700")
+        rows = [
+            _row("年報 2023", "2024-03-22", url="https://example.com/tencent-annual.pdf"),
+            _row("ESG 報告 2023", "2024-04-15", url="https://example.com/tencent-esg.pdf"),
+            _row("補充公告：股東週年大會通告", "2024-05-01", url="https://example.com/tencent-supp.pdf", file_size=200_000),
+        ]
+
+        selected = select_hk_main(rows, ticker, Period(year=2023, type=PeriodType.ANNUAL))
+
+        self.assertEqual(selected["url"], "https://example.com/tencent-annual.pdf")
+
+    def test_alibaba_march_fiscal_year_accepts_same_year_filing_window(self) -> None:
+        ticker = Ticker(exchange=Exchange.HK, code="09988")
+        rows = [
+            _row("Annual Report 2024", "2024-07-25", url="https://example.com/alibaba-annual.pdf", code="09988"),
+            _row("Annual Report 2024 Supplementary Information", "2024-08-01", url="https://example.com/alibaba-supp.pdf", code="09988"),
+            _row("Annual Report 2023", "2023-07-21", url="https://example.com/alibaba-old.pdf", code="09988"),
+        ]
+
+        selected = select_hk_main(rows, ticker, Period(year=2024, type=PeriodType.ANNUAL))
+
+        self.assertEqual(selected["url"], "https://example.com/alibaba-annual.pdf")
+
+    def test_hsbc_uses_pdf_verification_to_avoid_subsidiary_reports(self) -> None:
+        ticker = Ticker(exchange=Exchange.HK, code="00005")
+        rows = [
+            _row("HSBC Holdings plc Annual Report and Accounts 2023", "2024-02-21", url="https://example.com/hsbc-main.pdf", code="00005"),
+            _row("HSBC Bank plc Annual Report 2023", "2024-02-21", url="https://example.com/hsbc-bank.pdf", code="00005"),
+            _row("Pillar 3 Disclosures 2023", "2024-02-21", url="https://example.com/hsbc-pillar3.pdf", code="00005"),
+        ]
+
+        selected = select_hk_main(rows, ticker, Period(year=2023, type=PeriodType.ANNUAL))
+
+        self.assertEqual(selected["url"], "https://example.com/hsbc-main.pdf")
+
+    def test_aia_filters_non_report_esg_candidate(self) -> None:
+        ticker = Ticker(exchange=Exchange.HK, code="01299")
+        rows = [
+            _row("2023 ESG Report", "2024-03-15", url="https://example.com/aia-esg.pdf", code="01299"),
+            _row("2023 Annual Report", "2024-03-15", url="https://example.com/aia-annual.pdf", code="01299"),
+        ]
+
+        selected = select_hk_main(rows, ticker, Period(year=2023, type=PeriodType.ANNUAL))
+
+        self.assertEqual(selected["url"], "https://example.com/aia-annual.pdf")
+
+    def test_china_mobile_accepts_mixed_chinese_english_title(self) -> None:
+        ticker = Ticker(exchange=Exchange.HK, code="00941")
+        rows = [
+            _row("2023 年報 Annual Report", "2024-03-21", url="https://example.com/china-mobile-annual.pdf", code="00941"),
+            _row("2023 可持續發展報告 Sustainability Report", "2024-04-25", url="https://example.com/china-mobile-sustainability.pdf", code="00941"),
+        ]
+
+        selected = select_hk_main(rows, ticker, Period(year=2023, type=PeriodType.ANNUAL))
+
+        self.assertEqual(selected["url"], "https://example.com/china-mobile-annual.pdf")
+
+
+if __name__ == "__main__":
+    unittest.main()
