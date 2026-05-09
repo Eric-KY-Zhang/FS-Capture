@@ -15,10 +15,11 @@ ak_datas, ak_binaries, ak_hiddenimports = collect_all("akshare")
 odr_datas, odr_binaries, odr_hiddenimports = collect_all("OpenDartReader")
 pykrx_datas = collect_data_files("pykrx")
 certifi_datas = collect_data_files("certifi")
+playwright_datas, playwright_binaries, playwright_hiddenimports = collect_all("playwright")
+openpyxl_datas, openpyxl_binaries, openpyxl_hiddenimports = collect_all("openpyxl")
 
 extra_datas = [
     ("app/ui/styles/app.qss", "app/ui/styles"),
-    ("app/exporters/templates", "app/exporters/templates"),
     ("app/assets/fs_capture.ico", "app/assets"),
     ("app/assets/fs_capture_logo.png", "app/assets"),
 ]
@@ -26,12 +27,12 @@ extra_datas = [
 a = Analysis(
     ["app/main.py"],
     pathex=["."],
-    binaries=ak_binaries + odr_binaries,
-    datas=ak_datas + odr_datas + pykrx_datas + certifi_datas + extra_datas,
+    binaries=ak_binaries + odr_binaries + playwright_binaries + openpyxl_binaries,
+    datas=ak_datas + odr_datas + pykrx_datas + certifi_datas + playwright_datas + openpyxl_datas + extra_datas,
     hiddenimports=ak_hiddenimports + odr_hiddenimports + [
         "plugins.ashare", "plugins.hk", "plugins.us", "plugins.kr",
         "tomli_w", "certifi",
-    ],
+    ] + playwright_hiddenimports + openpyxl_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

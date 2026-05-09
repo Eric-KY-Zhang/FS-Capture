@@ -1,18 +1,26 @@
-# User/runtime files
+# User config (contains DART API key — never commit)
 config.toml
+
+# Runtime output (downloaded PDFs, caches, logs)
 output/
 development/output/
 data/
 logs/
 cache/
+docs_cache/
+development/data/
+development/logs/
+development/cache/
+development/docs_cache/
+development/e2e_output/
 crash.log
 *.xlsm
 
-# Packaged app runtime
+# Packaged app runtime (PyInstaller-built EXE bundle)
 FS Capture.exe
 _internal/
 
-# Python/build artifacts
+# Python build / cache artifacts
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -25,7 +33,10 @@ development/build/
 development/dist/
 development/build.log
 
-# Local editor/OS files
+# Claude Code internal worktrees and session metadata
+.claude/
+
+# Local editor / OS files
 .DS_Store
 Thumbs.db
 .vscode/
