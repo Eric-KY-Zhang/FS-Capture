@@ -53,11 +53,15 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-exclude = [".venv", "build", "dist", "_internal", "app", "plugins"]
+exclude = [".venv", "build", "dist", "_internal"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N"]
-ignore = ["E501"]
+# UP042: keep `class X(str, Enum)` for Pydantic v2 compatibility & explicit str-mixin semantics.
+#        Conversion to StrEnum is safe but deferred — separate audit needed for downstream consumers.
+ignore = ["E501", "UP042"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["B", "N"]
+# Qt event-handler overrides (mousePressEvent, changeEvent, etc.) are camelCase by Qt API contract.
+"app/ui/main_window.py" = ["N802"]

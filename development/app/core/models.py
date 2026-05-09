@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -25,7 +24,7 @@ class Exchange(str, Enum):
 class PeriodType(str, Enum):
     ANNUAL = "annual"
     Q1 = "q1"
-    Q2 = "q2"   # interim / 半年报
+    Q2 = "q2"  # interim / 半年报
     Q3 = "q3"
     IPO_PROSPECTUS = "ipo_prospectus"
 
@@ -52,9 +51,9 @@ class Ticker(BaseModel):
     exchange: Exchange
     code: str
     # Filled after name_resolver runs. None means unresolved.
-    name: Optional[str] = None
+    name: str | None = None
     # Exchange-specific ID (cninfo orgId, SEC CIK, DART corp_code, HKEX stock_id).
-    external_id: Optional[str] = None
+    external_id: str | None = None
 
     @field_validator("code")
     @classmethod
@@ -64,8 +63,8 @@ class Ticker(BaseModel):
 
 class Company(BaseModel):
     ticker: Ticker
-    listing_date: Optional[str] = None
-    industry: Optional[str] = None
+    listing_date: str | None = None
+    industry: str | None = None
     currency: str = "CNY"
     # Free-form extra fields per market.
     extra: dict = Field(default_factory=dict)
@@ -73,22 +72,23 @@ class Company(BaseModel):
 
 class ReportFile(BaseModel):
     """A downloaded disclosure document."""
+
     ticker: Ticker
-    period: Optional[Period] = None
-    kind: str   # annual_report | q1_report | interim_report | q3_report | ipo_prospectus
+    period: Period | None = None
+    kind: str  # annual_report | q1_report | interim_report | q3_report | ipo_prospectus
     local_path: str
     source_url: str
-    title: Optional[str] = None
-    file_size_bytes: Optional[int] = None
-    filing_date: Optional[str] = None
-    report_date: Optional[str] = None
-    form: Optional[str] = None
-    source_id: Optional[str] = None
-    accession_number: Optional[str] = None
+    title: str | None = None
+    file_size_bytes: int | None = None
+    filing_date: str | None = None
+    report_date: str | None = None
+    form: str | None = None
+    source_id: str | None = None
+    accession_number: str | None = None
     is_amendment: bool = False
-    sequence: Optional[int] = None
-    source_format: Optional[str] = None
-    output_format: Optional[str] = None
+    sequence: int | None = None
+    source_format: str | None = None
+    output_format: str | None = None
 
     @field_validator("filing_date", "report_date", mode="before")
     @classmethod

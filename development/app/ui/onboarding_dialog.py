@@ -35,7 +35,7 @@ class OnboardingDialog(QDialog):
         layout.addWidget(hint)
 
         dart = QLabel(
-            '韩股需要 DART API Key。可在 '
+            "韩股需要 DART API Key。可在 "
             '<a href="https://opendart.fss.or.kr/">opendart.fss.or.kr</a> 注册后粘贴到设置。'
         )
         dart.setOpenExternalLinks(True)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +27,7 @@ def write_sidecar(report: ReportFile) -> Path:
         "kind": report.kind,
         "title": report.title,
         "source_url": report.source_url,
-        "downloaded_at": datetime.now(timezone.utc).isoformat(),
+        "downloaded_at": datetime.now(UTC).isoformat(),
         "file_size_bytes": file_size,
         "sha256": sha256,
     }

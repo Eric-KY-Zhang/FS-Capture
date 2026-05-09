@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import traceback
 import threading
+import traceback
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal, Slot
@@ -12,15 +12,15 @@ from .settings import Settings
 
 
 class OrchestratorSignals(QObject):
-    job_started = Signal(int)                       # total tasks
-    task_started = Signal(object)                   # TaskResult
-    task_progress = Signal(object, str)             # TaskResult, status text
-    task_finished = Signal(object)                  # TaskResult (mutated in place)
-    job_finished = Signal(object)                   # Job
-    log = Signal(str, str)                          # level, message
+    job_started = Signal(int)  # total tasks
+    task_started = Signal(object)  # TaskResult
+    task_progress = Signal(object, str)  # TaskResult, status text
+    task_finished = Signal(object)  # TaskResult (mutated in place)
+    job_finished = Signal(object)  # Job
+    log = Signal(str, str)  # level, message
 
 
-class _Cancelled(Exception):
+class _CancelledError(Exception):
     """Raised internally when the user cancels a running job."""
 
 
@@ -40,7 +40,7 @@ class _TaskRunnable(QRunnable):
 
     def _check_cancel(self) -> None:
         if self.cancel_event.is_set():
-            raise _Cancelled()
+            raise _CancelledError()
 
     @Slot()
     def run(self) -> None:
@@ -89,7 +89,7 @@ class _TaskRunnable(QRunnable):
                 self.signals.log.emit("warning", f"{r.ticker.code} 未找到{r.label()}文件")
 
             r.status = TaskStatus.DONE
-        except _Cancelled:
+        except _CancelledError:
             r.status = TaskStatus.CANCELLED
             r.error = "用户取消"
         except Exception as exc:  # noqa: BLE001
@@ -115,6 +115,7 @@ class Orchestrator(QObject):
 
     def resolve_name(self, exchange: Exchange, code: str) -> Ticker:
         from plugins import get_plugin
+
         return get_plugin(exchange).resolve_name(code)
 
     def request_cancel(self) -> None:
@@ -129,9 +130,7 @@ class Orchestrator(QObject):
         output_root.mkdir(parents=True, exist_ok=True)
 
         tasks: list[TaskResult] = [
-            TaskResult(ticker=t, period=p)
-            for t in job.tickers
-            for p in job.periods
+            TaskResult(ticker=t, period=p) for t in job.tickers for p in job.periods
         ]
         job.results = tasks
         if not tasks:

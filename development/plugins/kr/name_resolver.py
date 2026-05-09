@@ -6,17 +6,16 @@ companies' corp_code, corp_name, stock_code, modify_date.
 
 We rely on OpenDartReader to manage the ZIP/XML extraction.
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Optional
 
 from loguru import logger
 
 from app.core.cache import get_cache
 from app.core.models import Company, Exchange, Ticker
 from app.core.settings import load_settings
-
 
 _CACHE_KEY_CORP_MAP = "kr:corpcode_map:v1"
 _TTL = 7 * 24 * 3600
@@ -29,16 +28,25 @@ def _normalize_code(code: str) -> str:
     return c.zfill(6)
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=4)
+def _dart_for_key(api_key: str):
+    import OpenDartReader
+
+    return OpenDartReader(api_key)
+
+
 def _dart():
-    s = load_settings()
-    if not s.dart.api_key:
+    api_key = (load_settings().dart.api_key or "").strip()
+    if not api_key:
         raise ValueError(
             "尚未配置 DART API 密钥。韩股官方披露数据需要 DART OpenAPI，"
             "请在『设置』中填入密钥；如暂时无法注册，可先取消勾选韩股。"
         )
-    import OpenDartReader
-    return OpenDartReader(s.dart.api_key)
+    return _dart_for_key(api_key)
+
+
+def reset_dart_client() -> None:
+    _dart_for_key.cache_clear()
 
 
 def _load_map() -> dict[str, dict]:
@@ -78,7 +86,7 @@ def resolve(code: str) -> Ticker:
 
 
 def fetch_company(ticker: Ticker) -> Company:
-    industry: Optional[str] = None
+    industry: str | None = None
     extra: dict = {}
     try:
         dart = _dart()

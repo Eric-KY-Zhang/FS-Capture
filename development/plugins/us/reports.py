@@ -9,19 +9,19 @@ Form types we surface:
 The auditor's report ("Report of Independent Registered Public Accounting Firm")
 is contained inside the 10-K / 20-F document — not filed separately.
 """
+
 from __future__ import annotations
 
 import datetime as dt
 import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from loguru import logger
 
 from app.core.http import default_client, get_json, stream_to_file
 from app.core.models import Period, PeriodType, ReportFile, Ticker
 from app.core.output_paths import report_output_path, report_output_path_for_filing
-
 
 _SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
 _ARCHIVE_BASE = "https://www.sec.gov/Archives/edgar/data/{cik_int}/{acc_no_clean}/{filename}"
@@ -40,7 +40,7 @@ _IPO_REGISTRATION_FORMS = _IPO_INITIAL_FORMS | _IPO_AMENDMENT_FORMS
 _PROSPECTUS_424B_RE = re.compile(r"^424B\d+$", re.IGNORECASE)
 
 
-def _parse_date(value: str) -> Optional[dt.date]:
+def _parse_date(value: str) -> dt.date | None:
     try:
         return dt.date.fromisoformat(value)
     except (TypeError, ValueError):
@@ -60,17 +60,21 @@ def _table_rows(table: dict) -> list[dict]:
 
     rows: list[dict] = []
     for i, form in enumerate(forms):
-        rows.append({
-            "form": form,
-            "accessionNumber": accs[i] if i < len(accs) else "",
-            "primaryDocument": primary_docs[i] if i < len(primary_docs) else "",
-            "primaryDocDescription": primary_doc_descrs[i] if i < len(primary_doc_descrs) else "",
-            "filingDate": filing_dates[i] if i < len(filing_dates) else "",
-            "reportDate": report_dates[i] if i < len(report_dates) else "",
-            "acceptanceDateTime": acceptance_dates[i] if i < len(acceptance_dates) else "",
-            "fileNumber": file_numbers[i] if i < len(file_numbers) else "",
-            "size": sizes[i] if i < len(sizes) else "",
-        })
+        rows.append(
+            {
+                "form": form,
+                "accessionNumber": accs[i] if i < len(accs) else "",
+                "primaryDocument": primary_docs[i] if i < len(primary_docs) else "",
+                "primaryDocDescription": primary_doc_descrs[i]
+                if i < len(primary_doc_descrs)
+                else "",
+                "filingDate": filing_dates[i] if i < len(filing_dates) else "",
+                "reportDate": report_dates[i] if i < len(report_dates) else "",
+                "acceptanceDateTime": acceptance_dates[i] if i < len(acceptance_dates) else "",
+                "fileNumber": file_numbers[i] if i < len(file_numbers) else "",
+                "size": sizes[i] if i < len(sizes) else "",
+            }
+        )
     return rows
 
 
@@ -80,13 +84,14 @@ def _filter_table(table: dict, period: Period) -> list[dict]:
     target_forms = set(_FORMS_BY_PERIOD[period.type])
     if period.type is PeriodType.ANNUAL:
         return [
-            r for r in rows
-            if r["form"] in target_forms
-            and r["reportDate"].startswith(str(period.year))
+            r
+            for r in rows
+            if r["form"] in target_forms and r["reportDate"].startswith(str(period.year))
         ]
 
     annual_dates = sorted(
-        d for d in (
+        d
+        for d in (
             _parse_date(r["reportDate"])
             for r in rows
             if r["form"] in _FORMS_BY_PERIOD[PeriodType.ANNUAL]
@@ -96,12 +101,14 @@ def _filter_table(table: dict, period: Period) -> list[dict]:
     fiscal_year_end = next((d for d in annual_dates if d.year == period.year), None)
     previous_year_end = (
         max((d for d in annual_dates if d < fiscal_year_end), default=None)
-        if fiscal_year_end else None
+        if fiscal_year_end
+        else None
     )
 
     if fiscal_year_end and previous_year_end:
         quarter_rows = [
-            r for r in rows
+            r
+            for r in rows
             if r["form"] in target_forms
             and (report_date := _parse_date(r["reportDate"])) is not None
             and previous_year_end < report_date < fiscal_year_end
@@ -123,7 +130,8 @@ def _filter_table(table: dict, period: Period) -> list[dict]:
         PeriodType.Q3: "09-30",
     }[period.type]
     return [
-        r for r in rows
+        r
+        for r in rows
         if r["form"] in target_forms
         and r["reportDate"].startswith(str(period.year))
         and r["reportDate"].endswith(calendar_end)
@@ -186,7 +194,9 @@ def _dedupe_rows(rows: list[dict]) -> list[dict]:
 
 def _accession_to_archive(cik: str, acc_no: str, filename: str) -> str:
     cik_int = str(int(cik))
-    return _ARCHIVE_BASE.format(cik_int=cik_int, acc_no_clean=acc_no.replace("-", ""), filename=filename)
+    return _ARCHIVE_BASE.format(
+        cik_int=cik_int, acc_no_clean=acc_no.replace("-", ""), filename=filename
+    )
 
 
 def _normalize_form(row_or_form: dict | str) -> str:
@@ -293,26 +303,28 @@ def download(ticker: Ticker, period: Period, output_root: Path) -> list[ReportFi
         url_doc, source_format, n_bytes = _download_primary_as_pdf(client, cik, chosen, dest)
         form = _normalize_form(chosen)
 
-        return [ReportFile(
-            ticker=ticker,
-            period=period,
-            kind=kind,
-            local_path=str(dest),
-            source_url=url_doc,
-            title=f"{chosen['form']} ({chosen['reportDate']})",
-            file_size_bytes=n_bytes,
-            filing_date=chosen.get("filingDate") or None,
-            report_date=chosen.get("reportDate") or None,
-            form=form,
-            source_id=_file_number(chosen) or None,
-            accession_number=_accession(chosen) or None,
-            is_amendment=_is_amendment_form(form),
-            source_format=source_format,
-            output_format="pdf",
-        )]
+        return [
+            ReportFile(
+                ticker=ticker,
+                period=period,
+                kind=kind,
+                local_path=str(dest),
+                source_url=url_doc,
+                title=f"{chosen['form']} ({chosen['reportDate']})",
+                file_size_bytes=n_bytes,
+                filing_date=chosen.get("filingDate") or None,
+                report_date=chosen.get("reportDate") or None,
+                form=form,
+                source_id=_file_number(chosen) or None,
+                accession_number=_accession(chosen) or None,
+                is_amendment=_is_amendment_form(form),
+                source_format=source_format,
+                output_format="pdf",
+            )
+        ]
 
 
-def _select_final_424b(rows: list[dict]) -> Optional[dict]:
+def _select_final_424b(rows: list[dict]) -> dict | None:
     prospectuses = [r for r in rows if _is_424b(str(r.get("form") or ""))]
     if not prospectuses:
         return None
@@ -328,10 +340,7 @@ def _sorted_unique_chain(rows: list[dict]) -> list[dict]:
 
 
 def _select_ipo_chain_by_file_number(rows: list[dict]) -> list[dict]:
-    initials = [
-        r for r in rows
-        if _normalize_form(r) in _IPO_INITIAL_FORMS and _file_number(r)
-    ]
+    initials = [r for r in rows if _normalize_form(r) in _IPO_INITIAL_FORMS and _file_number(r)]
     if not initials:
         return []
 
@@ -343,20 +352,19 @@ def _select_ipo_chain_by_file_number(rows: list[dict]) -> list[dict]:
         if not same_initials:
             continue
         same_initials.sort(key=_filing_sort_key)
-        candidates.append((
-            _filing_sort_key(same_initials[0]),
-            file_no,
-        ))
+        candidates.append(
+            (
+                _filing_sort_key(same_initials[0]),
+                file_no,
+            )
+        )
     if not candidates:
         return []
 
     candidates.sort()
     selected_file_no = candidates[0][1]
     selected_rows = [r for r in rows if _file_number(r) == selected_file_no]
-    chain = [
-        r for r in selected_rows
-        if _normalize_form(r) in _IPO_REGISTRATION_FORMS
-    ]
+    chain = [r for r in selected_rows if _normalize_form(r) in _IPO_REGISTRATION_FORMS]
     final = _select_final_424b(selected_rows)
     if final:
         chain.append(final)
@@ -374,24 +382,23 @@ def _select_ipo_chain_by_window(rows: list[dict]) -> list[dict]:
     start_key = _filing_sort_key(first_initial)
 
     prospectuses_after_start = [
-        r for r in rows
-        if _is_424b(str(r.get("form") or "")) and _filing_sort_key(r) >= start_key
+        r for r in rows if _is_424b(str(r.get("form") or "")) and _filing_sort_key(r) >= start_key
     ]
     prospectuses_after_start.sort(key=_filing_sort_key)
     first_424b = prospectuses_after_start[0] if prospectuses_after_start else None
     end_key = _filing_sort_key(first_424b) if first_424b else None
 
     chain = [
-        r for r in rows
+        r
+        for r in rows
         if _normalize_form(r) in _IPO_REGISTRATION_FORMS
         and _filing_sort_key(r) >= start_key
         and (end_key is None or _filing_sort_key(r) <= end_key)
     ]
     if end_key is not None:
-        final = _select_final_424b([
-            r for r in prospectuses_after_start
-            if _filing_sort_key(r) <= end_key
-        ])
+        final = _select_final_424b(
+            [r for r in prospectuses_after_start if _filing_sort_key(r) <= end_key]
+        )
         if final:
             chain.append(final)
 
@@ -448,22 +455,24 @@ def download_ipo_documents(ticker: Ticker, output_root: Path) -> list[ReportFile
             )
             url_doc, source_format, n_bytes = _download_primary_as_pdf(client, cik, row, dest)
             title = row.get("primaryDocDescription") or f"{form} ({filing_date or 'unknown date'})"
-            out.append(ReportFile(
-                ticker=ticker,
-                kind="ipo_prospectus",
-                local_path=str(dest),
-                source_url=url_doc,
-                title=title,
-                file_size_bytes=n_bytes,
-                filing_date=filing_date,
-                report_date=row.get("reportDate") or None,
-                form=form,
-                source_id=_file_number(row) or None,
-                accession_number=accession or None,
-                is_amendment=_is_amendment_form(form),
-                sequence=sequence,
-                source_format=source_format,
-                output_format="pdf",
-            ))
+            out.append(
+                ReportFile(
+                    ticker=ticker,
+                    kind="ipo_prospectus",
+                    local_path=str(dest),
+                    source_url=url_doc,
+                    title=title,
+                    file_size_bytes=n_bytes,
+                    filing_date=filing_date,
+                    report_date=row.get("reportDate") or None,
+                    form=form,
+                    source_id=_file_number(row) or None,
+                    accession_number=accession or None,
+                    is_amendment=_is_amendment_form(form),
+                    sequence=sequence,
+                    source_format=source_format,
+                    output_format="pdf",
+                )
+            )
 
         return out

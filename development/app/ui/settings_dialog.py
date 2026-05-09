@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -14,11 +11,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.core.settings import Settings, save_settings
+from app.core.settings import Settings, invalidate_dart_client_cache, save_settings
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, settings: Settings, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, settings: Settings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.settings = settings
         self.setWindowTitle("设置")
@@ -59,9 +56,13 @@ class SettingsDialog(QDialog):
         layout.addWidget(buttons)
 
     def _save(self) -> None:
-        self.settings.dart.api_key = self.dart_key.text().strip()
+        old_dart_key = self.settings.dart.api_key
+        new_dart_key = self.dart_key.text().strip()
+        self.settings.dart.api_key = new_dart_key
         self.settings.concurrency.max_workers = self.workers.value()
         self.settings.ui.theme = self.theme.currentText()
         self.settings.sec.user_agent = self.sec_ua.text().strip()
         save_settings(self.settings)
+        if new_dart_key != old_dart_key:
+            invalidate_dart_client_cache()
         self.accept()

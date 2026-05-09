@@ -1,11 +1,11 @@
 """HK report and IPO document download via HKEXnews Title Search."""
+
 from __future__ import annotations
 
 import datetime as dt
 import html
 import re
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 from loguru import logger
@@ -15,11 +15,14 @@ from app.core.http import default_client, stream_to_file
 from app.core.models import Period, PeriodType, ReportFile, Ticker
 from app.core.output_paths import report_output_path
 from app.core.ratelimit import limiter
+
 from ._pdf_verify import verify_pdf_year_and_kind
 from .fiscal_year import fiscal_year_end_month
 
 try:
-    from app.core.output_paths import report_output_path_for_filing as _report_output_path_for_filing
+    from app.core.output_paths import (
+        report_output_path_for_filing as _report_output_path_for_filing,
+    )
 except ImportError:  # Main agent adds this public helper; keep HK importable meanwhile.
     _report_output_path_for_filing = None
 
@@ -43,9 +46,27 @@ _DOC_TYPE_BY_PERIOD = {
 
 _REPORT_KEYWORDS = {
     PeriodType.ANNUAL: ("annual report", "年報", "年度報告", "年报", "年度报告"),
-    PeriodType.Q1: ("first quarterly report", "first quarter report", "第一季度報告", "第一季度报告"),
-    PeriodType.Q2: ("interim report", "half-year report", "interim/half-year report", "中期報告", "中期报告", "半年報", "半年报"),
-    PeriodType.Q3: ("third quarterly report", "third quarter report", "第三季度報告", "第三季度报告"),
+    PeriodType.Q1: (
+        "first quarterly report",
+        "first quarter report",
+        "第一季度報告",
+        "第一季度报告",
+    ),
+    PeriodType.Q2: (
+        "interim report",
+        "half-year report",
+        "interim/half-year report",
+        "中期報告",
+        "中期报告",
+        "半年報",
+        "半年报",
+    ),
+    PeriodType.Q3: (
+        "third quarterly report",
+        "third quarter report",
+        "第三季度報告",
+        "第三季度报告",
+    ),
 }
 
 _REPORT_EXCLUDE_KEYWORDS = (
@@ -145,7 +166,7 @@ def _strip_mobile_heading(text: str) -> str:
     return re.sub(r"^(Release Time|Stock Code|Stock Short Name|Document):\s*", "", text).strip()
 
 
-def _parse_release_date(value: str) -> Optional[dt.date]:
+def _parse_release_date(value: str) -> dt.date | None:
     value = _strip_mobile_heading(value)
     for fmt in ("%d/%m/%Y %H:%M", "%d/%m/%Y"):
         try:
@@ -205,17 +226,19 @@ def _parse_results(html_text: str) -> list[dict]:
         headline = _node_text(doc_cell.css_first("div.headline"))
         url = href if href.startswith(("http://", "https://")) else urljoin(_PDF_HOST, href)
         title = _node_text(link)
-        rows.append({
-            "url": url,
-            "title": title,
-            "headline": headline,
-            "doc_type": _extract_doc_type(headline),
-            "date": date_txt,
-            "filing_date": _parse_release_date(date_txt),
-            "stock_codes": tuple(_STOCK_CODE_RE.findall(stock_text)),
-            "stock_names": name_text,
-            "source_id": _source_id_from_url(url),
-        })
+        rows.append(
+            {
+                "url": url,
+                "title": title,
+                "headline": headline,
+                "doc_type": _extract_doc_type(headline),
+                "date": date_txt,
+                "filing_date": _parse_release_date(date_txt),
+                "stock_codes": tuple(_STOCK_CODE_RE.findall(stock_text)),
+                "stock_names": name_text,
+                "source_id": _source_id_from_url(url),
+            }
+        )
     return rows
 
 
@@ -336,7 +359,7 @@ def _filing_window(period: Period, fye_month: int) -> tuple[dt.date, dt.date]:
     return start, end
 
 
-def _filing_in_expected_window(filing_date: Optional[dt.date], period: Period, ticker: Ticker) -> bool:
+def _filing_in_expected_window(filing_date: dt.date | None, period: Period, ticker: Ticker) -> bool:
     if filing_date is None:
         return False
     start, end = _filing_window(period, fiscal_year_end_month(ticker.code))
@@ -369,14 +392,15 @@ def _base_report_score(row: dict, ticker: Ticker, period: Period) -> int:
     return score
 
 
-def _select_main(rows: list[dict], ticker: Ticker, period: Period) -> Optional[dict]:
+def _select_main(rows: list[dict], ticker: Ticker, period: Period) -> dict | None:
     matching_rows = [row for row in rows if _row_matches_ticker(row, ticker)]
     if not matching_rows:
         return None
 
     year_str = str(period.year)
     candidates = [
-        row for row in matching_rows
+        row
+        for row in matching_rows
         if _is_report_candidate(row, period) and year_str in (row.get("title") or "")
     ]
     if not candidates:
@@ -399,13 +423,10 @@ def _select_main(rows: list[dict], ticker: Ticker, period: Period) -> Optional[d
         )[:5]
         verified_ids: set[int] = set()
         verify_kind = _period_verify_kind(period.type)
-        for score, row in top:
+        for _score, row in top:
             if verify_pdf_year_and_kind(row.get("url") or "", period.year, verify_kind):
                 verified_ids.add(id(row))
-        scored = [
-            (score + (10 if id(row) in verified_ids else 0), row)
-            for score, row in scored
-        ]
+        scored = [(score + (10 if id(row) in verified_ids else 0), row) for score, row in scored]
 
     scored.sort(
         key=lambda item: (
@@ -432,10 +453,10 @@ def _filing_output_path(
     *,
     sequence: int,
     label: str,
-    filing_date: Optional[dt.date],
+    filing_date: dt.date | None,
     is_amendment: bool,
     suffix: str,
-    source_id: Optional[str],
+    source_id: str | None,
 ) -> Path:
     filing_date_text = filing_date.isoformat() if filing_date else None
     path_label = _fallback_safe_filename(label, fallback="ipo_document")
@@ -485,7 +506,9 @@ def _is_formal_ipo_primary(row: dict) -> bool:
         return False
     if _contains_any(doc_type, _IPO_PRIMARY_DOC_TYPES):
         return True
-    return "listing documents" in headline.lower() and _contains_any(full, _IPO_PRIMARY_TITLE_KEYWORDS)
+    return "listing documents" in headline.lower() and _contains_any(
+        full, _IPO_PRIMARY_TITLE_KEYWORDS
+    )
 
 
 def _is_formal_ipo_supplement(row: dict) -> bool:
@@ -537,7 +560,9 @@ def _sort_filing_rows(rows: list[dict]) -> list[dict]:
     )
 
 
-def _select_ipo_rows(formal_rows: list[dict], fallback_rows: list[dict], ticker: Ticker) -> list[dict]:
+def _select_ipo_rows(
+    formal_rows: list[dict], fallback_rows: list[dict], ticker: Ticker
+) -> list[dict]:
     formal_rows = [row for row in formal_rows if _row_matches_ticker(row, ticker)]
     primary_rows = [row for row in formal_rows if _is_formal_ipo_primary(row)]
     supplement_rows = [row for row in formal_rows if _is_formal_ipo_supplement(row)]
@@ -546,12 +571,14 @@ def _select_ipo_rows(formal_rows: list[dict], fallback_rows: list[dict], ticker:
     if primary_rows:
         primary_dates = [row["filing_date"] for row in primary_rows if row.get("filing_date")]
         selected = primary_rows + [
-            row for row in supplement_rows
+            row
+            for row in supplement_rows
             if not primary_dates or _near_primary_date(row, primary_dates)
         ]
     else:
         selected = [
-            row for row in supplement_rows
+            row
+            for row in supplement_rows
             if _contains_any(row.get("title") or "", _IPO_PRIMARY_TITLE_KEYWORDS)
         ]
 
@@ -560,8 +587,7 @@ def _select_ipo_rows(formal_rows: list[dict], fallback_rows: list[dict], ticker:
         return selected
 
     fallback = [
-        row for row in fallback_rows
-        if _row_matches_ticker(row, ticker) and _is_ipo_fallback(row)
+        row for row in fallback_rows if _row_matches_ticker(row, ticker) and _is_ipo_fallback(row)
     ]
     return _sort_filing_rows(_dedupe_rows(fallback))
 
@@ -589,7 +615,9 @@ def download(ticker: Ticker, period: Period, output_root: Path) -> list[ReportFi
 
     t1code, t2code, kind = _DOC_TYPE_BY_PERIOD[period.type]
     from_date = f"{period.year}0101"
-    to_date = f"{period.year + 1}0630" if period.type is PeriodType.ANNUAL else f"{period.year + 1}0331"
+    to_date = (
+        f"{period.year + 1}0630" if period.type is PeriodType.ANNUAL else f"{period.year + 1}0331"
+    )
 
     with default_client(source="hkexnews") as client:
         try:
@@ -616,24 +644,26 @@ def download(ticker: Ticker, period: Period, output_root: Path) -> list[ReportFi
         n_bytes = stream_to_file(client, url, dest, source="hkexnews", rate=_HKEX_RATE)
         file_format = _format_from_suffix(suffix)
 
-        return [ReportFile(
-            ticker=ticker,
-            period=period,
-            kind=kind,
-            local_path=str(dest),
-            source_url=url,
-            title=chosen.get("title"),
-            file_size_bytes=n_bytes,
-            form=chosen.get("doc_type"),
-            filing_date=chosen.get("filing_date"),
-            report_date=None,
-            source_id=chosen.get("source_id"),
-            accession_number=None,
-            is_amendment=False,
-            sequence=1,
-            source_format=file_format,
-            output_format=file_format,
-        )]
+        return [
+            ReportFile(
+                ticker=ticker,
+                period=period,
+                kind=kind,
+                local_path=str(dest),
+                source_url=url,
+                title=chosen.get("title"),
+                file_size_bytes=n_bytes,
+                form=chosen.get("doc_type"),
+                filing_date=chosen.get("filing_date"),
+                report_date=None,
+                source_id=chosen.get("source_id"),
+                accession_number=None,
+                is_amendment=False,
+                sequence=1,
+                source_format=file_format,
+                output_format=file_format,
+            )
+        ]
 
 
 def download_ipo_documents(ticker: Ticker, output_root: Path) -> list[ReportFile]:
@@ -687,23 +717,25 @@ def download_ipo_documents(ticker: Ticker, output_root: Path) -> list[ReportFile
             n_bytes = stream_to_file(client, url, dest, source="hkexnews", rate=_HKEX_RATE)
             file_format = _format_from_suffix(suffix)
 
-            out.append(_make_report_file(
-                ticker=ticker,
-                period=None,
-                kind="ipo_document",
-                local_path=str(dest),
-                source_url=url,
-                title=label,
-                file_size_bytes=n_bytes,
-                form=_ipo_form(row),
-                filing_date=filing_date,
-                report_date=None,
-                source_id=row.get("source_id"),
-                accession_number=None,
-                is_amendment=is_amendment,
-                sequence=sequence,
-                source_format=file_format,
-                output_format=file_format,
-            ))
+            out.append(
+                _make_report_file(
+                    ticker=ticker,
+                    period=None,
+                    kind="ipo_document",
+                    local_path=str(dest),
+                    source_url=url,
+                    title=label,
+                    file_size_bytes=n_bytes,
+                    form=_ipo_form(row),
+                    filing_date=filing_date,
+                    report_date=None,
+                    source_id=row.get("source_id"),
+                    accession_number=None,
+                    is_amendment=is_amendment,
+                    sequence=sequence,
+                    source_format=file_format,
+                    output_format=file_format,
+                )
+            )
 
         return out

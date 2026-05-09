@@ -7,7 +7,6 @@ from pypdf import PdfReader
 
 from app.core.http import default_client
 
-
 _KEYWORDS_BY_KIND = {
     "annual": ("年報", "年度報告", "年报", "年度报告", "Annual Report"),
     "interim": ("中期", "半年", "Interim", "Half-Year", "Half Year"),

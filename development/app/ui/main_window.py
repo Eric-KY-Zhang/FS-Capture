@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
 from PySide6.QtGui import QCursor, QMouseEvent
 from PySide6.QtWidgets import (
-    QApplication,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -25,7 +22,7 @@ class _TitleBar(QWidget):
     maximize_requested = Signal()
     close_requested = Signal()
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("TitleBar")
         self.setFixedHeight(48)
@@ -38,7 +35,7 @@ class _TitleBar(QWidget):
         self.logo = QLabel("FS Capture")
         self.logo.setObjectName("TitleBarLogo")
 
-        self.subtitle = QLabel("· 上市公司年报 / 审计报告 / 财务数据 一键抓取")
+        self.subtitle = QLabel("· 上市公司披露报告一键下载")
         self.subtitle.setObjectName("TitleBarSubtitle")
 
         layout.addWidget(self.logo)
@@ -124,10 +121,10 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(outer)
 
         # Drag / resize state
-        self._drag_offset: Optional[QPoint] = None
-        self._resize_edge: Optional[str] = None
-        self._resize_start_geom: Optional[QRect] = None
-        self._resize_start_pos: Optional[QPoint] = None
+        self._drag_offset: QPoint | None = None
+        self._resize_edge: str | None = None
+        self._resize_start_geom: QRect | None = None
+        self._resize_start_pos: QPoint | None = None
 
     # ---- public API ------------------------------------------------------
 
@@ -182,7 +179,11 @@ class MainWindow(QMainWindow):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:  # type: ignore[override]
-        if self._resize_edge and self._resize_start_geom is not None and self._resize_start_pos is not None:
+        if (
+            self._resize_edge
+            and self._resize_start_geom is not None
+            and self._resize_start_pos is not None
+        ):
             self._perform_resize(event.globalPosition().toPoint())
             event.accept()
             return
@@ -215,7 +216,7 @@ class MainWindow(QMainWindow):
 
     # ---- helpers ---------------------------------------------------------
 
-    def _edge_at(self, pos: QPoint) -> Optional[str]:
+    def _edge_at(self, pos: QPoint) -> str | None:
         m = self.EDGE_MARGIN
         x, y = pos.x(), pos.y()
         w, h = self.width(), self.height()
@@ -257,7 +258,11 @@ class MainWindow(QMainWindow):
             self.unsetCursor()
 
     def _perform_resize(self, global_pos: QPoint) -> None:
-        if self._resize_edge is None or self._resize_start_geom is None or self._resize_start_pos is None:
+        if (
+            self._resize_edge is None
+            or self._resize_start_geom is None
+            or self._resize_start_pos is None
+        ):
             return
         delta = global_pos - self._resize_start_pos
         g = QRect(self._resize_start_geom)

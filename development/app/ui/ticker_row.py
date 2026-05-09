@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal, Slot
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -16,7 +14,7 @@ from app.core.models import Exchange, Ticker
 
 
 class _ResolveSignals(QObject):
-    finished = Signal(object, object, str)   # ticker (or None), code, error_msg
+    finished = Signal(object, object, str)  # ticker (or None), code, error_msg
 
 
 class _ResolveRunnable(QRunnable):
@@ -30,6 +28,7 @@ class _ResolveRunnable(QRunnable):
     def run(self) -> None:
         try:
             from plugins import get_plugin
+
             plugin = get_plugin(self.exchange)
             ticker = plugin.resolve_name(self.code)
             self.signals.finished.emit(ticker, self.code, "")
@@ -42,13 +41,13 @@ class TickerRow(QWidget):
     and the resolved company name (or an error pill).
     """
 
-    removed = Signal(QWidget)            # emitted when user clicks ×
-    resolved = Signal(QWidget)           # emitted when name resolved successfully (or cleared)
+    removed = Signal(QWidget)  # emitted when user clicks ×
+    resolved = Signal(QWidget)  # emitted when name resolved successfully (or cleared)
 
-    def __init__(self, exchange: Exchange, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, exchange: Exchange, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.exchange = exchange
-        self._ticker: Optional[Ticker] = None
+        self._ticker: Ticker | None = None
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 4, 0, 4)
@@ -91,7 +90,7 @@ class TickerRow(QWidget):
     # ---- public API ---------------------------------------------------------
 
     @property
-    def ticker(self) -> Optional[Ticker]:
+    def ticker(self) -> Ticker | None:
         return self._ticker
 
     def is_resolved(self) -> bool:
@@ -112,7 +111,7 @@ class TickerRow(QWidget):
         signals.finished.connect(self._on_resolved)
         QThreadPool.globalInstance().start(_ResolveRunnable(self.exchange, code, signals))
 
-    def _on_resolved(self, ticker: Optional[Ticker], code: str, error: str) -> None:
+    def _on_resolved(self, ticker: Ticker | None, code: str, error: str) -> None:
         self.confirm_btn.setEnabled(True)
         self.code_input.setEnabled(True)
         if ticker is not None:

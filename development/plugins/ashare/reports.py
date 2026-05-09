@@ -9,13 +9,13 @@ For A-share the auditor's report is bundled inside the annual report PDF (no
 separate filing is published), so we surface a single 'annual_report' file for
 annual periods.
 """
+
 from __future__ import annotations
 
 import datetime as dt
 import html
 import re
 from pathlib import Path
-from typing import Optional
 
 from loguru import logger
 
@@ -24,7 +24,9 @@ from app.core.models import Period, PeriodType, ReportFile, Ticker
 from app.core.output_paths import report_output_path
 
 try:
-    from app.core.output_paths import report_output_path_for_filing as _report_output_path_for_filing
+    from app.core.output_paths import (
+        report_output_path_for_filing as _report_output_path_for_filing,
+    )
 except ImportError:  # Main agent adds this public helper; keep this module importable meanwhile.
     _report_output_path_for_filing = None
 
@@ -38,7 +40,7 @@ _PAGE_SIZE = 30
 _CATEGORY = {
     PeriodType.ANNUAL: "category_ndbg_szsh",
     PeriodType.Q1: "category_yjdbg_szsh",
-    PeriodType.Q2: "category_bndbg_szsh",   # 半年报
+    PeriodType.Q2: "category_bndbg_szsh",  # 半年报
     PeriodType.Q3: "category_sjdbg_szsh",
 }
 
@@ -151,7 +153,7 @@ def _announcement_time(announcement: dict) -> int:
         return 0
 
 
-def _announcement_date(announcement: dict) -> Optional[dt.date]:
+def _announcement_date(announcement: dict) -> dt.date | None:
     raw = _announcement_time(announcement)
     if not raw:
         return None
@@ -171,9 +173,7 @@ def _pdf_url(adjunct_url: str) -> str:
 def _cninfo_headers(ticker: Ticker) -> dict:
     return {
         "Origin": "http://www.cninfo.com.cn",
-        "Referer": (
-            f"http://www.cninfo.com.cn/new/disclosure/stock?stockCode={ticker.code}"
-        ),
+        "Referer": (f"http://www.cninfo.com.cn/new/disclosure/stock?stockCode={ticker.code}"),
         "Accept": "application/json, text/plain, */*",
         "X-Requested-With": "XMLHttpRequest",
         "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
@@ -196,7 +196,7 @@ def _base_query_data(ticker: Ticker) -> dict:
     }
 
 
-def _payload_total(payload: dict) -> Optional[int]:
+def _payload_total(payload: dict) -> int | None:
     for key in ("totalAnnouncement", "totalRecordNum", "totalRecords", "total"):
         value = payload.get(key)
         if value is None:
@@ -224,16 +224,21 @@ def _query_cninfo_announcements(
 
     while True:
         data = _base_query_data(ticker)
-        data.update({
-            "pageNum": page_num,
-            "category": category,
-            "seDate": se_date,
-            "searchkey": searchkey,
-        })
+        data.update(
+            {
+                "pageNum": page_num,
+                "category": category,
+                "seDate": se_date,
+                "searchkey": searchkey,
+            }
+        )
         payload = post_json(
-            client, _HISANNOUNCEMENT_URL,
-            source="cninfo", rate=_CNINFO_RATE,
-            data=data, headers=headers,
+            client,
+            _HISANNOUNCEMENT_URL,
+            source="cninfo",
+            rate=_CNINFO_RATE,
+            data=data,
+            headers=headers,
         )
         page_rows = payload.get("announcements") or []
         if not page_rows:
@@ -313,7 +318,7 @@ def _ipo_output_path(
     *,
     sequence: int,
     label: str,
-    filing_date: Optional[dt.date],
+    filing_date: dt.date | None,
     is_amendment: bool,
 ) -> Path:
     if _report_output_path_for_filing is not None:
@@ -348,7 +353,7 @@ def _make_report_file(**kwargs) -> ReportFile:
         raise
 
 
-def _select_main_filing(announcements: list[dict], year: int, period: PeriodType) -> Optional[dict]:
+def _select_main_filing(announcements: list[dict], year: int, period: PeriodType) -> dict | None:
     """Pick the canonical filing for the period from candidate announcements."""
     if not announcements:
         return None
@@ -362,7 +367,8 @@ def _select_main_filing(announcements: list[dict], year: int, period: PeriodType
     }[period]
 
     candidates = [
-        a for a in announcements
+        a
+        for a in announcements
         if keyword in (a.get("announcementTitle") or "")
         and year_str in (a.get("announcementTitle") or "")
         and not _is_amendment(a.get("announcementTitle") or "")
@@ -370,7 +376,8 @@ def _select_main_filing(announcements: list[dict], year: int, period: PeriodType
     if not candidates:
         # Fall back to anything mentioning the year
         candidates = [
-            a for a in announcements
+            a
+            for a in announcements
             if year_str in (a.get("announcementTitle") or "")
             and not _is_amendment(a.get("announcementTitle") or "")
         ]
@@ -382,9 +389,7 @@ def _select_main_filing(announcements: list[dict], year: int, period: PeriodType
     return candidates[0]
 
 
-def _query_announcements(
-    client, ticker: Ticker, period: Period
-) -> list[dict]:
+def _query_announcements(client, ticker: Ticker, period: Period) -> list[dict]:
     se_start, se_end = _announcement_window(period)
     return _query_cninfo_announcements(
         client,
@@ -428,9 +433,7 @@ def download(ticker: Ticker, period: Period, output_root: Path) -> list[ReportFi
         announcements = _query_announcements(client, ticker, period)
         main = _select_main_filing(announcements, period.year, period.type)
         if not main:
-            logger.warning(
-                f"[{ticker.code}] no {period.label()} filing found in cninfo"
-            )
+            logger.warning(f"[{ticker.code}] no {period.label()} filing found in cninfo")
             return []
 
         adjunct_url = main.get("adjunctUrl")
@@ -441,21 +444,26 @@ def download(ticker: Ticker, period: Period, output_root: Path) -> list[ReportFi
         kind = _KIND[period.type]
         dest = report_output_path(output_root, ticker, period, kind, ".pdf")
         n_bytes = stream_to_file(
-            client, pdf_url, dest,
-            source="cninfo", rate=_CNINFO_RATE,
+            client,
+            pdf_url,
+            dest,
+            source="cninfo",
+            rate=_CNINFO_RATE,
         )
 
-        return [ReportFile(
-            ticker=ticker,
-            period=period,
-            kind=kind,
-            local_path=str(dest),
-            source_url=pdf_url,
-            title=main.get("announcementTitle"),
-            file_size_bytes=n_bytes,
-            source_format="pdf",
-            output_format="pdf",
-        )]
+        return [
+            ReportFile(
+                ticker=ticker,
+                period=period,
+                kind=kind,
+                local_path=str(dest),
+                source_url=pdf_url,
+                title=main.get("announcementTitle"),
+                file_size_bytes=n_bytes,
+                source_format="pdf",
+                output_format="pdf",
+            )
+        ]
 
 
 def download_ipo_documents(ticker: Ticker, output_root: Path) -> list[ReportFile]:
@@ -487,28 +495,33 @@ def download_ipo_documents(ticker: Ticker, output_root: Path) -> list[ReportFile
                 is_amendment=is_amendment,
             )
             n_bytes = stream_to_file(
-                client, pdf_url, dest,
-                source="cninfo", rate=_CNINFO_RATE,
+                client,
+                pdf_url,
+                dest,
+                source="cninfo",
+                rate=_CNINFO_RATE,
             )
 
             source_id = _announcement_source_id(announcement) or adjunct_url
-            out.append(_make_report_file(
-                ticker=ticker,
-                period=None,
-                kind="ipo_document",
-                local_path=str(dest),
-                source_url=pdf_url,
-                title=title,
-                file_size_bytes=n_bytes,
-                form="IPO",
-                filing_date=filing_date,
-                report_date=None,
-                source_id=source_id,
-                accession_number=None,
-                is_amendment=is_amendment,
-                sequence=sequence,
-                source_format="pdf",
-                output_format="pdf",
-            ))
+            out.append(
+                _make_report_file(
+                    ticker=ticker,
+                    period=None,
+                    kind="ipo_document",
+                    local_path=str(dest),
+                    source_url=pdf_url,
+                    title=title,
+                    file_size_bytes=n_bytes,
+                    form="IPO",
+                    filing_date=filing_date,
+                    report_date=None,
+                    source_id=source_id,
+                    accession_number=None,
+                    is_amendment=is_amendment,
+                    sequence=sequence,
+                    source_format="pdf",
+                    output_format="pdf",
+                )
+            )
 
         return out

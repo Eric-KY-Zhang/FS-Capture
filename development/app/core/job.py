@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 from .models import Company, Period, ReportFile, Ticker
 
@@ -25,9 +24,9 @@ class TaskResult:
     ticker: Ticker
     period: Period
     status: TaskStatus = TaskStatus.PENDING
-    company: Optional[Company] = None
+    company: Company | None = None
     reports: list[ReportFile] = field(default_factory=list)
-    error: Optional[str] = None
+    error: str | None = None
 
     def label(self) -> str:
         return self.period.label()

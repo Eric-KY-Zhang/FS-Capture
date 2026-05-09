@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
@@ -15,13 +13,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.core.job import Job, TaskResult, TaskStatus
-from app.core.models import Exchange
+from app.core.job import TaskResult, TaskStatus
 from app.ui.styles.palette import exchange_accent
 
 
 class _TaskRow(QFrame):
-    def __init__(self, task: TaskResult, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, task: TaskResult, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.task = task
         self.setObjectName("ProgressItemRow")
@@ -80,7 +77,7 @@ class ProgressDock(QFrame):
 
     cancel_requested = Signal()
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("ProgressDock")
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)

@@ -1,11 +1,11 @@
 """KR filings download via DART OpenAPI and disclosure pages."""
+
 from __future__ import annotations
 
 import datetime as dt
 import re
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 from loguru import logger
@@ -13,8 +13,8 @@ from loguru import logger
 from app.core.http import default_client
 from app.core.models import Period, PeriodType, ReportFile, Ticker
 from app.core.output_paths import report_output_path, report_output_path_for_filing
-from .name_resolver import _dart
 
+from .name_resolver import _dart
 
 _DART_RATE = 5.0
 _DART_MAIN_URL = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo={rcept_no}"
@@ -163,7 +163,7 @@ def _list_ipo_filings(ticker: Ticker) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
-def _parse_date(value: str) -> Optional[dt.date]:
+def _parse_date(value: str) -> dt.date | None:
     try:
         text = str(value or "").strip()
         if len(text) == 8 and text.isdigit():
@@ -177,18 +177,18 @@ def _date_text(row: dict) -> str:
     return str(row.get("rcept_dt") or row.get("rcept_de") or row.get("date") or "")
 
 
-def _date_iso(row: dict) -> Optional[str]:
+def _date_iso(row: dict) -> str | None:
     text = _date_text(row)
     parsed = _parse_date(text)
     return parsed.isoformat() if parsed else (text or None)
 
 
-def _date_month(row: dict) -> Optional[int]:
+def _date_month(row: dict) -> int | None:
     match = re.match(r"^\d{4}(\d{2})\d{2}$", _date_text(row))
     return int(match.group(1)) if match else None
 
 
-def _select_filing(df: pd.DataFrame, period: Period) -> Optional[dict]:
+def _select_filing(df: pd.DataFrame, period: Period) -> dict | None:
     if df is None or df.empty:
         return None
     title_col = "report_nm" if "report_nm" in df.columns else "title"
@@ -218,7 +218,7 @@ def _select_filing(df: pd.DataFrame, period: Period) -> Optional[dict]:
     return rows[-1] if period.type in {PeriodType.ANNUAL, PeriodType.Q3} else rows[0]
 
 
-def _select_audit_filing(df: pd.DataFrame, period: Period) -> Optional[dict]:
+def _select_audit_filing(df: pd.DataFrame, period: Period) -> dict | None:
     if df is None or df.empty:
         return None
     title_col = "report_nm" if "report_nm" in df.columns else "title"
@@ -236,7 +236,7 @@ def _select_audit_filing(df: pd.DataFrame, period: Period) -> Optional[dict]:
     return rows[-1]
 
 
-def _extract_dcm_no(html: str, rcept_no: str) -> Optional[str]:
+def _extract_dcm_no(html: str, rcept_no: str) -> str | None:
     for match in _DART_PDF_RE.finditer(html or ""):
         if match.group("rcept") == rcept_no:
             return match.group("dcm")
@@ -252,7 +252,7 @@ def _is_pdf_file(path: Path) -> bool:
         return False
 
 
-def _download_pdf_url(client, url: str, dest: Path) -> Optional[int]:
+def _download_pdf_url(client, url: str, dest: Path) -> int | None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp_dest = dest.with_name(f"{dest.name}.part")
     tmp_dest.unlink(missing_ok=True)
@@ -274,7 +274,7 @@ def _download_pdf_url(client, url: str, dest: Path) -> Optional[int]:
         return None
 
 
-def _render_url_to_pdf(url: str, dest: Path) -> Optional[int]:
+def _render_url_to_pdf(url: str, dest: Path) -> int | None:
     from app.core.pdf_renderer import render_url_to_pdf
 
     try:
@@ -294,7 +294,7 @@ def _render_url_to_pdf(url: str, dest: Path) -> Optional[int]:
 def _download_rcept_as_pdf(rcept_no: str, dest: Path) -> tuple[str, str, int] | None:
     main_url = _DART_MAIN_URL.format(rcept_no=rcept_no)
     with _dart_client() as client:
-        dcm_no: Optional[str] = None
+        dcm_no: str | None = None
         try:
             from app.core.ratelimit import limiter
 
@@ -322,7 +322,9 @@ def _download_rcept_as_pdf(rcept_no: str, dest: Path) -> tuple[str, str, int] | 
     return None
 
 
-def _report_file(ticker: Ticker, period: Period, row: dict, output_root: Path, kind: str) -> Optional[ReportFile]:
+def _report_file(
+    ticker: Ticker, period: Period, row: dict, output_root: Path, kind: str
+) -> ReportFile | None:
     rcept = str(row.get("rcept_no") or row.get("RCEPT_NO") or "")
     if not rcept:
         return None
@@ -433,9 +435,12 @@ def _select_ipo_rows(df: pd.DataFrame) -> list[dict]:
             and parsed >= start_date
             and _is_ipo_boundary(row)
         ]
-        boundary_date = min(result_dates) if result_dates else start_date + dt.timedelta(days=_IPO_WINDOW_DAYS)
+        boundary_date = (
+            min(result_dates) if result_dates else start_date + dt.timedelta(days=_IPO_WINDOW_DAYS)
+        )
         selected = [
-            row for row in selected
+            row
+            for row in selected
             if (parsed := _parse_date(_date_text(row))) is not None
             and start_date <= parsed <= boundary_date
         ]
@@ -484,22 +489,24 @@ def download_ipo_documents(ticker: Ticker, output_root: Path) -> list[ReportFile
         if downloaded is None:
             continue
         source_url, source_format, n_bytes = downloaded
-        out.append(ReportFile(
-            ticker=ticker,
-            period=None,
-            kind="ipo_prospectus",
-            local_path=str(dest),
-            source_url=source_url,
-            title=_title(row),
-            file_size_bytes=n_bytes,
-            filing_date=filing_date,
-            form="DART-C001",
-            source_id=rcept,
-            accession_number=rcept,
-            is_amendment=is_amendment,
-            sequence=sequence,
-            source_format=source_format,
-            output_format="pdf",
-        ))
+        out.append(
+            ReportFile(
+                ticker=ticker,
+                period=None,
+                kind="ipo_prospectus",
+                local_path=str(dest),
+                source_url=source_url,
+                title=_title(row),
+                file_size_bytes=n_bytes,
+                filing_date=filing_date,
+                form="DART-C001",
+                source_id=rcept,
+                accession_number=rcept,
+                is_amendment=is_amendment,
+                sequence=sequence,
+                source_format=source_format,
+                output_format="pdf",
+            )
+        )
 
     return out

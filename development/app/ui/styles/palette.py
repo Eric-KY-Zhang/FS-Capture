@@ -7,10 +7,10 @@ from app.core.models import Exchange
 
 @dataclass(frozen=True)
 class Palette:
-    bg: str            # window background
-    surface: str       # card background
-    surface_alt: str   # alt card / hover
-    border: str        # subtle separators
+    bg: str  # window background
+    surface: str  # card background
+    surface_alt: str  # alt card / hover
+    border: str  # subtle separators
     border_strong: str
     text: str
     text_muted: str
@@ -25,7 +25,7 @@ class Palette:
     warning: str
     danger: str
 
-    shadow: str        # rgba string used in box shadow effects
+    shadow: str  # rgba string used in box shadow effects
 
 
 light_palette = Palette(
@@ -70,10 +70,10 @@ dark_palette = Palette(
 
 # Per-exchange accent colors. Chinese convention: red = up = A-share home market.
 _EXCHANGE_ACCENT = {
-    Exchange.A_SHARE: "#E11D48",   # rose-600 — A股
-    Exchange.HK: "#D97706",        # amber-600 — 港股
-    Exchange.US: "#2563EB",        # blue-600 — 美股
-    Exchange.KR: "#7C3AED",        # violet-600 — 韩股
+    Exchange.A_SHARE: "#E11D48",  # rose-600 — A股
+    Exchange.HK: "#D97706",  # amber-600 — 港股
+    Exchange.US: "#2563EB",  # blue-600 — 美股
+    Exchange.KR: "#7C3AED",  # violet-600 — 韩股
 }
 
 

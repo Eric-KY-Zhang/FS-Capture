@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
@@ -23,7 +21,7 @@ class ExchangePanel(QFrame):
 
     rows_changed = Signal()
 
-    def __init__(self, exchange: Exchange, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, exchange: Exchange, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.exchange = exchange
         self.setObjectName("Card")

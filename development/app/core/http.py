@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ssl
-import time
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -13,7 +12,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from .ratelimit import limiter
 from .settings import load_settings
-
 
 _DEFAULT_HEADERS = {
     "User-Agent": (

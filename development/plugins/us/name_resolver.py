@@ -1,14 +1,12 @@
 """US ticker resolution via SEC EDGAR company_tickers.json (cached daily)."""
-from __future__ import annotations
 
-from typing import Optional
+from __future__ import annotations
 
 from loguru import logger
 
 from app.core.cache import get_cache
 from app.core.http import default_client, get_json
 from app.core.models import Company, Exchange, Ticker
-
 
 _TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 _CACHE_KEY = "us:ticker_map:v1"
@@ -58,8 +56,7 @@ def resolve(code: str) -> Ticker:
 
 def fetch_company(ticker: Ticker) -> Company:
     cik = ticker.external_id or ""
-    listing_date: Optional[str] = None
-    industry: Optional[str] = None
+    industry: str | None = None
     extra: dict = {}
 
     if cik:
@@ -68,7 +65,7 @@ def fetch_company(ticker: Ticker) -> Company:
             try:
                 payload = get_json(client, url, source="sec", rate=8.0)
                 industry = payload.get("sicDescription")
-                listing_date = payload.get("ein")  # placeholder; SEC doesn't expose listing date directly
+                # SEC submissions doesn't expose listing date directly; left as None.
                 extra = {
                     "exchange": payload.get("exchanges", []),
                     "sic": payload.get("sic"),

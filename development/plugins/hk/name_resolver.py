@@ -1,106 +1,127 @@
-"""HK ticker resolution.
+"""HK ticker resolution via HKEXnews.
 
-Primary: per-code lookup via Eastmoney `stock/get` endpoint (lightweight, reliable).
-Fallback: akshare `stock_hk_spot_em()` bulk list (only if user wants name preview
-without exact code).
+HKEX Title Search does not accept the five-digit stock code as ``stockId``.
+It requires an internal numeric ``stockId`` returned by the HKEXnews prefix
+JSONP endpoint.  Keep the user-facing ticker code as five digits and store the
+real HKEX ``stockId`` in ``ticker.external_id``.
 """
+
 from __future__ import annotations
 
-from typing import Optional
+import json
+import re
 
 from loguru import logger
 
 from app.core.cache import get_cache
-from app.core.http import default_client, get_json
+from app.core.http import default_client
 from app.core.models import Company, Exchange, Ticker
+from app.core.ratelimit import limiter
 
-
-_CACHE_KEY = "hk:code_name_map:v1"
+_PREFIX_URL = "https://www1.hkexnews.hk/search/prefix.do"
+_CACHE_KEY_PREFIX = "hk:hkex_prefix:v2:"
 _TTL = 24 * 3600
+_JSONP_RE = re.compile(r"^[^(]*\((.*)\)\s*;?\s*$", re.DOTALL)
 
 
 def _normalize_code(code: str) -> str:
     c = code.strip().upper()
     if c.endswith(".HK"):
         c = c[:-3]
-    c = c.lstrip("HK")
-    c = c.lstrip("0") or "0"
+    if c.startswith("HK"):
+        c = c[2:]
+    c = re.sub(r"\D", "", c)
+    if not c:
+        raise ValueError(f"Invalid HK stock code: {code}")
     return c.zfill(5)
 
 
-def _eastmoney_single(code: str) -> Optional[str]:
-    """Direct lookup via Eastmoney stock/get. Returns name or None.
-    secid format: 116.{code} for HK.
-    """
-    url = "https://push2delay.eastmoney.com/api/qt/stock/get"
+def _parse_jsonp(text: str) -> dict:
+    match = _JSONP_RE.match(text.strip())
+    if not match:
+        raise ValueError("HKEX prefix response is not JSONP")
+    return json.loads(match.group(1))
+
+
+def _cached_result(norm: str) -> dict | None:
+    cached = get_cache().get(f"{_CACHE_KEY_PREFIX}{norm}")
+    return cached if isinstance(cached, dict) else None
+
+
+def _store_cache(norm: str, value: dict) -> None:
+    get_cache().set(f"{_CACHE_KEY_PREFIX}{norm}", value, expire=_TTL)
+
+
+def _fetch_hkex_prefix(norm: str) -> dict | None:
     params = {
-        "secid": f"116.{code}",
-        "fields": "f57,f58",
-        "_": "0",
+        "callback": "callback",
+        "lang": "EN",
+        "type": "A",
+        "name": norm,
+        "market": "SEHK",
     }
     headers = {
-        "Referer": "https://quote.eastmoney.com/",
-        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en",
+        "Accept": "application/javascript,text/javascript,*/*;q=0.1",
     }
+
     try:
-        with default_client(source="eastmoney") as client:
-            payload = get_json(
-                client, url, source="eastmoney", rate=4.0,
-                params=params, headers=headers,
-            )
-        data = payload.get("data") or {}
-        name = data.get("f58")
-        return str(name).strip() if name else None
+        with default_client(source="hkexnews") as client:
+            limiter("hkexnews", 3.0).acquire_blocking()
+            response = client.get(_PREFIX_URL, params=params, headers=headers)
+            response.raise_for_status()
+            payload = _parse_jsonp(response.text)
     except Exception as exc:
-        logger.warning(f"Eastmoney HK single-stock lookup failed for {code}: {exc}")
+        logger.warning(f"HKEX prefix lookup failed for {norm}: {exc}")
         return None
 
-
-def _financial_report_name(code: str) -> Optional[str]:
-    try:
-        import akshare as ak
-        df = ak.stock_financial_hk_report_em(stock=code, symbol="资产负债表", indicator="年度")
-        if not df.empty and "SECURITY_NAME_ABBR" in df.columns:
-            name = df["SECURITY_NAME_ABBR"].dropna().astype(str).iloc[0]
-            return name.strip() if name else None
-    except Exception as exc:
-        logger.warning(f"akshare HK financial-name lookup failed for {code}: {exc}")
+    for item in payload.get("stockInfo") or []:
+        code = str(item.get("code") or "").strip().zfill(5)
+        if code != norm:
+            continue
+        stock_id = item.get("stockId")
+        if stock_id is None or str(stock_id).strip() == "":
+            continue
+        return {
+            "code": code,
+            "name": str(item.get("name") or code).strip() or code,
+            "stockId": str(stock_id).strip(),
+        }
     return None
 
 
 def resolve(code: str) -> Ticker:
     norm = _normalize_code(code)
+    result = _cached_result(norm)
+    if not result:
+        result = _fetch_hkex_prefix(norm)
+        if result:
+            _store_cache(norm, result)
 
-    # Try cache first (the bulk map populated by previous successful akshare runs).
-    cache = get_cache()
-    bulk: dict[str, str] = cache.get(_CACHE_KEY) or {}
-    name = bulk.get(norm)
+    if not result:
+        raise ValueError(f"Unable to resolve HKEX stockId for HK stock code {norm}")
 
-    if not name:
-        name = _eastmoney_single(norm)
-
-    if not name:
-        name = _financial_report_name(norm)
-
-    if not name:
-        logger.warning(f"未能识别港股 {code} 名称，将继续使用代码作为名称")
-        name = norm
-
-    return Ticker(exchange=Exchange.HK, code=norm, name=name, external_id=norm)
+    return Ticker(
+        exchange=Exchange.HK,
+        code=norm,
+        name=str(result.get("name") or norm),
+        external_id=str(result["stockId"]),
+    )
 
 
 def fetch_company(ticker: Ticker) -> Company:
-    industry: Optional[str] = None
+    industry: str | None = None
     extra: dict = {}
     try:
         import akshare as ak
+
         df = ak.stock_hk_company_profile_em(symbol=ticker.code)
         if not df.empty:
             if {"item", "value"}.issubset(df.columns):
-                d = dict(zip(df["item"].astype(str), df["value"].astype(str)))
+                d = dict(zip(df["item"].astype(str), df["value"].astype(str), strict=False))
             else:
                 d = {str(k): str(v) for k, v in df.iloc[0].dropna().items()}
-            industry = d.get("行业") or d.get("所属行业")
+            industry = d.get("industry") or d.get("Industry") or d.get("所属行业")
             extra = d
     except Exception as exc:
         logger.warning(f"akshare HK company profile failed for {ticker.code}: {exc}")

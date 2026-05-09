@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from loguru import logger
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -32,7 +30,7 @@ from app.ui.settings_dialog import SettingsDialog
 class MainView(QWidget):
     """The main content area inside the window. Composites all sections."""
 
-    def __init__(self, settings: Settings, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, settings: Settings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.settings = settings
         self.orchestrator = Orchestrator(settings, parent=self)
@@ -158,7 +156,8 @@ class MainView(QWidget):
             return
         if warnings:
             ret = QMessageBox.question(
-                self, "继续？",
+                self,
+                "继续？",
                 "\n".join(warnings) + "\n\n仅继续抓取已确认的股票？",
                 QMessageBox.Yes | QMessageBox.No,
             )
@@ -174,7 +173,8 @@ class MainView(QWidget):
         kr_in_use = any(t.exchange == Exchange.KR for t in tickers)
         if kr_in_use and not self.settings.dart.api_key:
             ret = QMessageBox.question(
-                self, "DART 密钥缺失",
+                self,
+                "DART 密钥缺失",
                 "韩股官方披露数据主要来自 DART。当前未配置 DART API 密钥，"
                 "如继续使用韩股功能，请先在设置中填入密钥。\n\n是否现在打开设置？",
                 QMessageBox.Yes | QMessageBox.No,

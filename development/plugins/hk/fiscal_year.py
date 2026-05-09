@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 # Hong Kong listed companies with a non-December fiscal year-end.
 # Format: 5-digit HK ticker code -> fiscal year-end month.
 # Sources verified against HKEX disclosures and company annual reports.

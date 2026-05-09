@@ -4,7 +4,6 @@ import os
 import sys
 from pathlib import Path
 
-
 # PyInstaller --windowed mode sets sys.stdout/stderr to None. Many third-party
 # libraries (tqdm, akshare's progress bars, requests) blindly call .write() on
 # them and crash. Redirect to a sink BEFORE any other import that might use them.
@@ -13,7 +12,7 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = open(os.devnull, "w", encoding="utf-8")
 if sys.stdin is None:
-    sys.stdin = open(os.devnull, "r", encoding="utf-8")
+    sys.stdin = open(os.devnull, encoding="utf-8")
 
 
 from loguru import logger
@@ -26,7 +25,7 @@ from app.core.settings import Settings, config_path, load_settings
 from app.ui.main_view import MainView
 from app.ui.main_window import MainWindow
 from app.ui.onboarding_dialog import OnboardingDialog
-from app.ui.styles import light_palette, dark_palette, load_qss
+from app.ui.styles import dark_palette, light_palette, load_qss
 
 
 def resource_path(relative: str) -> str:
@@ -85,7 +84,10 @@ def main() -> int:
 
     if first_launch:
         onboarding = OnboardingDialog(window)
-        if onboarding.exec() == onboarding.DialogCode.Accepted and onboarding.open_settings_requested:
+        if (
+            onboarding.exec() == onboarding.DialogCode.Accepted
+            and onboarding.open_settings_requested
+        ):
             view._open_settings()
 
     return app.exec()
@@ -95,12 +97,14 @@ def _show_fatal(message: str) -> None:
     """Last-resort error dialog (used when QApplication isn't even running yet)."""
     try:
         from PySide6.QtWidgets import QApplication, QMessageBox
-        a = QApplication.instance() or QApplication(sys.argv)
+
+        _ = QApplication.instance() or QApplication(sys.argv)
         QMessageBox.critical(None, "FS Capture 启动失败", message)
     except Exception:
         # Fall back to native Windows MessageBox via ctypes
         try:
             import ctypes
+
             ctypes.windll.user32.MessageBoxW(0, message, "FS Capture 启动失败", 0x10)
         except Exception:
             pass
@@ -111,6 +115,7 @@ if __name__ == "__main__":
         sys.exit(main())
     except Exception as exc:  # noqa: BLE001
         import traceback
+
         tb = traceback.format_exc()
         try:
             logger.exception("fatal startup error")
@@ -119,7 +124,12 @@ if __name__ == "__main__":
         # Always write a crashlog file the user can find
         try:
             from pathlib import Path
-            crashlog = Path(getattr(sys, "_MEIPASS", "")).parent / "crash.log" if getattr(sys, "frozen", False) else Path("crash.log")
+
+            crashlog = (
+                Path(getattr(sys, "_MEIPASS", "")).parent / "crash.log"
+                if getattr(sys, "frozen", False)
+                else Path("crash.log")
+            )
             if getattr(sys, "frozen", False):
                 crashlog = Path(sys.executable).parent / "crash.log"
             crashlog.write_text(tb, encoding="utf-8")

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import Optional
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -23,7 +22,7 @@ class PeriodSelector(QFrame):
 
     selection_changed = Signal()
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("Card")
         self.setProperty("class", "Card")

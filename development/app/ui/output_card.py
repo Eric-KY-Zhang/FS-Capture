@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -20,7 +19,7 @@ from PySide6.QtWidgets import (
 class OutputCard(QFrame):
     path_changed = Signal(str)
 
-    def __init__(self, initial_path: str, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, initial_path: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("Card")
         self.setProperty("class", "Card")
@@ -64,7 +63,9 @@ class OutputCard(QFrame):
         return self.path_input.text().strip()
 
     def _browse(self) -> None:
-        d = QFileDialog.getExistingDirectory(self, "选择输出文件夹", self.path() or str(Path.home()))
+        d = QFileDialog.getExistingDirectory(
+            self, "选择输出文件夹", self.path() or str(Path.home())
+        )
         if d:
             self.path_input.setText(d)
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -19,7 +17,7 @@ from app.ui.styles.palette import exchange_accent
 class ExchangeChip(QPushButton):
     """A clickable card representing one exchange. Acts as a toggle."""
 
-    def __init__(self, exchange: Exchange, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, exchange: Exchange, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.exchange = exchange
         self.setObjectName("ExchangeChip")
@@ -35,9 +33,7 @@ class ExchangeChip(QPushButton):
 
         accent = QLabel()
         accent.setFixedSize(6, 28)
-        accent.setStyleSheet(
-            f"background:{exchange_accent(exchange)}; border-radius:3px;"
-        )
+        accent.setStyleSheet(f"background:{exchange_accent(exchange)}; border-radius:3px;")
 
         text_box = QVBoxLayout()
         text_box.setSpacing(2)
@@ -53,9 +49,7 @@ class ExchangeChip(QPushButton):
         layout.addLayout(text_box, 1)
 
         self.check_indicator = QLabel("○")
-        self.check_indicator.setStyleSheet(
-            "color: #CBD5E1; font-size: 18px; font-weight: 700;"
-        )
+        self.check_indicator.setStyleSheet("color: #CBD5E1; font-size: 18px; font-weight: 700;")
         layout.addWidget(self.check_indicator)
 
     def _sync_active_property(self, checked: bool) -> None:
@@ -93,7 +87,7 @@ class ExchangeSelector(QWidget):
 
     selection_changed = Signal()
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

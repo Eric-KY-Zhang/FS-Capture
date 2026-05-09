@@ -7,17 +7,16 @@ Strategy:
   orgId format: e.g. "gssh0600519" (sh) or "gssz0000001" (sz). Required for the
   hisAnnouncement download API.
 """
+
 from __future__ import annotations
 
 import time
-from typing import Optional
 
 from loguru import logger
 
 from app.core.cache import get_cache
-from app.core.http import default_client, get_json, post_json
+from app.core.http import default_client, post_json
 from app.core.models import Company, Exchange, Ticker
-
 
 _CNINFO_TOPSEARCH = "http://www.cninfo.com.cn/new/information/topSearch/detailOfQuery"
 _CACHE_KEY_NAME_MAP = "ashare:code_name_map:v1"
@@ -57,14 +56,15 @@ def _load_name_map() -> dict[str, str]:
         return cached  # type: ignore[return-value]
 
     import akshare as ak  # local import — heavy module
+
     logger.info("Loading A-share code↔name map from akshare ...")
     df = ak.stock_info_a_code_name()
-    name_map = dict(zip(df["code"].astype(str), df["name"].astype(str)))
+    name_map = dict(zip(df["code"].astype(str), df["name"].astype(str), strict=False))
     cache.set(_CACHE_KEY_NAME_MAP, name_map, expire=_NAME_MAP_TTL)
     return name_map
 
 
-def _fetch_orgid(code: str) -> Optional[str]:
+def _fetch_orgid(code: str) -> str | None:
     cache = get_cache()
     key = _CACHE_KEY_ORGID + code
     cached = cache.get(key)
@@ -83,8 +83,12 @@ def _fetch_orgid(code: str) -> Optional[str]:
     with default_client(source="cninfo") as client:
         try:
             payload = post_json(
-                client, _CNINFO_TOPSEARCH, source="cninfo", rate=5.0,
-                data=data, headers=headers,
+                client,
+                _CNINFO_TOPSEARCH,
+                source="cninfo",
+                rate=5.0,
+                data=data,
+                headers=headers,
             )
         except Exception as exc:
             logger.warning(f"cninfo topSearch failed for {code}: {exc}")
@@ -117,16 +121,15 @@ def resolve(code: str) -> Ticker:
 
 def fetch_company(ticker: Ticker) -> Company:
     """Best-effort metadata via akshare. Fields filled where available."""
-    market = _market_prefix(ticker.code)
-    sym = f"{market}{ticker.code}"
-    industry: Optional[str] = None
-    listing_date: Optional[str] = None
+    industry: str | None = None
+    listing_date: str | None = None
     extra: dict = {}
 
     try:
         import akshare as ak
+
         df = ak.stock_individual_info_em(symbol=ticker.code)
-        d = dict(zip(df["item"].astype(str), df["value"].astype(str)))
+        d = dict(zip(df["item"].astype(str), df["value"].astype(str), strict=False))
         industry = d.get("行业")
         listing_date = d.get("上市时间")
         extra = {k: v for k, v in d.items() if k not in {"行业", "上市时间"}}
