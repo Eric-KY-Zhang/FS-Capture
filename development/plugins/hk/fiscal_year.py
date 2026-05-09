@@ -3,8 +3,16 @@ from __future__ import annotations
 
 # Hong Kong listed companies with a non-December fiscal year-end.
 # Format: 5-digit HK ticker code -> fiscal year-end month.
+# Sources verified against HKEX disclosures and company annual reports.
 NON_DEC_FISCAL_YEAR: dict[str, int] = {
+    # Fiscal year ending 31 March (Apr-Mar cycle, common for Greater China retail/tech)
     "09988": 3,  # Alibaba Group Holding Ltd.
+    "00992": 3,  # Lenovo Group Ltd.
+    "00151": 3,  # Want Want China Holdings Ltd.
+    "01929": 3,  # Chow Tai Fook Jewellery Group Ltd.
+    # Fiscal year ending 30 June (HK property developers)
+    "00017": 6,  # New World Development Co. Ltd.
+    "00083": 6,  # Sino Land Co. Ltd.
 }
 
 

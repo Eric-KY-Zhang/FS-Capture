@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ssl
 import time
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -40,10 +42,19 @@ def default_client(
     return httpx.Client(
         headers=headers,
         timeout=timeout,
-        verify=certifi.where(),
+        verify=_ssl_context(),
         follow_redirects=True,
-        http2=True,
+        http2=source != "dart",
     )
+
+
+@lru_cache(maxsize=1)
+def _ssl_context() -> ssl.SSLContext:
+    """Cached SSL context using certifi's CA bundle.
+
+    httpx 0.36+ deprecated ``verify=<str>``; pass an ``SSLContext`` instead.
+    """
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 @retry(
