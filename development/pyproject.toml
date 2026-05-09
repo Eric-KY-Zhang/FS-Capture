@@ -1,7 +1,7 @@
 [project]
 name = "fs-capture"
 version = "0.1.0"
-description = "One-click multi-market (A/HK/US/KR) annual report and financials capture tool"
+description = "One-click multi-market disclosure report download tool"
 requires-python = ">=3.11,<3.15"
 authors = [{ name = "Eric", email = "kaiyu199602@gmail.com" }]
 
@@ -13,7 +13,6 @@ dependencies = [
     "OpenDartReader>=0.2.2",
     "pykrx>=1.0.45",
     "sec-edgar-downloader>=5.0",
-    "openpyxl>=3.1",
     "pydantic>=2.7",
     "tenacity>=8.2",
     "diskcache>=5.6",
@@ -38,5 +37,4 @@ include = ["app*", "plugins*"]
 
 [tool.setuptools.package-data]
 "app.ui.styles" = ["*.qss"]
-"app.exporters.templates" = ["*.xlsx"]
 "app.assets" = ["*.ico", "*.png"]

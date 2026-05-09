@@ -4,14 +4,17 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
-from .models import Company, FinancialStatement, Period, ReportFile, Ticker
+from .models import Company, Period, ReportFile, Ticker
+
+
+class JobMode(str, Enum):
+    REPORT_DOWNLOAD = "report_download"
 
 
 class TaskStatus(str, Enum):
     PENDING = "pending"
     RESOLVING = "resolving"
     DOWNLOADING = "downloading"
-    SCRAPING = "scraping"
     DONE = "done"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -24,8 +27,10 @@ class TaskResult:
     status: TaskStatus = TaskStatus.PENDING
     company: Optional[Company] = None
     reports: list[ReportFile] = field(default_factory=list)
-    statements: list[FinancialStatement] = field(default_factory=list)
     error: Optional[str] = None
+
+    def label(self) -> str:
+        return self.period.label()
 
 
 @dataclass
@@ -33,6 +38,7 @@ class Job:
     tickers: list[Ticker]
     periods: list[Period]
     output_dir: str
+    mode: JobMode = JobMode.REPORT_DOWNLOAD
     # Job-level results aggregated as workers finish.
     results: list[TaskResult] = field(default_factory=list)
 

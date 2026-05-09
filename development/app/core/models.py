@@ -69,32 +69,30 @@ class Company(BaseModel):
     extra: dict = Field(default_factory=dict)
 
 
-class StatementType(str, Enum):
-    BALANCE_SHEET = "balance_sheet"      # 资产负债表
-    INCOME = "income"                    # 利润表
-    CASH_FLOW = "cash_flow"              # 现金流量表
-
-
-class FinancialStatement(BaseModel):
-    """Canonical financial statement representation.
-
-    `lines` maps Chinese metric name → value. Names match the existing 瑞华底稿
-    schema so downstream Excel formulas keep working unchanged.
-    """
-    ticker: Ticker
-    period: Period
-    statement_type: StatementType
-    currency: str = "CNY"
-    unit: str = "元"   # 元 | 千元 | 万元 | 百万元
-    lines: dict[str, Optional[float]] = Field(default_factory=dict)
-
-
 class ReportFile(BaseModel):
-    """A downloaded report PDF/HTML."""
+    """A downloaded disclosure document."""
     ticker: Ticker
-    period: Period
-    kind: str   # "annual_report" | "audit_report" | "q1_report" | "q3_report" | "interim_report"
+    period: Optional[Period] = None
+    kind: str   # annual_report | q1_report | interim_report | q3_report | ipo_prospectus
     local_path: str
     source_url: str
     title: Optional[str] = None
     file_size_bytes: Optional[int] = None
+    filing_date: Optional[str] = None
+    report_date: Optional[str] = None
+    form: Optional[str] = None
+    source_id: Optional[str] = None
+    accession_number: Optional[str] = None
+    is_amendment: bool = False
+    sequence: Optional[int] = None
+    source_format: Optional[str] = None
+    output_format: Optional[str] = None
+
+    @field_validator("filing_date", "report_date", mode="before")
+    @classmethod
+    def normalize_date_text(cls, v):
+        if v is None or v == "":
+            return None
+        if hasattr(v, "isoformat"):
+            return v.isoformat()
+        return str(v)

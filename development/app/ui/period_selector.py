@@ -41,7 +41,7 @@ class PeriodSelector(QFrame):
 
         title = QLabel("报告期间")
         title.setObjectName("CardTitle")
-        sub = QLabel("选择年份区间与期间类型")
+        sub = QLabel("选择年份区间和期间报告")
         sub.setObjectName("CardSubtitle")
         sub.setStyleSheet("color: #94A3B8; font-size: 12px;")
         h.addWidget(title)

@@ -3,14 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from app.core.models import (
-    Company,
-    Exchange,
-    FinancialStatement,
-    Period,
-    ReportFile,
-    Ticker,
-)
+from app.core.models import Company, Exchange, Period, ReportFile, Ticker
 
 
 class ExchangePlugin(ABC):
@@ -20,7 +13,6 @@ class ExchangePlugin(ABC):
       1. resolve_name(code)        -> Ticker (with name + external_id)
       2. fetch_company(ticker)     -> Company metadata (industry, currency, ...)
       3. download_reports(t, p)    -> ReportFile[] streamed to disk
-      4. fetch_financials(t, p)    -> FinancialStatement[] (BS / IS / CF)
     """
 
     exchange: Exchange
@@ -47,14 +39,4 @@ class ExchangePlugin(ABC):
         Files saved flat under output_root, with market/code/year/type in the filename.
         Returns a list of ReportFile records pointing to local paths.
         Empty list = no filings found for this period (not an error).
-        """
-
-    @abstractmethod
-    def fetch_financials(
-        self,
-        ticker: Ticker,
-        period: Period,
-    ) -> list[FinancialStatement]:
-        """Fetch BS / IS / CF for the period. Returns 0-3 statements.
-        Use canonical Chinese metric names (matching 瑞华底稿 schema).
         """

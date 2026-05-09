@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import traceback
 from pathlib import Path
-from typing import Callable
 
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal, Slot
 
 from .job import Job, TaskResult, TaskStatus
-from .models import Exchange, Period, Ticker
+from .models import Exchange, Ticker
 from .settings import Settings
 
 
@@ -54,18 +53,14 @@ class _TaskRunnable(QRunnable):
             except Exception as exc:  # noqa: BLE001
                 self.signals.log.emit(
                     "warning",
-                    f"{r.ticker.code} 公司基础资料获取失败，继续抓取报告和财务数据：{exc}",
+                    f"{r.ticker.code} 公司基础资料获取失败，继续执行任务：{exc}",
                 )
 
             r.status = TaskStatus.DOWNLOADING
-            self.signals.task_progress.emit(r, f"下载{r.period.label()}报告")
-            reports = plugin.download_reports(r.ticker, r.period, self.output_root)
-            r.reports = reports
-
-            r.status = TaskStatus.SCRAPING
-            self.signals.task_progress.emit(r, f"抓取{r.period.label()}财务数据")
-            statements = plugin.fetch_financials(r.ticker, r.period)
-            r.statements = statements
+            self.signals.task_progress.emit(r, f"下载{r.label()}")
+            r.reports = plugin.download_reports(r.ticker, r.period, self.output_root)
+            if not r.reports:
+                self.signals.log.emit("warning", f"{r.ticker.code} 未找到{r.label()}文件")
 
             r.status = TaskStatus.DONE
         except Exception as exc:  # noqa: BLE001
@@ -77,7 +72,7 @@ class _TaskRunnable(QRunnable):
 
 
 class Orchestrator(QObject):
-    """Coordinates ticker name resolution and per-task report+financial fetch."""
+    """Coordinates ticker name resolution and report downloads."""
 
     def __init__(self, settings: Settings, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -98,10 +93,11 @@ class Orchestrator(QObject):
         output_root = Path(job.output_dir)
         output_root.mkdir(parents=True, exist_ok=True)
 
-        tasks: list[TaskResult] = []
-        for t in job.tickers:
-            for p in job.periods:
-                tasks.append(TaskResult(ticker=t, period=p))
+        tasks: list[TaskResult] = [
+            TaskResult(ticker=t, period=p)
+            for t in job.tickers
+            for p in job.periods
+        ]
         job.results = tasks
         if not tasks:
             self.signals.job_started.emit(0)

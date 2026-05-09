@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
 from loguru import logger
@@ -29,25 +27,6 @@ from app.ui.output_card import OutputCard
 from app.ui.period_selector import PeriodSelector
 from app.ui.progress_dock import ProgressDock
 from app.ui.settings_dialog import SettingsDialog
-
-
-def _workbook_path(job: Job) -> Path:
-    first_code = job.tickers[0].code if job.tickers else "结果"
-    years = sorted({p.year for p in job.periods})
-    period_part = (
-        f"{years[0]}-{years[-1]}" if len(years) > 1
-        else str(years[0]) if years
-        else "未选期间"
-    )
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
-    base = Path(job.output_dir) / f"底稿_{first_code}_{period_part}_{ts}.xlsx"
-    if not base.exists():
-        return base
-    for idx in range(2, 1000):
-        candidate = base.with_stem(f"{base.stem}_{idx}")
-        if not candidate.exists():
-            return candidate
-    raise FileExistsError(f"无法生成不重名的工作簿文件名：{base}")
 
 
 class MainView(QWidget):
@@ -90,11 +69,11 @@ class MainView(QWidget):
         section.setObjectName("SectionLabel")
         layout.addWidget(section)
 
-        title = QLabel("上市公司年报 / 审计报告 / 财务数据")
+        title = QLabel("上市公司官方披露 PDF 下载")
         title.setStyleSheet("font-size: 22px; font-weight: 700; color: #0F172A;")
         layout.addWidget(title)
 
-        sub = QLabel("勾选交易所 → 录入股票代码 → 选择期间 → 一键生成 PDF 与底稿")
+        sub = QLabel("勾选交易所 → 录入股票代码 → 选择期间 → 下载披露文件 PDF")
         sub.setStyleSheet("color: #64748B; font-size: 13px;")
         layout.addWidget(sub)
         layout.addSpacing(4)
@@ -133,7 +112,7 @@ class MainView(QWidget):
         self.settings_btn.setCursor(Qt.PointingHandCursor)
         self.settings_btn.clicked.connect(self._open_settings)
 
-        self.run_btn = QPushButton("▶  开始抓取")
+        self.run_btn = QPushButton("▶  抓报告")
         self.run_btn.setProperty("variant", "primary")
         self.run_btn.setMinimumHeight(40)
         self.run_btn.setMinimumWidth(160)
@@ -187,7 +166,7 @@ class MainView(QWidget):
 
         periods: list[Period] = self.period_selector.periods()
         if not periods:
-            QMessageBox.warning(self, "无法开始", "请至少选择一种期间类型")
+            QMessageBox.warning(self, "无法开始", "请至少选择一种报告类型")
             return
 
         # Korea needs DART key
@@ -209,13 +188,17 @@ class MainView(QWidget):
             return
 
         job = Job(tickers=tickers, periods=periods, output_dir=out_path)
-        self.run_btn.setEnabled(False)
+        self._set_action_buttons_enabled(False)
         self.progress_dock.reset(job.task_count())
         logger.info(
-            f"提交任务：{len(tickers)} 只股票 × {len(periods)} 个期间 = "
+            f"提交报告下载任务：{len(tickers)} 只股票 × {len(periods)} 个期间 = "
             f"{job.task_count()} 个 task"
         )
         self.orchestrator.submit_job(job)
+
+    def _set_action_buttons_enabled(self, enabled: bool) -> None:
+        self.run_btn.setEnabled(enabled)
+        self.settings_btn.setEnabled(enabled)
 
     def _open_settings(self) -> None:
         dlg = SettingsDialog(self.settings, self)
@@ -238,26 +221,17 @@ class MainView(QWidget):
         self.progress_dock.on_task_finished(task)
 
     def _on_job_finished(self, job: Job) -> None:
-        self.run_btn.setEnabled(True)
+        self._set_action_buttons_enabled(True)
         ok = sum(1 for r in job.results if r.status.value == "done")
         fail = sum(1 for r in job.results if r.status.value == "failed")
-
-        # Write workbook
-        from app.exporters.excel_writer import write_workbook
-
-        xlsx_path = _workbook_path(job)
-        try:
-            wr = write_workbook(job, xlsx_path)
-            xlsx_msg = f"\n📊 工作簿：{wr.path}"
-        except Exception as exc:
-            logger.exception(f"workbook write failed: {exc}")
-            xlsx_msg = f"\n⚠ 工作簿写入失败：{exc}"
+        report_count = sum(len(r.reports) for r in job.results)
 
         QMessageBox.information(
             self,
-            "抓取完成",
+            "下载完成",
             f"总计 {len(job.results)} 个 task：成功 {ok}，失败 {fail}\n\n"
-            f"📁 输出位置：{job.output_dir}{xlsx_msg}",
+            f"已下载 {report_count} 个 PDF\n"
+            f"输出位置：{job.output_dir}",
         )
 
     def _on_log(self, level: str, message: str) -> None:

@@ -45,7 +45,7 @@ class _TaskRow(QFrame):
         self.name_label.setStyleSheet("color: #475569;")
         self.name_label.setMinimumWidth(130)
 
-        self.period_label = QLabel(task.period.label())
+        self.period_label = QLabel(task.label())
         self.period_label.setStyleSheet("color: #64748B;")
         self.period_label.setMinimumWidth(80)
 
@@ -172,9 +172,10 @@ class ProgressDock(QFrame):
             row = self._rows.get(id(task))
         if row:
             if task.status is TaskStatus.DONE:
-                detail = (
-                    f"PDF {len(task.reports)} · 报表 {len(task.statements)}"
-                )
+                details: list[str] = []
+                if task.reports:
+                    details.append(f"文件 {len(task.reports)}")
+                detail = " · ".join(details) if details else "无文件"
                 row.update_status("✓ 完成", "ok", detail)
             elif task.status is TaskStatus.FAILED:
                 row.update_status("× 失败", "error", task.error or "")
