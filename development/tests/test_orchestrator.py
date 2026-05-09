@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import threading
-import unittest
 from pathlib import Path
+
+import pytest
 
 from app.core.cache import close_cache
 from app.core.job import TaskResult, TaskStatus
@@ -27,43 +28,35 @@ class _FakePlugin:
         return []
 
 
-class OrchestratorTests(unittest.TestCase):
-    def test_cancel_event_stops_task(self) -> None:
-        import plugins
+def test_cancel_event_stops_task(monkeypatch: pytest.MonkeyPatch) -> None:
+    import plugins
 
-        plugin = _FakePlugin()
-        original_get_plugin = plugins.get_plugin
-        plugins.get_plugin = lambda _exchange: plugin
-        try:
-            cancel_event = threading.Event()
-            cancel_event.set()
-            result = TaskResult(
-                ticker=Ticker(
-                    exchange=Exchange.A_SHARE,
-                    code="600519",
-                    name="贵州茅台",
-                    external_id="org",
-                ),
-                period=Period(year=2024, type=PeriodType.ANNUAL),
-            )
-            runnable = _TaskRunnable(
-                result,
-                OrchestratorSignals(),
-                Path("output"),
-                cancel_event,
-            )
+    plugin = _FakePlugin()
+    monkeypatch.setattr(plugins, "get_plugin", lambda _exchange: plugin)
+    cancel_event = threading.Event()
+    cancel_event.set()
+    result = TaskResult(
+        ticker=Ticker(
+            exchange=Exchange.A_SHARE,
+            code="600519",
+            name="贵州茅台",
+            external_id="org",
+        ),
+        period=Period(year=2024, type=PeriodType.ANNUAL),
+    )
+    runnable = _TaskRunnable(
+        result,
+        OrchestratorSignals(),
+        Path("output"),
+        cancel_event,
+    )
 
-            runnable.run()
+    runnable.run()
 
-            self.assertEqual(result.status, TaskStatus.CANCELLED)
-            self.assertFalse(plugin.download_called)
-        finally:
-            plugins.get_plugin = original_get_plugin
-
-    def test_cache_close_idempotent(self) -> None:
-        close_cache()
-        close_cache()
+    assert result.status is TaskStatus.CANCELLED
+    assert not plugin.download_called
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_cache_close_idempotent() -> None:
+    close_cache()
+    close_cache()

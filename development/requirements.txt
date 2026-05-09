@@ -14,3 +14,6 @@ pypdf>=4.2
 tomli-w>=1.0
 playwright>=1.45
 pyinstaller>=6.0
+pytest>=8.0
+pytest-httpx>=0.30
+ruff>=0.6.0

@@ -22,6 +22,9 @@ dependencies = [
     "tomli>=2.0; python_version<'3.11'",
     "tomli-w>=1.0",
     "playwright>=1.45",
+    "pytest>=8.0",
+    "pytest-httpx>=0.30",
+    "ruff>=0.6.0",
 ]
 
 [project.scripts]
@@ -38,3 +41,23 @@ include = ["app*", "plugins*"]
 [tool.setuptools.package-data]
 "app.ui.styles" = ["*.qss"]
 "app.assets" = ["*.ico", "*.png"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v --strict-markers"
+markers = [
+    "e2e: end-to-end smoke tests requiring network",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [".venv", "build", "dist", "_internal", "app", "plugins"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B", "N"]
