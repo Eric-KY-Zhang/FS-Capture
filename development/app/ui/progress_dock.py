@@ -109,6 +109,10 @@ class ProgressDock(QFrame):
         self.progress_bar.setRange(0, 1)
         self.progress_bar.setValue(0)
         h.addWidget(self.progress_bar)
+        self.cancel_btn = QPushButton("取消")
+        self.cancel_btn.setCursor(Qt.PointingHandCursor)
+        self.cancel_btn.clicked.connect(self.cancel_requested.emit)
+        h.addWidget(self.cancel_btn)
         outer.addWidget(header)
 
         body = QWidget()
@@ -147,6 +151,7 @@ class ProgressDock(QFrame):
         self.progress_bar.setRange(0, max(1, total))
         self.progress_bar.setValue(0)
         self.summary_label.setText(f"0 / {total}")
+        self.cancel_btn.setEnabled(total > 0)
         self.setVisible(True)
 
     def on_task_started(self, task: TaskResult) -> None:
@@ -179,9 +184,13 @@ class ProgressDock(QFrame):
                 row.update_status("✓ 完成", "ok", detail)
             elif task.status is TaskStatus.FAILED:
                 row.update_status("× 失败", "error", task.error or "")
+            elif task.status is TaskStatus.CANCELLED:
+                row.update_status("已取消", "pending", task.error or "")
             else:
                 row.update_status(task.status.value, "pending", task.error or "")
 
         self._completed += 1
         self.progress_bar.setValue(self._completed)
         self.summary_label.setText(f"{self._completed} / {self._total}")
+        if self._completed >= self._total:
+            self.cancel_btn.setEnabled(False)

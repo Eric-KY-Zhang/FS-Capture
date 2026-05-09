@@ -102,6 +102,7 @@ class MainView(QWidget):
 
         # ---- Progress dock (initially hidden) ---------------------------------
         self.progress_dock = ProgressDock()
+        self.progress_dock.cancel_requested.connect(self.orchestrator.request_cancel)
         layout.addWidget(self.progress_dock)
 
         # ---- Action row -------------------------------------------------------
