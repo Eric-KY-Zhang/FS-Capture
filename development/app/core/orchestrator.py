@@ -74,6 +74,17 @@ class _TaskRunnable(QRunnable):
             r.status = TaskStatus.DOWNLOADING
             self.signals.task_progress.emit(r, f"下载{r.label()}")
             r.reports = plugin.download_reports(r.ticker, r.period, self.output_root)
+            if r.reports:
+                from app.core.sidecar import write_sidecar
+
+                for report in r.reports:
+                    try:
+                        write_sidecar(report)
+                    except Exception as exc:  # noqa: BLE001
+                        self.signals.log.emit(
+                            "warning",
+                            f"{report.local_path} 元数据 sidecar 写入失败：{exc}",
+                        )
             if not r.reports:
                 self.signals.log.emit("warning", f"{r.ticker.code} 未找到{r.label()}文件")
 

@@ -27,6 +27,7 @@ class PeriodType(str, Enum):
     Q1 = "q1"
     Q2 = "q2"   # interim / 半年报
     Q3 = "q3"
+    IPO_PROSPECTUS = "ipo_prospectus"
 
     @property
     def display_name(self) -> str:
@@ -35,6 +36,7 @@ class PeriodType(str, Enum):
             "q1": "一季报",
             "q2": "半年报",
             "q3": "三季报",
+            "ipo_prospectus": "IPO 招股书",
         }[self.value]
 
 

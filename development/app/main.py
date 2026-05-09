@@ -22,9 +22,10 @@ from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
 
 from app.core.cache import close_cache
-from app.core.settings import Settings, load_settings
+from app.core.settings import Settings, config_path, load_settings
 from app.ui.main_view import MainView
 from app.ui.main_window import MainWindow
+from app.ui.onboarding_dialog import OnboardingDialog
 from app.ui.styles import light_palette, dark_palette, load_qss
 
 
@@ -68,6 +69,7 @@ def main() -> int:
     font.setStyleStrategy(QFont.PreferAntialias)
     app.setFont(font)
 
+    first_launch = not config_path().exists()
     settings = load_settings()
     _setup_logging(settings)
     logger.info("FS Capture starting up")
@@ -80,6 +82,11 @@ def main() -> int:
     view = MainView(settings, parent=window)
     window.set_body(view)
     window.show()
+
+    if first_launch:
+        onboarding = OnboardingDialog(window)
+        if onboarding.exec() == onboarding.DialogCode.Accepted and onboarding.open_settings_requested:
+            view._open_settings()
 
     return app.exec()
 

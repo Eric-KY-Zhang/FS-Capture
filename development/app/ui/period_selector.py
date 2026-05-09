@@ -95,7 +95,8 @@ class PeriodSelector(QFrame):
         self.cb_q3 = QCheckBox("三季报")
         self.cb_q2 = QCheckBox("半年报")
         self.cb_q1 = QCheckBox("一季报")
-        for cb in (self.cb_annual, self.cb_q3, self.cb_q2, self.cb_q1):
+        self.cb_ipo = QCheckBox("IPO 招股书")
+        for cb in (self.cb_annual, self.cb_q3, self.cb_q2, self.cb_q1, self.cb_ipo):
             cb.toggled.connect(lambda *_: self.selection_changed.emit())
             type_row.addWidget(cb)
         type_row.addStretch(1)
@@ -117,6 +118,8 @@ class PeriodSelector(QFrame):
             types.append(PeriodType.Q2)
         if self.cb_q3.isChecked():
             types.append(PeriodType.Q3)
+        if self.cb_ipo.isChecked():
+            types.append(PeriodType.IPO_PROSPECTUS)
         out: list[Period] = []
         for y in range(from_y, to_y + 1):
             for t in types:

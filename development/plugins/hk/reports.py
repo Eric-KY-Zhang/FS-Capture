@@ -577,6 +577,13 @@ def _ipo_form(row: dict) -> str:
 
 
 def download(ticker: Ticker, period: Period, output_root: Path) -> list[ReportFile]:
+    if period.type is PeriodType.IPO_PROSPECTUS:
+        reports = download_ipo_documents(ticker, output_root)
+        for report in reports:
+            report.period = period
+            report.kind = "ipo_prospectus"
+        return reports
+
     if period.type not in _DOC_TYPE_BY_PERIOD:
         return []
 

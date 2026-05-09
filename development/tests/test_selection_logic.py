@@ -5,8 +5,15 @@ import unittest
 import pandas as pd
 
 from app.core.models import Period, PeriodType
+from plugins.ashare.reports import _column_for as ashare_column_for
 from plugins.kr.reports import _select_filing as select_kr_filing
 from plugins.us.reports import _filter_table as filter_us_table
+
+
+class AShareReportSelectionTests(unittest.TestCase):
+    def test_beijing_stock_exchange_uses_cninfo_bj_column(self) -> None:
+        self.assertEqual(ashare_column_for("430047"), "bj")
+        self.assertEqual(ashare_column_for("430047.BJ"), "bj")
 
 
 class USReportSelectionTests(unittest.TestCase):
