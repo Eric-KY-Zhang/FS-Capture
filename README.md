@@ -3,141 +3,106 @@
 > 一键批量下载 A 股 / 港股 / 美股 / 韩股上市公司的官方披露文件（年报 / 审计报告 / 季报 / 半年报 / IPO 招股书）。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![PySide6](https://img.shields.io/badge/GUI-PySide6-green.svg)](https://doc.qt.io/qtforpython-6/)
+[![Release](https://img.shields.io/github/v/release/Eric-KY-Zhang/FS-Capture)](https://github.com/Eric-KY-Zhang/FS-Capture/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue.svg)]()
 
-FS Capture 是一个 Windows 桌面 EXE 工具，专注解决「批量拿到原始 PDF」这一件事——**不抓三大报表数字、不算财务指标、不生成 Excel 底稿**。需要财务数据 / Excel 装填的场景请使用相关 VBA 工具。
+FS Capture 是一个 Windows 桌面工具，专注解决「批量拿到原始 PDF」这一件事——**不抓三大报表数字、不算财务指标、不生成 Excel 底稿**。需要财务数据 / Excel 装填的场景请使用相关 VBA 工具。
 
-## 功能特点
+---
 
-- **4 个市场覆盖**：A 股、港股、美股、韩股，每个交易所有独立的插件实现
-- **多种报告类型**：年报、独立审计报告、一季报、半年报、三季报、IPO 招股书
-- **批量并发下载**：QThreadPool 多 worker，per-source TokenBucket 限速避免 IP 封禁
-- **现代 GUI**：PySide6 无边框圆角窗口 + 扁平化设计 + 行内确认 + 进度面板
-- **PDF 元数据 sidecar**：每个 PDF 旁写 `.meta.json`（含 sha256、source URL、下载时间）
-- **本地优先**：HTTP / 限速 / 缓存 / 配置全在本地，无服务端依赖
-- **PyInstaller 打包**：单 EXE 双击运行，~340 MB 自包含
+## 下载
 
-## 数据源
+前往 **[Releases 页面](https://github.com/Eric-KY-Zhang/FS-Capture/releases/latest)** 下载最新版：
 
-| 市场 | 公司名称 | 报告下载 | 鉴权 |
-|---|---|---|---|
-| A 股 | akshare + cninfo orgId | cninfo `hisAnnouncement` | 不需要 |
-| 港股 | 东方财富 `stock/get` | HKEXnews `titlesearch.xhtml` | 不需要 |
-| 美股 | SEC `company_tickers.json` | SEC `submissions API` + 分页 fallback | 不需要 |
-| 韩股 | OpenDartReader `corp_codes` | DART `list` + `document` | DART API Key（[免费注册](https://opendart.fss.or.kr/)） |
+1. 点击 `FS-Capture-vX.X-windows.zip` 下载
+2. 解压到任意文件夹
+3. 双击 `FS Capture.exe` 运行
 
-## 日常使用（已构建好的 EXE）
+> 无需安装 Python，无需联网激活，解压即用。
 
-1. 双击根目录的 `FS Capture.exe`
-2. 勾选交易所，添加股票代码，点击「确认」识别公司名称
-3. 选择年份区间和报告类型（年报 / 季报 / 半年报 / IPO 招股书）
-4. 点击「开始抓取」
-5. 结果保存在 `output/` 文件夹，PDF 平铺，文件名含市场 / 代码 / 年份元信息
+---
 
-韩股需要 DART API Key——[免费注册](https://opendart.fss.or.kr/)后在程序内「设置」中粘贴，或直接编辑 `config.toml`。若暂时无 Key，可不勾选韩股，A/HK/US 三市场不受影响。
+## 支持的市场与报告类型
 
-## 从源码运行
+| 市场 | 报告类型 | 是否需要账号 |
+|---|---|---|
+| 🇨🇳 A 股 | 年报、一季报、半年报、三季报、IPO 招股书 | 不需要 |
+| 🇭🇰 港股 | 年报、独立审计报告、IPO 招股书 | 不需要 |
+| 🇺🇸 美股 | 年报（10-K）、季报（10-Q）、IPO 招股书（S-1） | 不需要 |
+| 🇰🇷 韩股 | 年报、季报、半年报 | 需要 DART API Key（免费） |
 
-```bash
-git clone https://github.com/<your-username>/fs-capture.git
-cd fs-capture/development
-python -m pip install -r requirements.txt
-python -m playwright install chromium    # PDF 兜底渲染（KR/US 部分场景）
-python -m app.main
-```
+---
 
-要求：Windows 10/11 + Python 3.11~3.14。
+## 使用步骤
 
-## 构建 EXE
+### 第一步：输入股票代码
 
-```bat
-cd development
-build.bat
-```
+- 勾选目标交易所（A 股 / 港股 / 美股 / 韩股）
+- 在输入框中添加股票代码，每行一个
+  - A 股：`600519`（贵州茅台）
+  - 港股：`00700`（腾讯控股）
+  - 美股：`AAPL`（苹果）
+  - 韩股：`005930`（三星电子）
+- 点击「确认」，工具会自动识别公司名称
 
-PyInstaller one-folder 模式，产物在 `development/dist/FS Capture/`，约 340 MB。
+### 第二步：选择年份和报告类型
 
-## 配置
+- 拖动年份滑块选择区间（如 2020–2024）
+- 勾选需要的报告类型：年报 / 季报 / 半年报 / IPO 招股书
 
-`config.toml` 由首次启动 onboarding 引导生成，关键字段：
+### 第三步：开始抓取
 
-```toml
-[concurrency]
-max_workers = 4               # 并发任务数
+- 点击「开始抓取」
+- 进度面板实时显示每个任务的状态
+- 下载完成后，PDF 保存在程序同目录下的 `output/` 文件夹
 
-[rate_limits]
-cninfo = 5                    # 各数据源独立限速 (rps)
-hkexnews = 3
-sec = 8
-dart = 5
-akshare = 4
+**文件命名格式**：`市场_代码_公司名_年份_报告类型.pdf`
+例：`HK_00700_腾讯控股_2024_annual_report.pdf`
 
-[sec]
-user_agent = "FS Capture (your-email@example.com)"   # SEC 政策强制带邮箱
+---
 
-[dart]
-api_key = ""                  # 在此粘贴 DART API key
+## 韩股配置（DART API Key）
 
-[ui]
-theme = "light"               # light | dark
-```
+下载韩股文件需要免费注册 DART API Key：
 
-完整模板见 [`config.example.toml`](config.example.toml)。
+1. 前往 [https://opendart.fss.or.kr/](https://opendart.fss.or.kr/) 注册账号
+2. 申请 API Key（审核通常当天通过）
+3. 打开 FS Capture → 点击右上角「设置」→ 粘贴 API Key → 保存
 
-## 测试
+> 暂时没有 Key？不勾选韩股即可，A / 港 / 美三个市场不受影响。
 
-```bash
-cd development
-pytest -m "not e2e"           # 单元 + 集成测试，~30 个，不联网
-FS_CAPTURE_RUN_E2E=1 pytest -m e2e   # 联网真打 4 市场冒烟，~25 秒
-ruff check . && ruff format --check .
-```
+---
 
-GitHub Actions CI 在 `.github/workflows/ci.yml` 跑 lint + 非 e2e 测试。
+## 常见问题
 
-## 文档
+**Q：下载速度很慢？**
+A：工具已内置限速，避免被各交易所封 IP。速度取决于报告数量和网络状况，正常情况下每份 PDF 几秒内完成。
 
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) — 项目架构 + 模块依赖图 + invariants
-- [`PROJECT_RETROSPECTIVE.md`](PROJECT_RETROSPECTIVE.md) — 开发复盘 + 教训
-- [`development/DEVELOPMENT_BRIEF.md`](development/DEVELOPMENT_BRIEF.md) — 给代码审核者的开发委托书
-- [`roadmap/`](roadmap/) — Sprint 计划归档（v0.1 → v0.5）
+**Q：某个公司没找到？**
+A：确认股票代码格式正确（港股需补零至 5 位，如 `00700`）。部分小市值公司在数据源中可能登记信息不全。
 
-## 项目结构
+**Q：PDF 下载失败 / 文件损坏？**
+A：重新点击「开始抓取」，工具会跳过已成功的文件，只重试失败项。
 
-```text
-fs-capture/
-├── README.md                 # 本文件
-├── LICENSE                   # MIT
-├── ARCHITECTURE.md
-├── PROJECT_RETROSPECTIVE.md
-├── config.example.toml
-├── roadmap/                  # Sprint plans
-└── development/              # 源码
-    ├── pyproject.toml
-    ├── requirements.txt
-    ├── fs_capture.spec       # PyInstaller spec (one-folder)
-    ├── run.bat / build.bat
-    ├── app/                  # GUI (PySide6) + core (httpx, ratelimit, cache, orchestrator)
-    ├── plugins/              # 4 市场 plugin: ashare / hk / us / kr
-    └── tests/                # pytest unit + integration + e2e
-```
+**Q：程序打开报"Windows 已保护你的电脑"？**
+A：点击「更多信息」→「仍要运行」。这是 Windows SmartScreen 对未签名 EXE 的默认提示，工具本身不含恶意代码（[MIT 开源](LICENSE)）。
+
+---
 
 ## 隐私与合规
 
-- HTTP 请求只走公开 GET / POST，无登录绕过、无私人数据抓取
-- SEC 请求自动注入用户邮箱 User-Agent（SEC fair-use 政策强制）
-- DART API Key 与下载内容均落在本地 `config.toml` / `output/`，无外部上传
-- 不做交易、不抓实时行情
+- 所有请求均为公开接口的 GET / POST，不绕过登录，不抓取私人数据
+- SEC（美股）请求自带邮箱 User-Agent，符合 SEC fair-use 政策
+- DART API Key 和所有下载文件仅保存在本地，不上传任何数据
+- 不做交易，不抓实时行情
+
+---
+
+## 开发者文档
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — 项目架构与模块设计
+- [`development/`](development/) — 源码（Python 3.11 + PySide6）
 
 ## 许可
 
 [MIT License](LICENSE) © 2026 Eric Zhang
-
-## 致谢
-
-- [akshare](https://github.com/akfamily/akshare) — 中港美股数据源聚合
-- [OpenDartReader](https://github.com/FinanceData/OpenDartReader) — DART OpenAPI 包装器
-- [pypdf](https://github.com/py-pdf/pypdf) — HK 选片 PDF 文本验证
-- [PySide6](https://wiki.qt.io/Qt_for_Python) — Qt6 Python 绑定
-- 工具的 v0.1 → v0.5 5 个 sprint 在 Claude Code（Planner + Reviewer）↔ Codex（Generator）协作模式下完成。详见 [`roadmap/`](roadmap/) 与 [`PROJECT_RETROSPECTIVE.md`](PROJECT_RETROSPECTIVE.md)。
