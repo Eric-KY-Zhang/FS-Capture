@@ -86,3 +86,25 @@ def test_tw_2330_2024() -> None:
     reports = plugin.download_reports(ticker, Period(year=2024, type=PeriodType.ANNUAL), out)
     assert any(report.kind == "annual_report" for report in reports)
     _assert_downloaded_reports(reports)
+
+
+def test_tw_2330_2024_q2_interim() -> None:
+    """TSMC 2024 半年报 (Q2 financial statements) via MOPS mtype=A."""
+    plugin = get_plugin(Exchange.TW)
+    ticker = plugin.resolve_name("2330")
+    out = Path.cwd() / "e2e_output"
+    reports = plugin.download_reports(ticker, Period(year=2024, type=PeriodType.Q2), out)
+    assert any(report.kind == "interim_report" for report in reports)
+    _assert_downloaded_reports(reports)
+
+
+def test_tw_2330_ipo_prospectus() -> None:
+    """TSMC IPO prospectus via MOPS mtype=B sweep."""
+    plugin = get_plugin(Exchange.TW)
+    ticker = plugin.resolve_name("2330")
+    out = Path.cwd() / "e2e_output"
+    reports = plugin.download_reports(
+        ticker, Period(year=1994, type=PeriodType.IPO_PROSPECTUS), out
+    )
+    assert any(report.kind == "ipo_prospectus" for report in reports)
+    _assert_downloaded_reports(reports)

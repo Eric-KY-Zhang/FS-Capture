@@ -393,6 +393,11 @@ def _download_ipo(ticker: Ticker, output_root: Path) -> list[ReportFile]:
     out: list[ReportFile] = []
     for sequence, row in enumerate(rows, start=1):
         filing_date = _filing_date(row)
+        # Strip ``.pdf`` from source_id so report_output_path_for_filing's own
+        # ``.pdf`` suffix doesn't double up (TWSE filenames include ``.pdf``).
+        source_id = row["filename"]
+        if source_id.lower().endswith(".pdf"):
+            source_id = source_id[:-4]
         dest = report_output_path_for_filing(
             output_root,
             ticker,
@@ -401,7 +406,7 @@ def _download_ipo(ticker: Ticker, output_root: Path) -> list[ReportFile]:
             "ipo_prospectus",
             ".pdf",
             filing_date=filing_date,
-            source_id=row["filename"],
+            source_id=source_id,
         )
         url = _build_pdf_url(ticker.code, row["filename"], "B")
         n_bytes = _download_pdf(url, dest)

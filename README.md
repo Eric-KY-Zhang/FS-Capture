@@ -1,12 +1,14 @@
 # FS Capture
 
-> 一键批量下载 A 股 / 港股 / 美股 / 韩股上市公司的官方披露文件（年报 / 审计报告 / 季报 / 半年报 / IPO 招股书）。
+> 一键批量下载 A 股 / 港股 / 美股 / 韩股 / 台股上市公司的官方披露文件（年报 / 审计报告 / 季报 / 半年报 / IPO 招股书）。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Eric-KY-Zhang/FS-Capture)](https://github.com/Eric-KY-Zhang/FS-Capture/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue.svg)]()
 
 FS Capture 是一个 Windows 桌面工具，专注解决「批量拿到原始 PDF」这一件事——**不抓三大报表数字、不算财务指标、不生成 Excel 底稿**。需要财务数据 / Excel 装填的场景请使用相关 VBA 工具。
+
+![FS Capture 主界面](docs/screenshots/main_window.png)
 
 ---
 
