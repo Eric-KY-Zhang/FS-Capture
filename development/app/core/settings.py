@@ -34,6 +34,7 @@ class RateLimitsCfg(BaseModel):
     sec: float = 8.0
     dart: float = 5.0
     akshare: float = 4.0
+    twse: float = 2.0
 
 
 class SECCfg(BaseModel):

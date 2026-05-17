@@ -74,6 +74,7 @@ _EXCHANGE_ACCENT = {
     Exchange.HK: "#D97706",  # amber-600 — 港股
     Exchange.US: "#2563EB",  # blue-600 — 美股
     Exchange.KR: "#7C3AED",  # violet-600 — 韩股
+    Exchange.TW: "#0EA5E9",  # sky-500 — 台股
 }
 
 

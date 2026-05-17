@@ -73,3 +73,16 @@ def test_kr_005930_2024() -> None:
     reports = plugin.download_reports(ticker, Period(year=2024, type=PeriodType.ANNUAL), out)
     assert any(report.kind == "annual_report" for report in reports)
     _assert_downloaded_reports(reports)
+
+
+def test_tw_2330_2024() -> None:
+    """TSMC 2024 annual report via MOPS (公開資訊觀測站 / doc.twse.com.tw)."""
+    plugin = get_plugin(Exchange.TW)
+    ticker = plugin.resolve_name("2330")
+    assert ticker.name
+    company = plugin.fetch_company(ticker)
+    assert company.currency == "TWD"
+    out = Path.cwd() / "e2e_output"
+    reports = plugin.download_reports(ticker, Period(year=2024, type=PeriodType.ANNUAL), out)
+    assert any(report.kind == "annual_report" for report in reports)
+    _assert_downloaded_reports(reports)

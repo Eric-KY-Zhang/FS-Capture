@@ -19,6 +19,7 @@ crash.log
 # Packaged app runtime (PyInstaller-built EXE bundle)
 FS Capture.exe
 _internal/
+FS-Capture-v*-windows.zip
 
 # Python build / cache artifacts
 __pycache__/

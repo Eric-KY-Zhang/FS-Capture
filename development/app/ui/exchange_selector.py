@@ -69,6 +69,7 @@ class ExchangeChip(QPushButton):
             Exchange.HK: "港股",
             Exchange.US: "美股",
             Exchange.KR: "韩股",
+            Exchange.TW: "台股",
         }[exchange]
 
     @staticmethod
@@ -78,6 +79,7 @@ class ExchangeChip(QPushButton):
             Exchange.HK: "香港交易所",
             Exchange.US: "NYSE · NASDAQ",
             Exchange.KR: "KOSPI · KOSDAQ",
+            Exchange.TW: "台交所 · 櫃買中心",
         }[exchange]
 
 
@@ -94,7 +96,7 @@ class ExchangeSelector(QWidget):
         layout.setSpacing(12)
 
         self.chips: dict[Exchange, ExchangeChip] = {}
-        for ex in (Exchange.A_SHARE, Exchange.HK, Exchange.US, Exchange.KR):
+        for ex in (Exchange.A_SHARE, Exchange.HK, Exchange.US, Exchange.KR, Exchange.TW):
             chip = ExchangeChip(ex, self)
             chip.toggled.connect(lambda *_: self.selection_changed.emit())
             self.chips[ex] = chip

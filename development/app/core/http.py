@@ -37,10 +37,15 @@ def default_client(
     if source == "sec":
         s = load_settings()
         headers["User-Agent"] = s.sec.user_agent
+    # TWSE / MOPS serves certs missing "Subject Key Identifier" extension,
+    # which Python 3.12+ OpenSSL rejects under strict verification. The user
+    # has explicitly authorized verify=False for this source only; all other
+    # markets keep strict verification with certifi's CA bundle.
+    verify: ssl.SSLContext | bool = False if source == "twse" else _ssl_context()
     return httpx.Client(
         headers=headers,
         timeout=timeout,
-        verify=_ssl_context(),
+        verify=verify,
         follow_redirects=True,
         http2=source != "dart",
     )

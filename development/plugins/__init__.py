@@ -26,4 +26,8 @@ def get_plugin(exchange: Exchange) -> ExchangePlugin:
         from .kr import KRShare
 
         return KRShare()
+    if exchange is Exchange.TW:
+        from .tw import TWShare
+
+        return TWShare()
     raise ValueError(f"No plugin registered for exchange={exchange}")

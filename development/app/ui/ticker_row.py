@@ -149,4 +149,5 @@ class TickerRow(QWidget):
             Exchange.HK: "如 00700 / 9988",
             Exchange.US: "如 AAPL / TSLA",
             Exchange.KR: "如 005930 / 000660",
+            Exchange.TW: "如 2330 / 2317",
         }[exchange]

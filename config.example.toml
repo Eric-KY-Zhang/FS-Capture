@@ -12,6 +12,7 @@ hkexnews = 3
 sec = 8
 dart = 5
 akshare = 4
+twse = 2
 
 [sec]
 user_agent = "FS Capture (your_email@example.com)"

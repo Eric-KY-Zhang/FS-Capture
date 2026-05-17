@@ -83,7 +83,7 @@ class MainView(QWidget):
 
         # ---- Per-exchange panels ---------------------------------------------
         self._panels: dict[Exchange, ExchangePanel] = {}
-        for ex in (Exchange.A_SHARE, Exchange.HK, Exchange.US, Exchange.KR):
+        for ex in (Exchange.A_SHARE, Exchange.HK, Exchange.US, Exchange.KR, Exchange.TW):
             panel = ExchangePanel(ex)
             self._panels[ex] = panel
             layout.addWidget(panel)

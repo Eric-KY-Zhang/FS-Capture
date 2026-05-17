@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPushButton,
     QSizePolicy,
     QVBoxLayout,
@@ -12,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.models import Exchange, Ticker
+from app.ui.batch_import_dialog import BatchImportDialog
 from app.ui.styles.palette import exchange_accent
 from app.ui.ticker_row import TickerRow
 
@@ -55,7 +57,13 @@ class ExchangePanel(QFrame):
         h_layout.addWidget(sub)
         h_layout.addStretch(1)
 
-        self.add_btn = QPushButton("＋ 添加股票")
+        self.batch_btn = QPushButton("＋ 批量添加")
+        self.batch_btn.setProperty("variant", "ghost")
+        self.batch_btn.setCursor(Qt.PointingHandCursor)
+        self.batch_btn.clicked.connect(self._open_batch_import)
+        h_layout.addWidget(self.batch_btn)
+
+        self.add_btn = QPushButton("＋ 单只添加")
         self.add_btn.setProperty("variant", "ghost")
         self.add_btn.setCursor(Qt.PointingHandCursor)
         self.add_btn.clicked.connect(self.add_row)
@@ -73,7 +81,7 @@ class ExchangePanel(QFrame):
         outer.addWidget(self._rows_host)
 
         # Empty state hint
-        self._empty_label = QLabel("暂无股票，点击右上角添加")
+        self._empty_label = QLabel("暂无股票，点击右上角添加或批量导入")
         self._empty_label.setStyleSheet("color: #94A3B8; font-size: 12px; padding: 12px 4px;")
         self._rows_layout.addWidget(self._empty_label)
 
@@ -93,6 +101,19 @@ class ExchangePanel(QFrame):
         self._rows_layout.addWidget(row)
         self.rows_changed.emit()
         return row
+
+    def add_codes(self, codes: list[str], *, auto_confirm: bool = True) -> int:
+        existing = {r.code_input.text().strip().upper() for r in self._rows}
+        added = 0
+        for code in codes:
+            if code.upper() in existing:
+                continue
+            row = self.add_row(code)
+            existing.add(code.upper())
+            added += 1
+            if auto_confirm:
+                row.confirm()
+        return added
 
     def resolved_tickers(self) -> list[Ticker]:
         out: list[Ticker] = []
@@ -119,6 +140,25 @@ class ExchangePanel(QFrame):
             self._empty_label.show()
         self.rows_changed.emit()
 
+    def _open_batch_import(self) -> None:
+        dialog = BatchImportDialog(self.exchange, self)
+        if dialog.exec() != dialog.DialogCode.Accepted:
+            return
+
+        codes = dialog.codes()
+        if not codes:
+            QMessageBox.warning(self, "没有可添加的代码", "未识别到有效股票代码")
+            return
+
+        added = self.add_codes(codes, auto_confirm=dialog.auto_confirm.isChecked())
+        skipped = len(codes) - added
+        if skipped:
+            QMessageBox.information(
+                self,
+                "批量添加完成",
+                f"已添加 {added} 只股票，跳过 {skipped} 个重复代码。",
+            )
+
     @staticmethod
     def _title_for(exchange: Exchange) -> str:
         return {
@@ -126,6 +166,7 @@ class ExchangePanel(QFrame):
             Exchange.HK: "港股 · Hong Kong",
             Exchange.US: "美股 · United States",
             Exchange.KR: "韩股 · Korea",
+            Exchange.TW: "台股 · Taiwan",
         }[exchange]
 
     @staticmethod
@@ -135,4 +176,5 @@ class ExchangePanel(QFrame):
             Exchange.HK: "披露易 · 东方财富",
             Exchange.US: "SEC EDGAR",
             Exchange.KR: "DART 电子公示",
+            Exchange.TW: "公開資訊觀測站 MOPS",
         }[exchange]
