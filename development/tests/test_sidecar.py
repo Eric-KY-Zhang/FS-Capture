@@ -11,7 +11,7 @@ from app.core.sidecar import write_sidecar
 def test_write_sidecar_contains_report_metadata() -> None:
     work_dir = Path.cwd() / "sidecar_test_dir"
     work_dir.mkdir(exist_ok=True)
-    pdf_path = work_dir / "A_600519_2024_annual_annual_report.pdf"
+    pdf_path = work_dir / "A_600519_贵州茅台_2024_年报.pdf"
     pdf_path.write_bytes(b"%PDF-1.7\nbody")
     ticker = Ticker(exchange=Exchange.A_SHARE, code="600519", name="贵州茅台")
     period = Period(year=2024, type=PeriodType.ANNUAL)
@@ -27,7 +27,7 @@ def test_write_sidecar_contains_report_metadata() -> None:
     sidecar = write_sidecar(report)
     meta = json.loads(sidecar.read_text(encoding="utf-8"))
 
-    assert sidecar.name == "A_600519_2024_annual_annual_report.pdf.meta.json"
+    assert sidecar.name == "A_600519_贵州茅台_2024_年报.pdf.meta.json"
     assert meta["exchange"] == "A"
     assert meta["ticker_code"] == "600519"
     assert meta["period_year"] == 2024
