@@ -333,3 +333,55 @@ VBA Captor 用了 Triangle 模式（Planner / Generator / Reviewer 循环 12 pha
 6. KR 整条链路实跑（用户注册 DART Key 后）
 
 — Eric Zhang（kaiyu199602@gmail.com），2026-05-09
+
+---
+
+## 9. 后续：v0.6 新增台股（2026-05-17）
+
+v0.5 5 个 sprint 完成后工具趋于稳定，按用户「再加一个市场」需求新增台股插件。这是工具发布后的第一个市场扩展，验证插件架构的可扩展性。
+
+### 9.1 数据源调研
+
+台股披露生态由 **MOPS 公開資訊觀測站** 统一管理，单一端点 `doc.twse.com.tw/server-java/t57sb01` 即可覆盖：
+
+- 上市（TWSE）+ 上柜（TPEx）所有公司（同一端点）
+- 年报（mtype=F 股東會材料，typecode F04 中文 / FE4 英文）
+- 季报、半年报（mtype=A 財務報告書，typecode AI1 合併中文 / AIA 個體）
+- IPO 公开说明书 + 公司債 + 特別股发行说明书（mtype=B）
+
+无须 API Key，与 A/HK/US 三市场一致；用户体验上无配置门槛。
+
+### 9.2 实现教训
+
+1. **ROC 年份转换是经典 footgun**。`roc_year = ad_year - 1911`，独立函数 + 单元测试覆盖。
+2. **文件名语法因 mtype 而异**，且与"年份"语义不一致：
+   - mtype=F 是「股东会年份」（meeting year），文件名 leading YYYY 才是 FY
+   - mtype=A 是 FY 本身，文件名 prefix `YYYYQQ` 编码季度
+3. **下载需两步**：POST step=9 返回一个 `<a href='/pdf/<file>_<timestamp>.pdf'>` 临时链接（session-bound 数分钟），再 GET 才拿到 PDF 字节。
+4. **TWSE 证书 hygiene 缺陷**：服务端证书缺 Subject Key Identifier 扩展，Python 3.12+ OpenSSL 严格模式拒绝。仅对 `source=twse` 用 `verify=False`（用户授权），不污染其他四市场严格校验。
+5. **Big5 编码**：MOPS HTML body 是 Big5，必须 `resp.content.decode("big5", errors="replace")` 而非 `resp.text`。
+
+### 9.3 验证
+
+| 报告类型 | 实跑结果 |
+|---|---|
+| 2024 中文年报（F04） | ✓ 9.99 MB |
+| 2024 半年报（AI1 Q2） | ✓ 7.2 MB |
+| IPO + 公司債 + 特別股说明书 | ✓ 60+ 份（2-16 MB 不等） |
+
+附带修复：IPO 输出文件名 `.pdf.pdf` 重复后缀小 bug。
+
+### 9.4 插件架构验证
+
+新市场代码量统计（不含测试）：
+
+| 文件 | 行数 |
+|---|---|
+| `plugins/tw/__init__.py` | 28 |
+| `plugins/tw/name_resolver.py` | ~140 |
+| `plugins/tw/reports.py` | ~320 |
+| UI 改动（5 个文件，每个加一条 dict entry / 列表元素） | ~10 |
+
+**结论**：plugin-per-exchange 架构按预期可扩展，新市场约半天到一天就能完成（含数据源探查、实现、测试、E2E 验证）。
+
+— Eric Zhang，2026-05-17（v0.6 5 市场 release）
