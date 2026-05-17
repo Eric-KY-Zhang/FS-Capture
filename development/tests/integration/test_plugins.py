@@ -63,12 +63,13 @@ def test_hk_resolve_name_uses_prefix_stock_id(monkeypatch) -> None:
         "_fetch_hkex_prefix",
         lambda _code: {"code": "00700", "name": "TENCENT", "stockId": "7609"},
     )
+    monkeypatch.setattr(name_resolver, "_fetch_chinese_short_name", lambda _code: "腾讯控股")
     monkeypatch.setattr(name_resolver, "_store_cache", lambda *_args: None)
 
     ticker = HKShare().resolve_name("700")
 
     assert ticker.code == "00700"
-    assert ticker.name == "TENCENT"
+    assert ticker.name == "腾讯控股"
     assert ticker.external_id == "7609"
 
 
@@ -151,6 +152,49 @@ def test_us_download_reports_uses_recent_filings(monkeypatch) -> None:
 
     assert result[0].kind == "annual_report"
     assert result[0].form == "10-K"
+
+
+def test_us_html_filings_are_rendered_from_downloaded_local_file(monkeypatch, tmp_path) -> None:
+    from plugins.us import reports
+
+    calls = {}
+
+    def fake_stream_to_file(client, url, dest, **kwargs):
+        calls["client"] = client
+        calls["url"] = url
+        calls["dest"] = Path(dest)
+        calls["kwargs"] = kwargs
+        Path(dest).write_text("<html><body>10-K</body></html>", encoding="utf-8")
+        return 28
+
+    def fake_render_url_to_pdf(url, dest):
+        calls["render_url"] = url
+        Path(dest).write_bytes(b"%PDF-1.7\n")
+        return 100_001
+
+    monkeypatch.setattr(reports, "stream_to_file", fake_stream_to_file)
+    monkeypatch.setattr(reports, "_render_url_to_pdf", fake_render_url_to_pdf)
+
+    client = object()
+    row = {
+        "accessionNumber": "0000320193-24-000123",
+        "primaryDocument": "aapl-20240928.htm",
+    }
+    dest = tmp_path / "US_AAPL_Apple Inc_2024_年报.pdf"
+
+    source_url, source_format, n_bytes = reports._download_primary_as_pdf(
+        client, "0000320193", row, dest
+    )
+
+    assert source_url.endswith("/aapl-20240928.htm")
+    assert source_format == "html"
+    assert n_bytes == 100_001
+    assert calls["client"] is client
+    assert calls["kwargs"]["source"] == "sec"
+    assert calls["kwargs"]["read_timeout"] is None
+    assert calls["render_url"].startswith("file:///")
+    assert calls["dest"].name == "US_AAPL_Apple Inc_2024_年报.source.html"
+    assert not calls["dest"].exists()
 
 
 def test_kr_resolve_name_uses_corp_code_map(monkeypatch) -> None:

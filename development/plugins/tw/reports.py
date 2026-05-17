@@ -82,6 +82,8 @@ _READFILE_RE = re.compile(
 # Soft rate limit: MOPS sometimes returns 200 with no rows.
 _EMPTY_RETRIES = 3
 _EMPTY_BACKOFF_BASE = 1.5
+_DOWNLOAD_RETRIES = 3
+_DOWNLOAD_BACKOFF_BASE = 1.5
 
 
 def roc_year(ad_year: int) -> int:
@@ -238,53 +240,60 @@ def _download_pdf(url: str, dest: Path) -> int | None:
         return None
 
     dest.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with default_client(source="twse", timeout=120.0) as client:
-            # Step 1: POST to get the temporary PDF URL.
-            limiter("twse", _RATE).acquire_blocking()
-            form = {
-                "step": "9",
-                "kind": mtype,
-                "co_id": co_id,
-                "filename": fname,
-                "colorchg": "1",
-                "DEBUG": "",
-                "SKEY1": "",
-                "SKEY2": "",
-                "YEAR": "",
-                "MDATE": "",
-                "TYPE": "",
-            }
-            resp = client.post(_DOC_URL, data=form, timeout=60.0)
-            resp.raise_for_status()
-            body = resp.content.decode("big5", errors="replace")
-            href_match = _PDF_HREF_RE.search(body)
-            if not href_match:
-                logger.warning(
-                    f"TWSE step=9 did not yield a /pdf/ link for {fname}: body[:200]={body[:200]!r}"
-                )
-                return None
-            pdf_url = f"https://doc.twse.com.tw{href_match.group(1)}"
+    for attempt in range(_DOWNLOAD_RETRIES):
+        try:
+            with default_client(source="twse", timeout=120.0) as client:
+                # Step 1: POST to get the temporary PDF URL.
+                limiter("twse", _RATE).acquire_blocking()
+                form = {
+                    "step": "9",
+                    "kind": mtype,
+                    "co_id": co_id,
+                    "filename": fname,
+                    "colorchg": "1",
+                    "DEBUG": "",
+                    "SKEY1": "",
+                    "SKEY2": "",
+                    "YEAR": "",
+                    "MDATE": "",
+                    "TYPE": "",
+                }
+                resp = client.post(_DOC_URL, data=form, timeout=60.0)
+                resp.raise_for_status()
+                body = resp.content.decode("big5", errors="replace")
+                href_match = _PDF_HREF_RE.search(body)
+                if not href_match:
+                    raise ValueError(
+                        f"TWSE step=9 did not yield a /pdf/ link for {fname}: "
+                        f"body[:200]={body[:200]!r}"
+                    )
+                pdf_url = f"https://doc.twse.com.tw{href_match.group(1)}"
 
-            # Step 2: GET the temporary PDF.
-            n = stream_to_file(
-                client,
-                pdf_url,
-                dest,
-                source="twse",
-                rate=_RATE,
-                read_timeout=180.0,
-            )
-        with dest.open("rb") as f:
-            head = f.read(4)
-        if head != b"%PDF":
-            logger.warning(f"TWSE final download was not a PDF (got {head!r}): {pdf_url}")
+                # Step 2: GET the temporary PDF.
+                n = stream_to_file(
+                    client,
+                    pdf_url,
+                    dest,
+                    source="twse",
+                    rate=_RATE,
+                    read_timeout=180.0,
+                )
+            with dest.open("rb") as f:
+                head = f.read(4)
+            if head != b"%PDF":
+                dest.unlink(missing_ok=True)
+                raise ValueError(f"TWSE final download was not a PDF (got {head!r}): {pdf_url}")
+            return n
+        except Exception as exc:
             dest.unlink(missing_ok=True)
-            return None
-        return n
-    except Exception as exc:
-        logger.warning(f"TWSE download failed for {url}: {exc}")
-        return None
+            if attempt == _DOWNLOAD_RETRIES - 1:
+                logger.warning(f"TWSE download failed for {url}: {exc}")
+                return None
+            logger.warning(
+                f"TWSE download retry {attempt + 1}/{_DOWNLOAD_RETRIES} for {url}: {exc}"
+            )
+            time.sleep(_DOWNLOAD_BACKOFF_BASE**attempt)
+    return None
 
 
 def _qparam(url: str, name: str) -> str | None:

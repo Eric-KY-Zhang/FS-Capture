@@ -19,7 +19,7 @@ from app.core.models import Company, Exchange, Ticker
 from app.core.ratelimit import limiter
 
 _PREFIX_URL = "https://www1.hkexnews.hk/search/prefix.do"
-_CACHE_KEY_PREFIX = "hk:hkex_prefix:v2:"
+_CACHE_KEY_PREFIX = "hk:hkex_prefix:v3:"
 _TTL = 24 * 3600
 _JSONP_RE = re.compile(r"^[^(]*\((.*)\)\s*;?\s*$", re.DOTALL)
 
@@ -90,12 +90,41 @@ def _fetch_hkex_prefix(norm: str) -> dict | None:
     return None
 
 
+def _fetch_chinese_short_name(norm: str) -> str | None:
+    try:
+        import akshare as ak
+
+        df = ak.stock_hk_security_profile_em(symbol=norm)
+    except Exception as exc:
+        logger.warning(f"Eastmoney HK security profile lookup failed for {norm}: {exc}")
+        return None
+
+    if df.empty:
+        return None
+    for col in ("证券简称", "股票简称", "简称", "名称"):
+        if col not in df.columns:
+            continue
+        value = str(df.iloc[0][col] or "").strip()
+        if value:
+            return value
+    return None
+
+
 def resolve(code: str) -> Ticker:
     norm = _normalize_code(code)
     result = _cached_result(norm)
     if not result:
         result = _fetch_hkex_prefix(norm)
         if result:
+            zh_name = _fetch_chinese_short_name(norm)
+            if zh_name:
+                result["zh_name"] = zh_name
+            _store_cache(norm, result)
+    elif not result.get("zh_name"):
+        zh_name = _fetch_chinese_short_name(norm)
+        if zh_name:
+            result = dict(result)
+            result["zh_name"] = zh_name
             _store_cache(norm, result)
 
     if not result:
@@ -104,7 +133,7 @@ def resolve(code: str) -> Ticker:
     return Ticker(
         exchange=Exchange.HK,
         code=norm,
-        name=str(result.get("name") or norm),
+        name=str(result.get("zh_name") or result.get("name") or norm),
         external_id=str(result["stockId"]),
     )
 

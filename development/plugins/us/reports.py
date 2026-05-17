@@ -246,6 +246,15 @@ def _render_url_to_pdf(url: str, dest: Path) -> int:
     raise FileNotFoundError(f"PDF renderer did not create {dest}")
 
 
+def _download_html_then_render_pdf(client: Any, url_doc: str, dest: Path) -> int:
+    html_dest = dest.with_name(f"{dest.stem}.source.html")
+    try:
+        stream_to_file(client, url_doc, html_dest, source="sec", rate=8.0, read_timeout=None)
+        return _render_url_to_pdf(html_dest.resolve().as_uri(), dest)
+    finally:
+        html_dest.unlink(missing_ok=True)
+
+
 def _download_primary_as_pdf(client: Any, cik: str, row: dict, dest: Path) -> tuple[str, str, int]:
     acc_no = _accession(row)
     primary = str(row.get("primaryDocument") or "").strip()
@@ -257,8 +266,7 @@ def _download_primary_as_pdf(client: Any, cik: str, row: dict, dest: Path) -> tu
     if source_format == "pdf":
         n_bytes = stream_to_file(client, url_doc, dest, source="sec", rate=8.0)
     else:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        n_bytes = _render_url_to_pdf(url_doc, dest)
+        n_bytes = _download_html_then_render_pdf(client, url_doc, dest)
     return url_doc, source_format, n_bytes
 
 

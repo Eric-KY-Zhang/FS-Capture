@@ -179,6 +179,49 @@ def test_download_quarter_picks_correct_quarter_pdf(monkeypatch, tmp_path: Path)
     assert rep.title == "202402_2330_AI1.pdf"
 
 
+def test_download_pdf_retries_temporary_twse_pdf_failure(monkeypatch, tmp_path: Path) -> None:
+    class FakeLimiter:
+        def acquire_blocking(self) -> None:
+            return None
+
+    class FakeResponse:
+        content = b"<html><a href='/pdf/202402_2330_AI1_123.pdf'>pdf</a></html>"
+
+        def raise_for_status(self) -> None:
+            return None
+
+    class FakeClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def post(self, *_args, **_kwargs):
+            return FakeResponse()
+
+    attempts = {"count": 0}
+
+    def fake_stream_to_file(_client, _url, dest, **_kwargs):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise RuntimeError("illegal status line")
+        Path(dest).write_bytes(b"%PDF-1.4\n%fake")
+        return Path(dest).stat().st_size
+
+    monkeypatch.setattr(tw_reports, "default_client", lambda **_kwargs: FakeClient())
+    monkeypatch.setattr(tw_reports, "stream_to_file", fake_stream_to_file)
+    monkeypatch.setattr(tw_reports, "limiter", lambda *_args, **_kwargs: FakeLimiter())
+    monkeypatch.setattr(tw_reports.time, "sleep", lambda _seconds: None)
+
+    url = _build_pdf_url("2330", "202402_2330_AI1.pdf", "A")
+    n_bytes = tw_reports._download_pdf(url, tmp_path / "tw-q2.pdf")
+
+    assert attempts["count"] == 2
+    assert n_bytes is not None
+    assert n_bytes > 0
+
+
 def test_download_reports_returns_empty_when_no_candidates(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(tw_reports, "_fetch_listing", lambda *_a, **_k: "<html></html>")
     ticker = Ticker(exchange=Exchange.TW, code="9999", name="無此公司", external_id="9999")

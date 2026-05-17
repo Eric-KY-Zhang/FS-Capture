@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal, Slot
+from PySide6.QtCore import QObject, QRunnable, QSignalBlocker, Qt, QThreadPool, Signal, Slot
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -115,8 +115,10 @@ class TickerRow(QWidget):
         self.confirm_btn.setEnabled(True)
         self.code_input.setEnabled(True)
         if ticker is not None:
-            self._ticker = ticker
+            blocker = QSignalBlocker(self.code_input)
             self.code_input.setText(ticker.code)
+            del blocker
+            self._ticker = ticker
             self._set_state("ok", "✓ 已确认", ticker.name or "")
         else:
             self._ticker = None
