@@ -308,7 +308,9 @@ VBA Captor 用了 Triangle 模式（Planner / Generator / Reviewer 循环 12 pha
 
 ---
 
-## 8. 总结
+## 8. 总结（v0.2 时点快照，2026-05-09）
+
+> 以下评估反映 v0.2 重定位完成时的状态；v0.5 ↔ v0.6 后续进展见 §9。
 
 | 维度 | 评估 |
 |---|---|
@@ -319,7 +321,7 @@ VBA Captor 用了 Triangle 模式（Planner / Generator / Reviewer 循环 12 pha
 | GUI 质量 | 无边框圆角 + 4 chip + 行内确认 + 进度面板（首版可用，无 onboarding） |
 | 数据源稳定性 | A 股 / 港股 / 美股 PDF 抓取已验证；HK 选片有已知粗糙；KR 未实跑 |
 | 部署 | PyInstaller one-folder ~340 MB / 启动器 ~27 MB，windowed 模式两个坑已修 |
-| 文档 | ARCHITECTURE + PROJECT_RETROSPECTIVE + README + DEVELOPMENT_BRIEF + roadmap/ + current.md |
+| 文档 | ARCHITECTURE + PROJECT_RETROSPECTIVE + README + DEVELOPMENT_BRIEF；v0.2 阶段的 sprint 规划与 planner↔Codex 协作日志已归档于 `roadmap/archive/` |
 
 **当前阶段：v0.2 重定位中（Sprint 01 砍掉抓数据代码 → Sprint 02-05 健壮性 + 选片 + UX + 测试）**。
 

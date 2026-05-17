@@ -80,8 +80,7 @@ FS Capture/                    # 项目根（发布版直接 ship）
 ├── README.md                  # 用户使用说明（中文）
 ├── ARCHITECTURE.md            # 架构文档
 ├── PROJECT_RETROSPECTIVE.md   # 项目复盘
-├── current.md                 # 当前 planner ↔ Codex 交互（一页）
-├── roadmap/                   # 多 sprint 计划文件
+├── roadmap/archive/           # v0.1→v0.5 sprint 规划归档（已完成）
 ├── config.example.toml        # 用户配置模板
 ├── VBA Captor/                # 旧 Excel/VBA 工具（仅作历史参考，不动）
 └── development/

@@ -45,8 +45,7 @@
 ├── README.md                # 给最终用户看的使用说明
 ├── ARCHITECTURE.md          # 本文档
 ├── PROJECT_RETROSPECTIVE.md # 复盘
-├── current.md               # 当前 planner ↔ Codex 交互（一页轮次）
-├── roadmap/                 # 多 sprint 计划文件
+├── roadmap/archive/         # v0.1→v0.5 sprint 规划归档 + 历史 planner 日志
 ├── config.example.toml      # 用户配置模板（不含密钥）
 ├── VBA Captor/              # 旧 Excel/VBA 工具（v1.0 release，仅作历史参考）
 └── development/             # Python EXE 源码 + 构建脚本 + 测试 + 开发委托书
@@ -103,7 +102,8 @@ UI 层
    ├─ ashare/               akshare + cninfo
    ├─ hk/                   东方财富 + HKEXnews
    ├─ us/                   SEC submissions
-   └─ kr/                   OpenDartReader (DART)
+   ├─ kr/                   OpenDartReader (DART)
+   └─ tw/                   TWSE ISIN + MOPS（v0.6 新增）
 ```
 
 依赖方向：
@@ -376,7 +376,7 @@ python -m unittest tests.test_selection_logic
 | 韩股 | 005930 | ✓ 三星电子 | ✓ annual_report.pdf 9.7 MB |
 | 台股 | 2330 | ✓ 台積電 | ✓ annual_report 9.99 MB / 半年报 7.2 MB / 60+ IPO 公开说明书 |
 
-未覆盖的回归路径见 `roadmap/`，重点：
+未覆盖的回归路径（v0.1→v0.5 规划已归档于 `roadmap/archive/`），重点：
 
 - KR 整条链路（DART Key 注册后必须实跑一遍）。
 - US `submissions.files[]` 分页兜底（老 ticker，AAPL FY2018 之前会落到这条路径）。
