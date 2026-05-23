@@ -1,6 +1,6 @@
 # Filings Atlas / 全球披露图谱 — 架构
 
-> Last updated: 2026-05-23 (v0.8 — Playwright 池化 + 断点续传 + UI strings + lint 锁定)
+> Last updated: 2026-05-23 (v1.0 — 7 市场 + 双语 UI + sidecar 迁移 + 增量更新 + JP/UK)
 
 本文档描述 Filings Atlas / 全球披露图谱（原 FS Capture）的 Python/PySide6 桌面工具架构，与同仓 `VBA Captor/` 子项目（旧 Excel/VBA 工具，已 v1.0 release）并存。本文档面向后续维护者和 Codex/Reviewer 交接使用，不替代 `development/DEVELOPMENT_BRIEF.md` 的开发委托书细节。
 
@@ -10,7 +10,7 @@
 
 核心目标（v0.2 重定位后）：
 
-- 一键下载 A 股 / 港股 / 美股 / 韩股 / 台股上市公司的**官方披露文件**：年报、审计报告、季报、半年报、IPO 招股书。
+- 一键下载 A 股 / 港股 / 美股 / 韩股 / 台股 / 日股 / 英股上市公司的**官方披露文件**：年报、审计报告、季报、半年报、IPO 招股书。
 - 单 EXE 双击运行，配置（DART Key、并发、限速）走 `config.toml`。
 - 输出扁平：所有 PDF 平铺在 `output/` 下，文件名内嵌交易所 / 代码 / 年份 / 期间 / 报告类型元信息。
 - 无服务端依赖，所有 HTTP / 缓存 / 限速都在本地。
@@ -28,8 +28,10 @@
 - GUI 用 PySide6 + 自定义 QSS（无边框圆角窗口，扁平化设计），不用 Tkinter / Electron。
 - 每市场一个 plugin 模块，新增市场只需要新建目录。
 - HTTP 走 `httpx` + `tenacity`，不再用 VBA 的 WinHttp + 正则。
-- 韩股 DART API Key 变为可选加速器；未配置时走 DART 公网披露页 fallback。A 股 / 港股 / 美股 / 台股四市场仍免 Key。
-- 台股 MOPS 服务端证书缺失 Subject Key Identifier 扩展，`app/core/http.default_client` 仅对 `source=twse` 关闭证书校验（用户授权），其他四市场保留 certifi 严格校验。
+- 韩股 DART API Key 变为可选加速器；未配置时走 DART 公网披露页 fallback。
+- 日股 EDINET 支持双模式，但 v1.0 **强烈推荐配置 EDINET Subscription-Key**（免费注册 `disclosure2.edinet-fsa.go.jp` / `api.edinet-fsa.go.jp`）。未配置时仅尝试 EDINET 公网页 fallback，官方 API 会返回 invalid subscription key。
+- 英股 UK/FCA NSM 不需要 Key。
+- 台股 MOPS 服务端证书缺失 Subject Key Identifier 扩展，`app/core/http.default_client` 仅对 `source=twse` 关闭证书校验（用户授权），其他六市场保留 certifi 严格校验。
 - 抓数据 / Excel 装填的需求请用 `VBA Captor/`（已 v1.0 release，4 市场已稳定）；FS Capture 只解决「批量拿到原始 PDF」一个问题。
 
 跟 `VBA Captor/` 的关系：
@@ -56,7 +58,7 @@
     ├── run.bat              # 源码启动（开发）
     ├── build.bat            # 一键打包 EXE
     ├── app/                 # GUI + 核心逻辑
-    ├── plugins/             # 5 市场插件
+    ├── plugins/             # 7 市场插件
     └── tests/               # unittest 用例
 ```
 
@@ -72,7 +74,7 @@ GUI 入口
 UI 层
 └─ app/ui/main_window.py        无边框圆角窗口 + 自定义标题栏 + 8 方向 hit-test
    └─ app/ui/main_view.py       主视图，组装所有 section 并监听 orchestrator
-      ├─ exchange_selector.py   顶部 5 个 chip (A/HK/US/KR/TW)
+      ├─ exchange_selector.py   顶部 7 个 chip (A/HK/US/KR/TW/JP/UK)
       ├─ exchange_panel.py      单交易所 section（内嵌 ticker_row 列表）
       ├─ ticker_row.py          单行：代码输入 + 确认 + 状态徽章 + 名称 + 删除
       ├─ period_selector.py     起止年份 + 期间类型 checkbox（年报 / 季报 / 半年报 / IPO 招股书）
@@ -104,7 +106,9 @@ UI 层
    ├─ hk/                   东方财富 + HKEXnews
    ├─ us/                   SEC submissions
    ├─ kr/                   OpenDartReader (DART) + DART public web fallback
-   └─ tw/                   TWSE ISIN + MOPS（v0.6 新增）
+   ├─ tw/                   TWSE ISIN + MOPS
+   ├─ jp/                   EDINET API v2 + EDINET public web fallback
+   └─ uk/                   FCA NSM public search + artefact download/render
 ```
 
 依赖方向：
@@ -116,7 +120,7 @@ UI 层
 
 ## 4. 插件契约（ExchangePlugin ABC）
 
-每个市场 = `plugins/{ashare,hk,us,kr}/` 模块，实现 `plugins/base.py` 的 `ExchangePlugin` ABC：
+每个市场 = `plugins/{ashare,hk,us,kr,tw,jp,uk}/` 模块，实现 `plugins/base.py` 的 `ExchangePlugin` ABC：
 
 ```python
 class ExchangePlugin(ABC):
@@ -146,6 +150,8 @@ class ExchangePlugin(ABC):
 | 美股 | SEC `company_tickers.json`（24h 缓存） | SEC `submissions API` + 分页 `files` 兜底 | ✓ AAPL 10-K FY2023/2024 |
 | 韩股 | OpenDartReader `corp_codes` 或 DART 公网按需搜索（无 TTL 缓存） | DART OpenAPI `list` 或公网 HTML 搜索 + 公告 PDF/渲染下载 | ✓ 005930 三星电子（有 Key / 无 Key） |
 | 台股 | TWSE ISIN 服务（30d 缓存，覆盖上市 + 上柜） | MOPS `doc.twse.com.tw/server-java/t57sb01`（POST step=9 → 解析临时 `/pdf/` 链接 → GET） | ✓ 2330 台积电 年报 / 半年报 / IPO |
+| 日股 | EDINET 文档列表 API 或 EDINET 公网页 fallback | EDINET document API / PDF 展示链路 | API Key 路径单测覆盖；无 Key 官方 API 阻断 |
+| 英股 | 预置主流 LSE ticker + FCA NSM issuer metadata | FCA NSM search API + artifact PDF/HTML 渲染 | ✓ ULVR / HSBA / AZN |
 
 ## 5. 数据流
 
@@ -183,10 +189,10 @@ class ExchangePlugin(ABC):
 `output_paths.py::report_output_path`：
 
 ```text
-{exchange}_{code}_{year}_{period_type}_{kind}.{ext}
-例：A_600519_2024_annual_annual_report.pdf
-   US_AAPL_2024_annual_10K.pdf
-   HK_00700_2024_annual_annual_report.pdf
+{exchange}_{code}_{name}_{year}_{kind_zh}.pdf
+例：A_600519_贵州茅台_2024_年报.pdf
+   US_AAPL_Apple Inc._2024_年报.pdf
+   UK_ULVR_Unilever PLC_2024_年报.pdf
 ```
 
 扁平铺在 `output_root` 下，**不再按公司或市场嵌套**（test_output_layout.py 锁定）。`safe_filename` 会替换 `< > : " / \ | ? *` 与 `\x00-\x1f` 为下划线。
@@ -232,16 +238,16 @@ class ExchangePlugin(ABC):
 ### 6.5 输出
 
 - `safe_filename` 输入路径必经过滤（防注入）。
-- 输出目录扁平，无公司/市场嵌套（`test_output_layout.py` 锁定）。
-- `output/` 下**只产出 PDF（少数情况下 HTML）**，不写入任何 Excel / JSON 衍生产物。
-- 文件名规则不可变（`{exchange}_{code}_{year}_{period_type}_{kind}.{ext}`）。
+- 输出目录扁平，无公司/市场嵌套（`tests/test_output_layout.py` 锁定）。
+- `output/` 下**只产出 PDF**，sidecar 元数据落在 `data/cache/sidecars/`，不写入任何 Excel / JSON 衍生产物。
+- 文件名规则不可变（`{exchange}_{code}_{name}_{year}_{kind_zh}.pdf`）。
 
 ### 6.6 GUI
 
 - `MainWindow` 是 `FramelessWindowHint + WA_TranslucentBackground`；圆角通过 `#WindowRoot` QSS `border-radius: 14px` + `QGraphicsDropShadowEffect`。
 - 边缘 6px hit-test 实现 8 方向缩放；最大化时去掉圆角（避免裁切）。
 - 全部样式集中在 `app/ui/styles/app.qss`，不能在 Python 代码里 setStyleSheet。
-- 顶层 UI 中文文案集中在 `app/ui/strings.py`；当前只做物理集中，不引入 `tr()` 或运行时语言切换。
+- 顶层 UI 文案集中在 `app/ui/strings.py`；运行时语言切换走 `LanguageManager`，保留 widget 状态并原地 `setText()`。
 - 状态徽章 `StatusPill` 通过 `dynamic property + style().unpolish/polish` 切换，不重建 widget。
 
 ### 6.7 PyInstaller 兼容
@@ -281,7 +287,7 @@ development/
 ├── plugins/
 │   ├── base.py              ExchangePlugin ABC（3 方法）
 │   ├── __init__.py          get_plugin(exchange) 路由
-│   └── {ashare,hk,us,kr}/
+│   └── {ashare,hk,us,kr,tw,jp,uk}/
 │       ├── name_resolver.py
 │       └── reports.py
 │
@@ -316,7 +322,7 @@ HTTP 请求原则：
 - SEC 请求带最低限速（TokenBucket sec=8 rps）+ 邮箱 UA。
 - DART Key 缺失时 KR 自动走公网 fallback；填 Key 时优先走 OpenAPI。
 - 用户输入的 ticker code 全程 normalize（strip+upper），不直接拼 URL（防 SSRF）。
-- **TWSE 例外**：MOPS 服务端证书缺失 Subject Key Identifier 扩展（Python 3.12+ 严格 OpenSSL 拒绝），`default_client` 仅对 `source=twse` 设 `verify=False`，其他四市场保持 certifi 严格校验。这是 TWSE 服务端的证书 hygiene 问题，非我们可控。
+- **TWSE 例外**：MOPS 服务端证书缺失 Subject Key Identifier 扩展（Python 3.12+ 严格 OpenSSL 拒绝），`default_client` 仅对 `source=twse` 设 `verify=False`，其他六市场保持 certifi 严格校验。这是 TWSE 服务端的证书 hygiene 问题，非我们可控。
 
 | 层 | 实现 | TTL / 策略 |
 |---|---|---|
@@ -354,7 +360,140 @@ docs_cache/                    预留文档缓存
 development/                   源码 + 构建脚本（隐藏，开发用）
 ```
 
-## 11. 验证矩阵
+## 11. 如何加新市场（v1.0 起 7 市场，扩展模板）
+
+新增市场时只扩展“官方披露 PDF 下载”这一条链路，不引入财务数据抽取、指标计算或 Excel 输出。推荐先复制 JP/UK 的结构做最小闭环，再逐步补充 IPO、季度和边界场景。
+
+### 11.1 Exchange 枚举
+
+在 `development/app/core/models.py::Exchange` 增加新成员，并同步 `display_name`：
+
+```python
+class Exchange(str, Enum):
+    JP = "JP"
+    UK = "UK"
+    NEW = "NEW"
+
+    @property
+    def display_name(self) -> str:
+        return {
+            "JP": "日股",
+            "UK": "英股",
+            "NEW": "新市场",
+        }[self.value]
+```
+
+枚举值会进入输出文件名、sidecar exchange 字段、增量更新匹配和进度 UI。不要改已有枚举值，否则会破坏历史 sidecar 与已下载文件识别。
+
+### 11.2 Plugin 三件套
+
+每个市场至少包含：
+
+```text
+development/plugins/{mk}/
+├── __init__.py          # {Market}Share(ExchangePlugin)，懒 import 下游模块
+├── name_resolver.py    # 用户输入 code -> Ticker(name + external_id)
+└── reports.py          # Period -> ReportFile[]，只落地 PDF
+```
+
+`__init__.py` 只做契约适配，保持和 JP 插件类似：
+
+```python
+class JPShare(ExchangePlugin):
+    exchange = Exchange.JP
+
+    def resolve_name(self, code: str) -> Ticker:
+        from .name_resolver import resolve as _resolve
+        return _resolve(code)
+
+    def fetch_company(self, ticker: Ticker) -> Company:
+        from .name_resolver import fetch_company as _fetch_company
+        return _fetch_company(ticker)
+
+    def download_reports(self, ticker: Ticker, period: Period, output_root: Path) -> list[ReportFile]:
+        from .reports import download as _download
+        return _download(ticker, period, output_root)
+```
+
+如果数据源有 Key 与无 Key 两条路，拆成 `{mk}_api.py` 与 `{mk}_web.py`，在 `name_resolver.py` / `reports.py` 里统一选择分支。JP 是 v1.0 的模板：
+
+- `edinet_api.py`：EDINET API v2，使用 `Subscription-Key`，走 `default_client(source="edinet")` 与 `rate_limits.edinet`。
+- `edinet_web.py`：公网 fallback 入口，选择器集中在 `_SELECTORS`。
+- `name_resolver.py`：规范化 `7203` / `7203.T` / `JP7203`，缓存 EDINET code 与 filer name。
+- `reports.py`：按 `PeriodType` 映射 EDINET `docTypeCode`，下载或转换为 PDF，返回 `ReportFile`。
+
+v1.0 的 Key 口径：
+
+- **Japan / EDINET**：强烈推荐配置 EDINET Subscription-Key。官方 API v2 的 documents list 与 document download 都要求 `Subscription-Key`；用户可免费注册 `disclosure2.edinet-fsa.go.jp` / `api.edinet-fsa.go.jp` 后在设置里填写。无 Key 时只尝试公网 fallback，稳定性不等同于 API。
+- **United Kingdom / FCA NSM**：不需要 Key。UK 插件走 FCA NSM 公网 search endpoint 与 `data.fca.org.uk/artefacts/` 文件下载/HTML 渲染。
+
+### 11.3 注册
+
+在 `development/plugins/__init__.py::get_plugin` 加显式分支。当前项目不使用自动发现，便于 PyInstaller hidden import 与 Reviewer 审查。
+
+```python
+if exchange is Exchange.UK:
+    from .uk import UKShare
+    return UKShare()
+```
+
+新增市场后同步检查 `development/filings_atlas.spec` 的 `hiddenimports`，确保 frozen EXE 能加载新插件。
+
+### 11.4 UI 接入
+
+最小 UI 接线清单：
+
+- `app/ui/main_view.py`：exchange tuple 加新 `Exchange`。
+- `app/ui/exchange_selector.py`：chip 名称、meta 与顺序。
+- `app/ui/exchange_panel.py`：panel title/subtitle。
+- `app/ui/ticker_row.py`：输入 placeholder。
+- `app/ui/batch_import_dialog.py`：批量导入正则、normalize 和示例。
+- `app/ui/progress_dock.py`：市场名称映射。
+- `app/ui/styles/palette.py`：新增 accent 色。
+- `app/ui/strings.py`：至少补 `ES_NAME_*`、`ES_META_*`、`EP_TITLE_*`、`EP_SUBTITLE_*`、`TR_PLACEHOLDER_*` 的 zh/en 双语 key。
+
+所有用户可见文字必须进 `strings.py`，并保证 `STRINGS["zh"]` 和 `STRINGS["en"]` key 完全一致，英文 value 不含 CJK。
+
+### 11.5 Settings 可选 Key
+
+只有数据源确实需要或显著受益于 Key 时才加设置项。结构参照 EDINET：
+
+```python
+class EDINETCfg(BaseModel):
+    api_key: str = ""
+
+class Settings(BaseModel):
+    edinet: EDINETCfg = Field(default_factory=EDINETCfg)
+```
+
+如果 Key 被缓存到客户端或 resolver，必须提供 cache invalidation hook，并在 `settings_dialog.py` 保存 Key 变化后调用。EDINET 当前用 `invalidate_edinet_client_cache()` 清理 `plugins.jp.name_resolver` 里的缓存。
+
+不要为 UK/NSM 这类免 Key 数据源加空设置项，避免误导用户。
+
+### 11.6 测试要求
+
+新增市场至少补两组测试：
+
+- `tests/test_{mk}_name_resolver.py`：代码 normalize、resolve/fetch_company、Key 分支或公网搜索 shape。
+- `tests/test_{mk}_reports.py`：list_filings、select_filing、PDF 下载/HTML 渲染、无披露返回 `[]`。
+
+最低要求不少于 5 个用例，并同步：
+
+- `tests/integration/test_plugins.py`：`get_plugin(Exchange.X)` 注册测试。
+- `tests/test_batch_import.py`：批量导入 normalize 测试。
+- `tests/test_ui_strings.py` / `tests/test_language_switch.py`：双语 key 和 UI 扫描保持绿。
+
+最终验证矩阵：
+
+```powershell
+cd development
+python -m pytest -m "not e2e" -v -p no:cacheprovider
+python -m ruff check . --no-cache
+```
+
+如果数据源允许公网访问，还应做 1-3 票真实 smoke，并确认落地文件以 `%PDF` 开头。若需要 Key 且本机未配置，必须在自检报告中明确说明阻断原因。
+
+## 12. 验证矩阵
 
 当前测试集（`development/tests/`）：
 
