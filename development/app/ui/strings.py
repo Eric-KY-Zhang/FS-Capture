@@ -54,6 +54,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "MV_SUBTITLE": "勾选交易所 → 录入股票代码 → 选择期间 → 下载披露文件 PDF",
         "MV_SETTINGS_BUTTON": "⚙  设置",
         "MV_RUN_BUTTON": "▶  抓报告",
+        "MV_INCREMENTAL_BUTTON": "增量更新",
         "MV_CANNOT_START_TITLE": "无法开始",
         "MV_NO_TICKERS_BODY": "请先添加并确认至少一只股票",
         "MV_UNCONFIRMED_SUFFIX": " 中存在尚未确认的股票代码",
@@ -67,6 +68,9 @@ STRINGS: dict[str, dict[str, str]] = {
             "提交报告下载任务：{tickers} 只股票 × {periods} 个期间 = {tasks} 个 task"
         ),
         "MV_JOB_STARTED_FORMAT": "Job 开始，共 {total} 个 task",
+        "MV_INCREMENTAL_SKIPPED_FORMAT": "增量模式：跳过 {count} 个已下载任务",
+        "MV_INCREMENTAL_NONE_TITLE": "无新报告",
+        "MV_INCREMENTAL_NONE_BODY": "所选股票/期间均已下载过。",
         "MV_DONE_TITLE": "下载完成",
         "MV_DONE_BODY_FORMAT": (
             "总计 {total} 个 task：成功 {ok}，失败 {fail}\n\n"
@@ -191,6 +195,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "MV_SUBTITLE": "Select markets → enter ticker codes → choose periods → download disclosure PDFs",
         "MV_SETTINGS_BUTTON": "⚙  Settings",
         "MV_RUN_BUTTON": "▶  Download Reports",
+        "MV_INCREMENTAL_BUTTON": "Incremental Update",
         "MV_CANNOT_START_TITLE": "Cannot start",
         "MV_NO_TICKERS_BODY": "Add and confirm at least one ticker first",
         "MV_UNCONFIRMED_SUFFIX": " has unconfirmed ticker codes",
@@ -204,6 +209,9 @@ STRINGS: dict[str, dict[str, str]] = {
             "Submitted report download job: {tickers} tickers x {periods} periods = {tasks} tasks"
         ),
         "MV_JOB_STARTED_FORMAT": "Job started with {total} tasks",
+        "MV_INCREMENTAL_SKIPPED_FORMAT": "Incremental: skipped {count} already-downloaded tasks",
+        "MV_INCREMENTAL_NONE_TITLE": "Nothing New",
+        "MV_INCREMENTAL_NONE_BODY": "All selected ticker/period pairs are already downloaded.",
         "MV_DONE_TITLE": "Download complete",
         "MV_DONE_BODY_FORMAT": (
             "{total} tasks total: {ok} succeeded, {fail} failed\n\n"

@@ -118,10 +118,16 @@ class MainView(QWidget):
         self.run_btn.setMinimumHeight(40)
         self.run_btn.setMinimumWidth(160)
         self.run_btn.setCursor(Qt.PointingHandCursor)
-        self.run_btn.clicked.connect(self._start_job)
+        self.run_btn.clicked.connect(lambda: self._start_job(incremental=False))
+
+        self.incremental_btn = QPushButton(ui_strings.MV_INCREMENTAL_BUTTON)
+        self.incremental_btn.setMinimumHeight(40)
+        self.incremental_btn.setCursor(Qt.PointingHandCursor)
+        self.incremental_btn.clicked.connect(lambda: self._start_job(incremental=True))
 
         actions.addWidget(self.settings_btn)
         actions.addStretch(1)
+        actions.addWidget(self.incremental_btn)
         actions.addWidget(self.run_btn)
         layout.addLayout(actions)
 
@@ -137,6 +143,7 @@ class MainView(QWidget):
         self.subtitle_label.setText(ui_strings.MV_SUBTITLE)
         self.settings_btn.setText(ui_strings.MV_SETTINGS_BUTTON)
         self.run_btn.setText(ui_strings.MV_RUN_BUTTON)
+        self.incremental_btn.setText(ui_strings.MV_INCREMENTAL_BUTTON)
 
     # ---- panel visibility --------------------------------------------------
 
@@ -151,7 +158,7 @@ class MainView(QWidget):
 
     # ---- job actions -------------------------------------------------------
 
-    def _start_job(self) -> None:
+    def _start_job(self, incremental: bool = False) -> None:
         # Collect resolved tickers across all visible panels
         tickers: list[Ticker] = []
         warnings: list[str] = []
@@ -199,7 +206,27 @@ class MainView(QWidget):
             )
             return
 
-        job = Job(tickers=tickers, periods=periods, output_dir=out_path)
+        task_pairs: list[tuple[Ticker, Period]] | None = None
+        if incremental:
+            from app.core.incremental import compute_incremental_pairs
+
+            task_pairs, skipped = compute_incremental_pairs(tickers, periods)
+            if skipped:
+                logger.info(ui_strings.MV_INCREMENTAL_SKIPPED_FORMAT.format(count=skipped))
+            if not task_pairs:
+                QMessageBox.information(
+                    self,
+                    ui_strings.MV_INCREMENTAL_NONE_TITLE,
+                    ui_strings.MV_INCREMENTAL_NONE_BODY,
+                )
+                return
+
+        job = Job(
+            tickers=tickers,
+            periods=periods,
+            output_dir=out_path,
+            task_pairs=task_pairs,
+        )
         self._set_action_buttons_enabled(False)
         self.progress_dock.reset(job.task_count())
         logger.info(
@@ -211,6 +238,7 @@ class MainView(QWidget):
 
     def _set_action_buttons_enabled(self, enabled: bool) -> None:
         self.run_btn.setEnabled(enabled)
+        self.incremental_btn.setEnabled(enabled)
         self.settings_btn.setEnabled(enabled)
 
     def _open_settings(self) -> None:

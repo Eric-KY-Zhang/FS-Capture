@@ -38,8 +38,14 @@ class Job:
     periods: list[Period]
     output_dir: str
     mode: JobMode = JobMode.REPORT_DOWNLOAD
+    task_pairs: list[tuple[Ticker, Period]] | None = None
     # Job-level results aggregated as workers finish.
     results: list[TaskResult] = field(default_factory=list)
 
+    def pairs(self) -> list[tuple[Ticker, Period]]:
+        if self.task_pairs is not None:
+            return list(self.task_pairs)
+        return [(ticker, period) for ticker in self.tickers for period in self.periods]
+
     def task_count(self) -> int:
-        return len(self.tickers) * len(self.periods)
+        return len(self.pairs())

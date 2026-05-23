@@ -137,7 +137,7 @@ class Orchestrator(QObject):
             self.signals.log.emit("warning", f"临时下载文件清理失败，继续执行任务：{exc}")
 
         tasks: list[TaskResult] = [
-            TaskResult(ticker=t, period=p) for t in job.tickers for p in job.periods
+            TaskResult(ticker=ticker, period=period) for ticker, period in job.pairs()
         ]
         job.results = tasks
         if not tasks:

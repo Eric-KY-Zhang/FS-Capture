@@ -1,7 +1,7 @@
 # FS Capture 总路线图 v0.6.1 → v1.0
 
 **起草日期**：2026-05-23
-**最后更新**：2026-05-23（v1.0 批次 4 语言开关与 live re-translate 完成，等待 Checkpoint A）
+**最后更新**：2026-05-23（v1.0 批次 7 IPO 统一 + sidecar 迁移 + 增量更新完成，等待 Checkpoint B）
 **Planner**：Claude Code (Opus 4.7)
 **Worker**：Codex
 **Reviewer**：Claude Code
@@ -35,7 +35,7 @@
 | **v0.6.1** | Patch — bug 修复 + 体验微调 | 1-2 天 | ✅ **已完成 2026-05-23** | 7 个 bug 修完，72/72 tests pass，5 市场 smoke 实跑通过 |
 | **v0.7** | KR 公网爬虫去 Key + 测试补强 | 1 周 | ✅ **已完成 2026-05-23**（11 commit，85/85 tests，KR 无 Key 4 家实跑通过） | KR 无 Key 跑通 + US 分页测试 + Playwright audit 渲染验证 |
 | **v0.8** | 性能 + UI 字符串集中化 + lint 锁定 | 2 周 | ✅ **已完成 2026-05-23**（6 批次，100/100 tests，KR audit e2e + ruff 通过） | Playwright pool / 大 PDF 续传 / name_resolver 单飞缓存 / UI strings.py 集中 / lint pre-commit + CI |
-| **v1.0** | **品牌重命名 Filings Atlas + 中英双语 UI + sidecar 迁移 + JP/UK + 增量 + IPO 统一**（首个 GitHub release） | 4-6 周 | 🟡 **实施中：批次 4 已完成，等待 Checkpoint A**（11 批次 + 3 Checkpoint） | 7 市场 e2e 全绿 + 双语 UI + `output/` 100% PDF + GitHub release artifact |
+| **v1.0** | **品牌重命名 Filings Atlas + 中英双语 UI + sidecar 迁移 + JP/UK + 增量 + IPO 统一**（首个 GitHub release） | 4-6 周 | 🟡 **实施中：批次 7 已完成，等待 Checkpoint B**（11 批次 + 3 Checkpoint） | 7 市场 e2e 全绿 + 双语 UI + `output/` 100% PDF + GitHub release artifact |
 
 ---
 
