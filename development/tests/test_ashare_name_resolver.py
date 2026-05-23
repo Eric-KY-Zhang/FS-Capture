@@ -19,21 +19,17 @@ class _Frame:
         return self._columns[key]
 
 
-class _Cache:
-    def get(self, _key: str):
-        return None
-
-    def set(self, *_args, **_kwargs) -> None:
-        pass
-
-
 def test_zip_strict_logs_error_on_mismatch(monkeypatch) -> None:
     errors: list[str] = []
     fake_akshare = SimpleNamespace(
         stock_info_a_code_name=lambda: _Frame(code=["600519", "000001"], name=["贵州茅台"])
     )
     monkeypatch.setitem(sys.modules, "akshare", fake_akshare)
-    monkeypatch.setattr(name_resolver, "get_cache", lambda: _Cache())
+    monkeypatch.setattr(
+        name_resolver,
+        "cached_or_load",
+        lambda _key, loader, *, expire: loader(),
+    )
     monkeypatch.setattr(
         name_resolver,
         "logger",

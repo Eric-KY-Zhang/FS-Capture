@@ -1,11 +1,11 @@
 # FS Capture 总路线图 v0.6.1 → v1.0
 
 **起草日期**：2026-05-23
-**最后更新**：2026-05-23（v0.6.1 验收通过，v0.7 SPRINT 已出）
+**最后更新**：2026-05-23（v0.8 internal 完成，v1.0 待起草）
 **Planner**：Claude Code (Opus 4.7)
 **Worker**：Codex
 **Reviewer**：Claude Code
-**当前版本**：v0.6.1（2026-05-23 验收通过，5 市场 A/HK/US/KR/TW）
+**当前版本**：v0.8 internal（2026-05-23 完成，5 市场 A/HK/US/KR/TW）
 **发布策略**：v0.6.x / v0.7 / v0.8 内部迭代不发 release；**GitHub Release 只发 v1.0**
 
 ---
@@ -33,8 +33,8 @@
 | 版本 | 主题 | 工作量 | 状态 | 验收门槛 |
 |---|---|---|---|---|
 | **v0.6.1** | Patch — bug 修复 + 体验微调 | 1-2 天 | ✅ **已完成 2026-05-23** | 7 个 bug 修完，72/72 tests pass，5 市场 smoke 实跑通过 |
-| **v0.7** | KR 公网爬虫去 Key + 测试补强 | 1 周 | 🟡 **SPRINT 已出，待 Codex** | KR 无 Key 跑通 5 只票 + US 分页 fallback 测试覆盖 + TW e2e smoke |
-| **v0.8** | 性能 + UI 字符串集中化 + lint 清债 | 2 周 | ⏳ 待起草 | Playwright 池化 / 大 PDF 续传 / UI strings.py 集中 / ruff 0 warning |
+| **v0.7** | KR 公网爬虫去 Key + 测试补强 | 1 周 | ✅ **已完成 2026-05-23**（11 commit，85/85 tests，KR 无 Key 4 家实跑通过） | KR 无 Key 跑通 + US 分页测试 + Playwright audit 渲染验证 |
+| **v0.8** | 性能 + UI 字符串集中化 + lint 锁定 | 2 周 | ✅ **已完成 2026-05-23**（6 批次，100/100 tests，KR audit e2e + ruff 通过） | Playwright pool / 大 PDF 续传 / name_resolver 单飞缓存 / UI strings.py 集中 / lint pre-commit + CI |
 | **v1.0** | 新市场（日本 + 伦敦）+ 增量更新检测 + IPO 路径统一 | 4-6 周 | ⏳ 待起草 | 7 市场全部 e2e 通过；月度增量任务跑通 |
 
 ---
@@ -99,41 +99,42 @@
 
 ---
 
-## v0.8 — 性能 + lint 清债
+## v0.8 — 性能 + UI 集中化 + Lint 锁定（详细 SPRINT 见 `SPRINT_v0.8_perf_and_ui_strings.md`）
 
-### 8.1 性能优化（ROI 排序）
+经 v0.8 SPRINT 起草前的代码侦察，**原 ROADMAP v0.8 三项已不成立**：
 
-| # | 优化 | 文件 | 预估收益 |
-|---|---|---|---|
-| 1 | Playwright browser 连接池 | `app/core/pdf_renderer.py` | 批量 HTML→PDF 省 30-50% 时间 |
-| 2 | `_load_name_map` / KR `resolve_one` 加锁防惊群 | 各 plugin `name_resolver.py` + 抽 helper 到 `plugins/base.py` | 4 worker 启动时省 3 次冗余请求 |
-| 3 | 大 PDF 断点续传（`Range:` + `.part`） | `app/core/http.py::stream_to_file` | IPO 招股书 >50MB 断网恢复体验 |
-| 4 | diskcache 批写 `cache.transact()` | 各 plugin `name_resolver.py` | 高写入场景省 20-40% I/O |
+| 原 ROADMAP 项 | 处置 | 实测证据 |
+|---|---|---|
+| ~~ruff 0 warning（清 114 个 warnings）~~ | **已完成，改为锁定** | `ruff check development/` 输出 `All checks passed!`；pyproject.toml 已严格 select；本期只在 pre-commit + CI 锁定 |
+| ~~Playwright 移除决断~~ | **不可行，改池化** | v0.7 KR 4 家 smoke 实跑显示 audit 报告 100% 依赖 `render_url_to_pdf`；US HTML filings 同样依赖。Playwright 是必要基础设施 |
+| ~~diskcache 批写~~ | **挪到 v1.0** | 当前 `cache.set` 都不在热循环里，ROI 低 |
+| ~~Bundle 体积优化（425MB → 250MB）~~ | **挪到 v0.9/v1.0**（用户 2026-05-23 决断） | 本期不动；llvmlite 剥离 / Chromium 按需下载留作后续选项 |
 
-### 8.1.5 UI 字符串集中化（从 v0.7 挪过来）
+### 8.1 v0.8 实际范围（5 项，已完成）
 
-- 12 个 UI 文件共 110 处中文硬编码字符串
-- 物理集中到 `app/ui/strings.py`（**不**上 `tr()`，先做物理集中为未来 i18n 准备）
-- 与 ruff lint 一并做，因为都是文件级机械改动
+| Part | 内容 | ROI |
+|---|---|---|
+| **A.1** | Playwright 浏览器池化（singleton browser + per-render context） | 🔴 高（批量渲染省 30-50% 时间） |
+| **A.2** | 大 PDF 断点续传（`stream_to_file` 保留 `.part` + Range header + `cleanup_stale_parts`） | 🟡 中（TW IPO / HK 大年报断网恢复） |
+| **A.3** | 5 plugin name_resolver 加锁防惊群（新 `app/core/cache.py::cached_or_load` helper） | 🟡 中（4 worker 启动省 3 次冗余请求） |
+| **B** | UI 中文字符串物理集中化（97 处 / 11 文件 → `app/ui/strings.py`） | 🟢 低（清债，未来 i18n 铺路） |
+| **C** | Lint 锁定（pre-commit + GitHub Actions CI） | 🟢 低 |
 
-### 8.2 ruff lint 清债
+### 8.3 v0.8 实施结果
 
-- 当前 `pyproject.toml` 排除 `app/` 和 `plugins/` 不做 lint，遗留 114 处历史 warnings
-- 本期目标：分批清完 `app/core/` → `app/ui/` → 各 plugin，每清一个目录就解锁 ruff 覆盖
-- 验收：`uv run ruff check development/` 0 warning，且 CI 锁定
+- `cached_or_load` 单飞缓存接入 A 股 / 美股 / 韩股 / 台股名称解析；港股保持单股查询路径。
+- `stream_to_file` 支持 `.part` 断点续传、服务器忽略 Range 时重写、416 时清理后重试，并在任务入口清理过期 `.part`。
+- Playwright 渲染改为进程级 singleton browser + per-render context，并在应用退出时关闭。
+- UI 中文字符串集中到 `app/ui/strings.py`，顶层 UI 模块新增 tokenize 测试锁定无 CJK 字符串字面量。
+- Lint 状态通过 `.pre-commit-config.yaml`、GitHub Actions lint/test job、ruff isort first-party 配置锁定。
+- 验收：`pytest -m "not e2e" -v` 100 passed / 7 deselected；`ruff check development/` 通过；KR 005930 audit e2e 通过。
 
-### 8.3 移除残留依赖
+### 8.2 不在 v0.8 范围
 
-- `pyproject.toml` 的 `playwright>=1.45` 在 v0.2 重定位删 fetch_financials 后已无用途，本期决断：
-  - **方案 A（推荐）**：彻底删除 Playwright + `pdf_renderer.py`，仅 HK/TW 部分 PDF 渲染场景改用 `pypdf` + `weasyprint`（如确有 HTML→PDF 需要）
-  - **方案 B**：保留但写明用途文档化
-
-**决断点**：v0.8 启动前需用户确认走 A 还是 B（涉及 ~50MB 体积差异）
-
-### 8.4 PyInstaller 体积优化
-
-- 当前 ~340MB，分析 `_internal/` 找肥大依赖（如完整 akshare、numpy MKL）
-- 目标：压到 250MB 以下
+- ~~Playwright 移除~~（必要基础设施，保留并池化）
+- ~~diskcache 批写~~（挪 v1.0）
+- ~~Bundle 体积优化~~（挪 v0.9/v1.0）
+- ~~i18n tr() 包装~~（v0.8 只做物理集中，i18n 留 v1.0+ 评估）
 
 ---
 

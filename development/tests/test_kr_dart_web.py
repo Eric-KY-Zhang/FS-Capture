@@ -12,17 +12,6 @@ def _fixture(name: str) -> str:
     return (Path(__file__).parent / "fixtures" / name).read_text(encoding="utf-8")
 
 
-class _Cache:
-    def __init__(self) -> None:
-        self.store = {}
-
-    def get(self, key):
-        return self.store.get(key)
-
-    def set(self, key, value, expire=None) -> None:
-        self.store[key] = value
-
-
 def test_dart_web_resolve_corp_parses_search_result(monkeypatch) -> None:
     monkeypatch.setattr(
         dart_web,
@@ -133,7 +122,11 @@ def test_kr_no_api_key_falls_back_to_public_crawler(monkeypatch) -> None:
     from plugins.kr import name_resolver
 
     monkeypatch.setattr(name_resolver, "load_settings", lambda: Settings())
-    monkeypatch.setattr(name_resolver, "get_cache", lambda: _Cache())
+    monkeypatch.setattr(
+        name_resolver,
+        "cached_or_load",
+        lambda _key, loader, *, expire: loader(),
+    )
     monkeypatch.setattr(
         dart_web_module,
         "resolve_corp",
@@ -161,7 +154,11 @@ def test_kr_with_api_key_prefers_openapi_path(monkeypatch) -> None:
         "load_settings",
         lambda: Settings.model_validate({"dart": {"api_key": "test-key"}}),
     )
-    monkeypatch.setattr(name_resolver, "get_cache", lambda: _Cache())
+    monkeypatch.setattr(
+        name_resolver,
+        "cached_or_load",
+        lambda _key, loader, *, expire: loader(),
+    )
     monkeypatch.setattr(name_resolver, "_dart_for_key", lambda _api_key: _Dart())
     monkeypatch.setattr(
         dart_web_module,

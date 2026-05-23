@@ -183,8 +183,8 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 |---|---|---|
 | v0.6 | ✅ 已发布 2026-05-17 | `roadmap/archive/` |
 | v0.6.1 | ✅ **已完成 2026-05-23**（6 commit `dfa461d → 3fa6c12`，72/72 tests，5 票 smoke 实跑） | `roadmap/SPRINT_v0.6.1_patch.md` |
-| **v0.7** | ✅ **已完成 2026-05-23**（KR 无 Key + US 分页测试 + TW e2e） | `roadmap/SPRINT_v0.7_kr_public_crawler.md` |
-| v0.8 | ⏳ 待起草（性能 + UI 字符串集中化 + lint 清债） | TBD |
+| v0.7 | ✅ **已完成 2026-05-23**（11 commit `2dc5fd2 → d07d133`，85/85 tests，KR 无 Key 4 家实跑） | `roadmap/SPRINT_v0.7_kr_public_crawler.md` |
+| **v0.8** | ✅ **已完成 2026-05-23**（6 批次，100/100 tests，Playwright 池化 + 断点续传 + UI strings + lint 锁定） | `roadmap/SPRINT_v0.8_perf_and_ui_strings.md` |
 | v1.0 | ⏳ 待起草（+ 日本 EDINET + 英国 LSE/NSM + 增量更新） | TBD |
 
 **发布策略**：v0.6.x / v0.7 / v0.8 内部迭代不发 release；**GitHub Release 只发 v1.0**。意味着 v0.7/v0.8 期间：
@@ -199,8 +199,8 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 详细见 `roadmap/ROADMAP_v0.6.1_to_v1.0.md`。
 
 - **v0.6.1**（已完成）：7 个 bug 修复（ratelimit 热更新 / HK PDF drop / HK 财年表扩 / KR `induty_code` 兼容 / A 股 strict zip / batch import 反馈 / settings 返回值）
-- **v0.7**（已完成）：KR 公网爬虫去 Key（双模式）+ US 分页 fallback 单元测试 + TW e2e smoke。**架构清债项已澄清**：httpx verify 已在 v0.6 后期修过；plugin 重试统一是误判（TW 重试是合理业务重试）；HK 真实场景测试 v0.6.1 已覆盖；UI 字符串集中化挪到 v0.8
-- **v0.8**（2 周）：Playwright 池化 + 大 PDF 续传 + UI 字符串集中化（110 处 / 12 文件） + ruff 0 warning + Playwright 移除决断 + 体积优化
+- **v0.7**（已完成）：KR 公网爬虫去 Key（双模式）+ US 分页 fallback 单元测试 + Playwright audit 渲染兜底实跑验证。**架构清债项已澄清**：httpx verify 已在 v0.6 后期修过；plugin 重试统一是误判；HK 真实场景测试 v0.6.1 已覆盖；UI 字符串挪到 v0.8
+- **v0.8**（已完成）：Playwright **池化**（不删）+ 大 PDF 断点续传 + name_resolver 单飞缓存 + UI 字符串集中（11 文件）+ Lint pre-commit/CI 锁定。**已校准**：ruff 已 0 warning 改为锁定；Playwright 不可删（KR/US 必要依赖）；bundle 体积挪到 v0.9/v1.0
 - **v1.0**（4-6 周）：日本（EDINET）+ 英国（LSE/NSM）+ 增量更新检测 + IPO 路径统一 + 模块边界文档化
 
 **明确不做**：印度市场、数字财务底稿、跨市场对标、桌面 web 化。
@@ -225,4 +225,4 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 
 ---
 
-**最后更新**：2026-05-23（v0.7 内部迭代完成，v0.8 待起草）
+**最后更新**：2026-05-23（v0.8 internal 完成，100/100 tests，v1.0 待起草）

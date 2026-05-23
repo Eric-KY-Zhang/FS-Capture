@@ -1,6 +1,6 @@
 # FS Capture — 架构
 
-> Last updated: 2026-05-23 (v0.7 — 韩股 KR 无 Key 公网 fallback + 测试补强)
+> Last updated: 2026-05-23 (v0.8 — Playwright 池化 + 断点续传 + UI strings + lint 锁定)
 
 本文档描述 FS Capture 的 Python/PySide6 桌面工具架构，与同仓 `VBA Captor/` 子项目（旧 Excel/VBA 工具，已 v1.0 release）并存。本文档面向后续维护者和 Codex/Reviewer 交接使用，不替代 `development/DEVELOPMENT_BRIEF.md` 的开发委托书细节。
 
@@ -90,8 +90,9 @@ UI 层
    ├─ settings.py           config.toml 读写（pydantic + tomllib + tomli_w）
    ├─ http.py               httpx Client 工厂 + tenacity 装饰过的 get_json / post_json / stream_to_file
    ├─ ratelimit.py          TokenBucket（同步+异步） + RateLimiterRegistry
-   ├─ cache.py              diskcache 单例
-   ├─ output_paths.py       safe_filename + report_output_path
+   ├─ cache.py              diskcache 单例 + cached_or_load 单飞缓存
+   ├─ output_paths.py       safe_filename + report_output_path + stale .part 清理
+   ├─ pdf_renderer.py       Playwright singleton browser pool + URL/PDF 渲染
    ├─ job.py                Job / TaskResult / TaskStatus dataclass
    └─ orchestrator.py       QThreadPool 调度器 + OrchestratorSignals
 
@@ -225,6 +226,7 @@ class ExchangePlugin(ABC):
 - 每数据源独立 TokenBucket（`config.toml` `[rate_limits]`）：cninfo / hkexnews / sec / dart / akshare / eastmoney。
 - `verify=True` 永远不能改（不禁用 SSL 校验）。
 - `get_json` / `post_json` / `stream_to_file` 全部 tenacity 装饰，3 次指数退避。
+- `stream_to_file` 写入 `{dest}.part`，支持 `Range` 断点续传；服务器忽略 Range 返回 200 时从 0 重写，416 时删除 stale `.part` 后让 tenacity 重试，瞬断失败时保留 `.part` 供下次恢复。
 - 失败响应（4xx）不写入 cache。
 
 ### 6.5 输出
@@ -239,6 +241,7 @@ class ExchangePlugin(ABC):
 - `MainWindow` 是 `FramelessWindowHint + WA_TranslucentBackground`；圆角通过 `#WindowRoot` QSS `border-radius: 14px` + `QGraphicsDropShadowEffect`。
 - 边缘 6px hit-test 实现 8 方向缩放；最大化时去掉圆角（避免裁切）。
 - 全部样式集中在 `app/ui/styles/app.qss`，不能在 Python 代码里 setStyleSheet。
+- 顶层 UI 中文文案集中在 `app/ui/strings.py`；当前只做物理集中，不引入 `tr()` 或运行时语言切换。
 - 状态徽章 `StatusPill` 通过 `dynamic property + style().unpolish/polish` 切换，不重建 widget。
 
 ### 6.7 PyInstaller 兼容
@@ -247,6 +250,7 @@ class ExchangePlugin(ABC):
 - `fs_capture.spec` 的 `collect_all("akshare")` / `collect_all("OpenDartReader")` / `collect_data_files("pykrx")` 不能去掉。
 - `excludes` 列表只能加不能减（已剔除 matplotlib/scipy/torch/QtWebEngine）。
 - 冻结模式所有路径走 `Path(sys.executable).parent`（`settings.py::project_root`），不能用 `__file__`。
+- `app/core/pdf_renderer.py` 持有进程级 Playwright browser pool：首次渲染 lazy init，每次渲染只创建/关闭独立 context；`shutdown_renderer()` 随 `QApplication.aboutToQuit` 关闭 Chromium 与 runtime。
 
 ## 7. 关键文件路径
 
@@ -268,6 +272,7 @@ development/
 │   │   ├── ratelimit.py
 │   │   ├── cache.py
 │   │   ├── output_paths.py
+│   │   ├── pdf_renderer.py
 │   │   ├── job.py
 │   │   └── orchestrator.py
 │   ├── ui/                  全部 PySide6 部件（10 文件 + styles/）
@@ -321,7 +326,7 @@ HTTP 请求原则：
 | 限速 | TokenBucket（同步+异步） | 每数据源独立桶，参数从 config.toml 读 |
 | 4xx 响应 | — | 不缓存，直接抛 |
 
-`diskcache` 单例（`app/core/cache.py`）当前未在退出时关闭——`cache.close()` 计划挂到 `QApplication.aboutToQuit`（详见 Sprint 02）。
+`diskcache` 单例（`app/core/cache.py`）随 `QApplication.aboutToQuit` 调用 `close_cache()` 关闭。名称解析大表或按票 corp_code 使用 `cached_or_load()` 双重检查锁，避免 QThreadPool 并发 cache miss 时重复拉取同一份远端数据。
 
 ## 10. 打包与部署
 
@@ -355,16 +360,21 @@ development/                   源码 + 构建脚本（隐藏，开发用）
 
 ```bat
 cd development
-python -m unittest tests.test_output_layout
-python -m unittest tests.test_selection_logic
+python -m pytest -m "not e2e" -v
+python -m pytest tests/e2e/test_smoke.py::test_kr_005930_2024 -v
+python -m ruff check . --no-cache
 ```
 
 覆盖：
 
 - `test_output_layout`：PDF 报告路径扁平化 + `safe_filename` 行为。
-- `test_selection_logic`：
-  - US 非日历财年 10-Q 季度归类（FY 报告日 9 月，Q1/Q2/Q3 自然年映射）。
-  - KR 季度报告 Q1 / Q3 按 `rcept_dt` 月份选片。
+- `test_selection_logic`：US 非日历财年 10-Q 季度归类；KR Q1/Q3 按 `rcept_dt` 月份选片。
+- `test_cached_or_load`：name_resolver 缓存 single-flight、防 None 污染。
+- `test_stream_resume`：`.part` 断点续传、Range 忽略、416 清理、失败保留。
+- `test_pdf_renderer_pool`：Playwright browser pool 复用与幂等清理。
+- `test_ui_strings`：顶层 UI 模块无 CJK 字符串字面量、strings 常量命名唯一。
+
+v0.8 本地验收：非 e2e `100 passed / 7 deselected`，KR 005930 e2e audit 路径通过，ruff 全绿。
 
 端到端验证（手动）：
 
