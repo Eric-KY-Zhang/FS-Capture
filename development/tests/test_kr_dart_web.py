@@ -118,3 +118,20 @@ def test_kr_with_api_key_prefers_openapi_path(monkeypatch) -> None:
 
     assert ticker.name == "삼성전자"
     assert ticker.external_id == "00126380"
+
+
+def test_dart_web_list_ipo_filings_uses_c001_search(monkeypatch) -> None:
+    calls = []
+
+    def fake_detail_search(**kwargs):
+        calls.append(kwargs)
+        return _fixture("dart_ipo_454910.html") if kwargs["detail_type"] == "C001" else ""
+
+    monkeypatch.setattr(dart_web, "_detail_search_html", fake_detail_search)
+
+    df = dart_web.list_ipo_filings("01105153")
+
+    assert "투자설명서" in set(df["report_nm"])
+    assert "증권발행실적보고서" in set(df["report_nm"])
+    assert set(df.columns) == {"rcept_no", "report_nm", "rcept_dt", "corp_code"}
+    assert [call["detail_type"] for call in calls] == ["C001", ""]

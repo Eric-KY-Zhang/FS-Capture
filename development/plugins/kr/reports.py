@@ -150,23 +150,28 @@ def _list_filings(ticker: Ticker, period: Period) -> pd.DataFrame:
 
 def _list_ipo_filings(ticker: Ticker) -> pd.DataFrame:
     dart = _dart()
-    frames: list[pd.DataFrame] = []
-    for detail in ("C001", ""):
-        try:
-            df = dart.list(
-                corp=_corp(ticker),
-                kind="C",
-                kind_detail=detail,
-                final=False,
-            )
-        except Exception as exc:
-            logger.warning(f"DART IPO list failed for {ticker.code}: {exc}")
-            continue
-        if isinstance(df, pd.DataFrame) and not df.empty:
-            frames.append(df)
-    if not frames:
-        return pd.DataFrame()
-    return pd.concat(frames, ignore_index=True)
+    if dart is not None:
+        frames: list[pd.DataFrame] = []
+        for detail in ("C001", ""):
+            try:
+                df = dart.list(
+                    corp=_corp(ticker),
+                    kind="C",
+                    kind_detail=detail,
+                    final=False,
+                )
+            except Exception as exc:
+                logger.warning(f"DART IPO list failed for {ticker.code}: {exc}")
+                continue
+            if isinstance(df, pd.DataFrame) and not df.empty:
+                frames.append(df)
+        if not frames:
+            return pd.DataFrame()
+        return pd.concat(frames, ignore_index=True)
+
+    from .dart_web import list_ipo_filings
+
+    return list_ipo_filings(_corp(ticker))
 
 
 def _parse_date(value: str) -> dt.date | None:

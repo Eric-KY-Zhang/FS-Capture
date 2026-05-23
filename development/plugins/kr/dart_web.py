@@ -184,3 +184,36 @@ def list_filings(corp_code: str, bgn_de: str, end_de: str, detail_type: str) -> 
         logger.warning(f"DART public filing list failed for {corp_code}: {exc}")
         return _rows_to_frame([])
     return _rows_to_frame(_parse_detail_rows(html))
+
+
+def _dedupe_frame(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    return df.drop_duplicates(subset=["rcept_no"], keep="first").reset_index(drop=True)
+
+
+def list_ipo_filings(corp_code: str) -> pd.DataFrame:
+    """List IPO/prospectus filings via public DART search."""
+    end_de = dt.date.today().strftime("%Y%m%d")
+    frames: list[pd.DataFrame] = []
+    for detail_type in ("C001", ""):
+        try:
+            html = _detail_search_html(
+                corp_code=corp_code,
+                bgn_de="19990101",
+                end_de=end_de,
+                detail_type=detail_type,
+                final=False,
+                max_results=100,
+            )
+        except Exception as exc:
+            logger.warning(
+                f"DART public IPO filing list failed for {corp_code} detail={detail_type}: {exc}"
+            )
+            continue
+        rows = _parse_detail_rows(html)
+        if rows:
+            frames.append(_rows_to_frame(rows))
+    if not frames:
+        return _rows_to_frame([])
+    return _dedupe_frame(pd.concat(frames, ignore_index=True))
