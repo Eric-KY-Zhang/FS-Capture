@@ -6,7 +6,7 @@ from functools import lru_cache
 
 from loguru import logger
 
-from app.core.cache import get_cache
+from app.core.cache import cached_or_load
 from app.core.models import Company, Exchange, Ticker
 from app.core.settings import load_settings
 
@@ -41,35 +41,29 @@ def reset_dart_client() -> None:
 
 def resolve_one(stock_code: str) -> dict | None:
     """stock_code -> {corp_code, corp_name}; cache permanently."""
-    cache = get_cache()
     cache_key = f"kr:corp:{stock_code}"
-    cached = cache.get(cache_key)
-    if cached:
-        return cached  # type: ignore[return-value]
 
-    dart = _dart()
-    if dart is not None:
-        try:
-            df = dart.corp_codes
-            df = df[df["stock_code"].astype(str).str.zfill(6) == stock_code]
-            if not df.empty:
-                row = df.iloc[0]
-                info = {
-                    "corp_code": str(row["corp_code"]),
-                    "corp_name": str(row["corp_name"]),
-                }
-                cache.set(cache_key, info)
-                return info
-        except Exception as exc:
-            logger.warning(f"DART OpenAPI corp lookup failed for {stock_code}: {exc}")
+    def _fetch() -> dict | None:
+        dart = _dart()
+        if dart is not None:
+            try:
+                df = dart.corp_codes
+                df = df[df["stock_code"].astype(str).str.zfill(6) == stock_code]
+                if not df.empty:
+                    row = df.iloc[0]
+                    return {
+                        "corp_code": str(row["corp_code"]),
+                        "corp_name": str(row["corp_name"]),
+                    }
+            except Exception as exc:
+                logger.warning(f"DART OpenAPI corp lookup failed for {stock_code}: {exc}")
 
-    from .dart_web import resolve_corp
+        from .dart_web import resolve_corp
 
-    logger.info(f"DART OpenAPI not configured; falling back to public crawler for {stock_code}")
-    info = resolve_corp(stock_code)
-    if info is not None:
-        cache.set(cache_key, info)
-    return info
+        logger.info(f"DART OpenAPI not configured; falling back to public crawler for {stock_code}")
+        return resolve_corp(stock_code)
+
+    return cached_or_load(cache_key, _fetch, expire=None)
 
 
 def resolve(code: str) -> Ticker:

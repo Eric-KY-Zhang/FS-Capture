@@ -14,7 +14,7 @@ import time
 
 from loguru import logger
 
-from app.core.cache import get_cache
+from app.core.cache import cached_or_load, get_cache
 from app.core.http import default_client, post_json
 from app.core.models import Company, Exchange, Ticker
 
@@ -58,18 +58,16 @@ def _market_prefix(code: str) -> str:
 
 def _load_name_map() -> dict[str, str]:
     """code -> name, cached daily via akshare."""
-    cache = get_cache()
-    cached = cache.get(_CACHE_KEY_NAME_MAP)
-    if cached:
-        return cached  # type: ignore[return-value]
+    def _fetch() -> dict[str, str]:
+        import akshare as ak  # local import — heavy module
 
-    import akshare as ak  # local import — heavy module
+        logger.info("Loading A-share code↔name map from akshare ...")
+        df = ak.stock_info_a_code_name()
+        return _strict_dict(
+            df["code"].astype(str), df["name"].astype(str), context="code/name"
+        )
 
-    logger.info("Loading A-share code↔name map from akshare ...")
-    df = ak.stock_info_a_code_name()
-    name_map = _strict_dict(df["code"].astype(str), df["name"].astype(str), context="code/name")
-    cache.set(_CACHE_KEY_NAME_MAP, name_map, expire=_NAME_MAP_TTL)
-    return name_map
+    return cached_or_load(_CACHE_KEY_NAME_MAP, _fetch, expire=_NAME_MAP_TTL)
 
 
 def _fetch_orgid(code: str) -> str | None:

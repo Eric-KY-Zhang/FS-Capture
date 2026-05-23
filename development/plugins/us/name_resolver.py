@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from loguru import logger
 
-from app.core.cache import get_cache
+from app.core.cache import cached_or_load
 from app.core.http import default_client, get_json
 from app.core.models import Company, Exchange, Ticker
 
@@ -15,27 +15,24 @@ _TTL = 24 * 3600
 
 def _load_map() -> dict[str, dict]:
     """ticker -> {cik, name}"""
-    cache = get_cache()
-    cached = cache.get(_CACHE_KEY)
-    if cached:
-        return cached  # type: ignore[return-value]
+    def _fetch() -> dict[str, dict]:
+        logger.info("Loading SEC ticker↔CIK map ...")
+        with default_client(source="sec") as client:
+            payload = get_json(client, _TICKERS_URL, source="sec", rate=8.0)
 
-    logger.info("Loading SEC ticker↔CIK map ...")
-    with default_client(source="sec") as client:
-        payload = get_json(client, _TICKERS_URL, source="sec", rate=8.0)
+        out: dict[str, dict] = {}
+        # company_tickers.json is keyed by row index, values have ticker / cik_str / title
+        for _, row in (payload or {}).items():
+            ticker = str(row.get("ticker", "")).upper()
+            if not ticker:
+                continue
+            out[ticker] = {
+                "cik": int(row["cik_str"]),
+                "name": str(row.get("title", "")),
+            }
+        return out
 
-    out: dict[str, dict] = {}
-    # company_tickers.json is keyed by row index, values have ticker / cik_str / title
-    for _, row in (payload or {}).items():
-        ticker = str(row.get("ticker", "")).upper()
-        if not ticker:
-            continue
-        out[ticker] = {
-            "cik": int(row["cik_str"]),
-            "name": str(row.get("title", "")),
-        }
-    cache.set(_CACHE_KEY, out, expire=_TTL)
-    return out
+    return cached_or_load(_CACHE_KEY, _fetch, expire=_TTL)
 
 
 def resolve(code: str) -> Ticker:

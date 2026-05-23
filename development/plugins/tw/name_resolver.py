@@ -18,7 +18,7 @@ import re
 
 from loguru import logger
 
-from app.core.cache import get_cache
+from app.core.cache import cached_or_load
 from app.core.http import default_client
 from app.core.models import Company, Exchange, Ticker
 from app.core.ratelimit import limiter
@@ -109,30 +109,27 @@ def _load_map() -> dict[str, dict]:
 
     Merges 上市 + 上柜; 上市 wins on conflicts (rare).
     """
-    cache = get_cache()
-    cached = cache.get(_CACHE_KEY)
-    if cached:
-        return cached  # type: ignore[return-value]
+    def _fetch() -> dict[str, dict]:
+        logger.info("Loading TW ISIN directory (上市 + 上櫃) ...")
+        out: dict[str, dict] = {}
+        for board in ("otc", "sii"):  # sii second so its entries overwrite otc on conflict
+            try:
+                rows = _fetch_isin_board(board)
+            except Exception as exc:
+                logger.warning(f"TW ISIN fetch failed for board={board}: {exc}")
+                continue
+            for row in rows:
+                out[row["code"]] = {
+                    "name": row["name"],
+                    "listing_date": row["listing_date"] or None,
+                    "industry": row["industry"] or None,
+                    "board": row["board"],
+                }
+        if not out:
+            raise RuntimeError("无法加载台股 ISIN 列表（TWSE/TPEx 均不可达）")
+        return out
 
-    logger.info("Loading TW ISIN directory (上市 + 上櫃) ...")
-    out: dict[str, dict] = {}
-    for board in ("otc", "sii"):  # sii second so its entries overwrite otc on conflict
-        try:
-            rows = _fetch_isin_board(board)
-        except Exception as exc:
-            logger.warning(f"TW ISIN fetch failed for board={board}: {exc}")
-            continue
-        for row in rows:
-            out[row["code"]] = {
-                "name": row["name"],
-                "listing_date": row["listing_date"] or None,
-                "industry": row["industry"] or None,
-                "board": row["board"],
-            }
-    if not out:
-        raise RuntimeError("无法加载台股 ISIN 列表（TWSE/TPEx 均不可达）")
-    cache.set(_CACHE_KEY, out, expire=_TTL)
-    return out
+    return cached_or_load(_CACHE_KEY, _fetch, expire=_TTL)
 
 
 def resolve(code: str) -> Ticker:
