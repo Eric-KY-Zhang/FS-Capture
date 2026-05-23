@@ -25,7 +25,7 @@ class OnboardingDialog(QDialog):
         layout.setContentsMargins(24, 22, 24, 20)
         layout.setSpacing(14)
 
-        title = QLabel("FS Capture 帮你一键下载 4 市场上市公司官方披露 PDF")
+        title = QLabel("FS Capture 帮你一键下载 5 市场上市公司官方披露 PDF")
         title.setObjectName("CardTitle")
         title.setWordWrap(True)
         layout.addWidget(title)
@@ -35,8 +35,9 @@ class OnboardingDialog(QDialog):
         layout.addWidget(hint)
 
         dart = QLabel(
-            "韩股需要 DART API Key。可在 "
-            '<a href="https://opendart.fss.or.kr/">opendart.fss.or.kr</a> 注册后粘贴到设置。'
+            "韩股默认通过 DART 公网披露页抓取，无需配置。如需更快更稳的体验，"
+            '可在 <a href="https://opendart.fss.or.kr/">opendart.fss.or.kr</a> '
+            "免费申请 API Key 后填入设置。"
         )
         dart.setOpenExternalLinks(True)
         dart.setTextInteractionFlags(Qt.TextBrowserInteraction)
@@ -47,7 +48,7 @@ class OnboardingDialog(QDialog):
         actions.addStretch(1)
         later_btn = QPushButton("稍后再说")
         later_btn.clicked.connect(self.accept)
-        settings_btn = QPushButton("现在就配 DART")
+        settings_btn = QPushButton("先填 Key（可选）")
         settings_btn.setProperty("variant", "primary")
         settings_btn.clicked.connect(self._accept_for_settings)
         actions.addWidget(later_btn)

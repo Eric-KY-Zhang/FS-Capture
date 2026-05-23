@@ -29,9 +29,9 @@ class SettingsDialog(QDialog):
         form.setSpacing(10)
 
         self.dart_key = QLineEdit(settings.dart.api_key)
-        self.dart_key.setPlaceholderText("opendart.fss.or.kr 注册后获取")
+        self.dart_key.setPlaceholderText("可选——留空走 DART 公网爬虫")
         self.dart_key.setEchoMode(QLineEdit.Password)
-        form.addRow("DART API 密钥（韩股）", self.dart_key)
+        form.addRow("DART OpenAPI Key（可选，韩股加速）", self.dart_key)
 
         self.workers = QSpinBox()
         self.workers.setRange(1, 16)

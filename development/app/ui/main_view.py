@@ -169,19 +169,12 @@ class MainView(QWidget):
             QMessageBox.warning(self, "无法开始", "请至少选择一种报告类型")
             return
 
-        # Korea needs DART key
+        # Korea: DART API key is optional; without it we fall back to public crawler.
         kr_in_use = any(t.exchange == Exchange.KR for t in tickers)
         if kr_in_use and not self.settings.dart.api_key:
-            ret = QMessageBox.question(
-                self,
-                "DART 密钥缺失",
-                "韩股官方披露数据主要来自 DART。当前未配置 DART API 密钥，"
-                "如继续使用韩股功能，请先在设置中填入密钥。\n\n是否现在打开设置？",
-                QMessageBox.Yes | QMessageBox.No,
+            logger.info(
+                "未配置 DART OpenAPI Key，韩股将使用 DART 公网披露页，速度可能较慢。"
             )
-            if ret == QMessageBox.Yes:
-                self._open_settings()
-            return
 
         out_path = self.output_card.path()
         if not out_path:
