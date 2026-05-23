@@ -22,6 +22,6 @@ api_key = ""
 
 [ui]
 theme = "light"
-language = "zh_CN"
+language = "zh"
 window_width = 1280
 window_height = 820

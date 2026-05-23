@@ -23,6 +23,7 @@ from PySide6.QtWidgets import QApplication
 from app.core.cache import close_cache
 from app.core.pdf_renderer import shutdown_renderer
 from app.core.settings import Settings, config_path, load_settings
+from app.ui.i18n import LanguageManager
 from app.ui.main_view import MainView
 from app.ui.main_window import MainWindow
 from app.ui.onboarding_dialog import OnboardingDialog
@@ -71,6 +72,7 @@ def main() -> int:
 
     first_launch = not config_path().exists()
     settings = load_settings()
+    LanguageManager.instance().set_language(settings.ui.language)
     _setup_logging(settings)
     logger.info("Filings Atlas starting up")
 

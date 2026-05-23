@@ -185,7 +185,7 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 | v0.6.1 | ✅ **已完成 2026-05-23**（6 commit `dfa461d → 3fa6c12`，72/72 tests，5 票 smoke 实跑） | `roadmap/SPRINT_v0.6.1_patch.md` |
 | v0.7 | ✅ **已完成 2026-05-23**（11 commit `2dc5fd2 → d07d133`，85/85 tests，KR 无 Key 4 家实跑） | `roadmap/SPRINT_v0.7_kr_public_crawler.md` |
 | v0.8 | ✅ **已完成 2026-05-23**（6 批次，100/100 tests，Playwright 池化 + 断点续传 + UI strings + lint 锁定） | `roadmap/SPRINT_v0.8_perf_and_ui_strings.md` |
-| **v1.0** | 🟡 **实施中：批次 1 品牌重命名已完成**（11 批次 + 3 Reviewer Checkpoint，首发 GitHub release）— Filings Atlas / 全球披露图谱 + 双语 UI + sidecar 迁移 + JP/UK + 增量 | `roadmap/SPRINT_v1.0_filings_atlas.md` |
+| **v1.0** | 🟡 **实施中：批次 2 i18n 脚手架已完成**（11 批次 + 3 Reviewer Checkpoint，首发 GitHub release）— Filings Atlas / 全球披露图谱 + 双语 UI + sidecar 迁移 + JP/UK + 增量 | `roadmap/SPRINT_v1.0_filings_atlas.md` |
 
 **发布策略**：v0.6.x / v0.7 / v0.8 内部迭代不发 release；**GitHub Release 只发 v1.0**。意味着 v0.7/v0.8 期间：
 - 不更新 README 顶部版本号或 "What's new" 段
@@ -225,4 +225,4 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 
 ---
 
-**最后更新**：2026-05-23（v1.0 批次 1 品牌重命名完成，下一批次为 i18n 脚手架）
+**最后更新**：2026-05-23（v1.0 批次 2 i18n 脚手架完成，下一批次为 strings.py 双语拆分）

@@ -48,9 +48,22 @@ class DARTCfg(BaseModel):
 
 class UICfg(BaseModel):
     theme: str = "light"
-    language: str = "zh_CN"
+    language: str = "zh"
     window_width: int = 1280
     window_height: int = 820
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_language(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            normalized = dict(data)
+            lang = str(normalized.get("language", "")).strip()
+            if lang in {"zh_CN", "zh-cn", "zh-CN", "chinese"}:
+                normalized["language"] = "zh"
+            elif lang in {"en_US", "en-us", "en-US", "english"}:
+                normalized["language"] = "en"
+            return normalized
+        return data
 
 
 class Settings(BaseModel):
