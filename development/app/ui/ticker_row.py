@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from app.core.models import Exchange, Ticker
 from app.ui import strings as ui_strings
+from app.ui.i18n import LanguageManager
 
 
 class _ResolveSignals(QObject):
@@ -49,6 +50,7 @@ class TickerRow(QWidget):
         super().__init__(parent)
         self.exchange = exchange
         self._ticker: Ticker | None = None
+        self._pill_key = "TR_PENDING"
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 4, 0, 4)
@@ -87,6 +89,7 @@ class TickerRow(QWidget):
         layout.addWidget(self.status_pill)
         layout.addWidget(self.name_label, 1)
         layout.addWidget(self.delete_btn)
+        LanguageManager.instance().language_changed.connect(self._retranslate)
 
     # ---- public API ---------------------------------------------------------
 
@@ -102,9 +105,9 @@ class TickerRow(QWidget):
     def confirm(self) -> None:
         code = self.code_input.text().strip()
         if not code:
-            self._set_state("error", ui_strings.TR_ENTER_CODE, "")
+            self._set_state("error", "TR_ENTER_CODE", "")
             return
-        self._set_state("resolving", ui_strings.TR_RESOLVING, "")
+        self._set_state("resolving", "TR_RESOLVING", "")
         self.confirm_btn.setEnabled(False)
         self.code_input.setEnabled(False)
 
@@ -120,17 +123,18 @@ class TickerRow(QWidget):
             self.code_input.setText(ticker.code)
             del blocker
             self._ticker = ticker
-            self._set_state("ok", ui_strings.TR_RESOLVED, ticker.name or "")
+            self._set_state("ok", "TR_RESOLVED", ticker.name or "")
         else:
             self._ticker = None
-            self._set_state("error", ui_strings.TR_NOT_FOUND, error or ui_strings.TR_UNRESOLVABLE)
+            self._set_state("error", "TR_NOT_FOUND", error or ui_strings.TR_UNRESOLVABLE)
         self.resolved.emit(self)
 
     # ---- internals ----------------------------------------------------------
 
-    def _set_state(self, state: str, pill_text: str, name_text: str) -> None:
+    def _set_state(self, state: str, pill_key: str, name_text: str) -> None:
+        self._pill_key = pill_key
         self.status_pill.setProperty("state", state)
-        self.status_pill.setText(pill_text)
+        self.status_pill.setText(getattr(ui_strings, pill_key))
         # Force QSS re-evaluation after dynamic property change
         self.status_pill.style().unpolish(self.status_pill)
         self.status_pill.style().polish(self.status_pill)
@@ -139,11 +143,17 @@ class TickerRow(QWidget):
     def _on_text_changed(self, _text: str) -> None:
         if self._ticker is not None:
             self._ticker = None
-            self._set_state("pending", ui_strings.TR_PENDING, "")
+            self._set_state("pending", "TR_PENDING", "")
             self.resolved.emit(self)
 
     def _on_delete_clicked(self) -> None:
         self.removed.emit(self)
+
+    def _retranslate(self, _lang: str = "") -> None:
+        self.code_input.setPlaceholderText(self._placeholder_for(self.exchange))
+        self.confirm_btn.setText(ui_strings.TR_CONFIRM)
+        self.status_pill.setText(getattr(ui_strings, self._pill_key))
+        self.delete_btn.setToolTip(ui_strings.TR_DELETE_TOOLTIP)
 
     @staticmethod
     def _placeholder_for(exchange: Exchange) -> str:

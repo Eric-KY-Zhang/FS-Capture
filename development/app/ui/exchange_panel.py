@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from app.core.models import Exchange, Ticker
 from app.ui import strings as ui_strings
 from app.ui.batch_import_dialog import BatchImportDialog
+from app.ui.i18n import LanguageManager
 from app.ui.styles.palette import exchange_accent
 from app.ui.ticker_row import TickerRow
 
@@ -48,14 +49,14 @@ class ExchangePanel(QFrame):
         accent.setStyleSheet(f"background:{exchange_accent(exchange)}; border-radius:2px;")
         h_layout.addWidget(accent)
 
-        title = QLabel(self._title_for(exchange))
-        title.setObjectName("CardTitle")
-        h_layout.addWidget(title)
+        self.title_label = QLabel(self._title_for(exchange))
+        self.title_label.setObjectName("CardTitle")
+        h_layout.addWidget(self.title_label)
 
-        sub = QLabel(self._subtitle_for(exchange))
-        sub.setObjectName("CardSubtitle")
-        sub.setStyleSheet("color: #94A3B8; font-size: 12px;")
-        h_layout.addWidget(sub)
+        self.subtitle_label = QLabel(self._subtitle_for(exchange))
+        self.subtitle_label.setObjectName("CardSubtitle")
+        self.subtitle_label.setStyleSheet("color: #94A3B8; font-size: 12px;")
+        h_layout.addWidget(self.subtitle_label)
         h_layout.addStretch(1)
 
         self.batch_btn = QPushButton(ui_strings.EP_BATCH_ADD)
@@ -87,6 +88,7 @@ class ExchangePanel(QFrame):
         self._rows_layout.addWidget(self._empty_label)
 
         self._rows: list[TickerRow] = []
+        LanguageManager.instance().language_changed.connect(self._retranslate)
 
     # ---- API ---------------------------------------------------------------
 
@@ -141,6 +143,13 @@ class ExchangePanel(QFrame):
             self._empty_label.show()
         self.rows_changed.emit()
 
+    def _retranslate(self, _lang: str = "") -> None:
+        self.title_label.setText(self._title_for(self.exchange))
+        self.subtitle_label.setText(self._subtitle_for(self.exchange))
+        self.batch_btn.setText(ui_strings.EP_BATCH_ADD)
+        self.add_btn.setText(ui_strings.EP_SINGLE_ADD)
+        self._empty_label.setText(ui_strings.EP_EMPTY)
+
     def _open_batch_import(self) -> None:
         dialog = BatchImportDialog(self.exchange, self)
         if dialog.exec() != dialog.DialogCode.Accepted:
@@ -189,7 +198,7 @@ class ExchangePanel(QFrame):
         return {
             Exchange.A_SHARE: ui_strings.EP_SUBTITLE_A_SHARE,
             Exchange.HK: ui_strings.EP_SUBTITLE_HK,
-            Exchange.US: "SEC EDGAR",
+            Exchange.US: ui_strings.EP_SUBTITLE_US,
             Exchange.KR: ui_strings.EP_SUBTITLE_KR,
             Exchange.TW: ui_strings.EP_SUBTITLE_TW,
         }[exchange]

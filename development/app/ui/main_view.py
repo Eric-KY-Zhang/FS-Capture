@@ -22,6 +22,7 @@ from app.core.settings import Settings
 from app.ui import strings as ui_strings
 from app.ui.exchange_panel import ExchangePanel
 from app.ui.exchange_selector import ExchangeSelector
+from app.ui.i18n import LanguageManager
 from app.ui.output_card import OutputCard
 from app.ui.period_selector import PeriodSelector
 from app.ui.progress_dock import ProgressDock
@@ -64,17 +65,17 @@ class MainView(QWidget):
         layout.setSpacing(20)
 
         # ---- Hero / heading ---------------------------------------------------
-        section = QLabel(ui_strings.MV_SECTION)
-        section.setObjectName("SectionLabel")
-        layout.addWidget(section)
+        self.section_label = QLabel(ui_strings.MV_SECTION)
+        self.section_label.setObjectName("SectionLabel")
+        layout.addWidget(self.section_label)
 
-        title = QLabel(ui_strings.MV_TITLE)
-        title.setStyleSheet("font-size: 22px; font-weight: 700; color: #0F172A;")
-        layout.addWidget(title)
+        self.title_label = QLabel(ui_strings.MV_TITLE)
+        self.title_label.setStyleSheet("font-size: 22px; font-weight: 700; color: #0F172A;")
+        layout.addWidget(self.title_label)
 
-        sub = QLabel(ui_strings.MV_SUBTITLE)
-        sub.setStyleSheet("color: #64748B; font-size: 13px;")
-        layout.addWidget(sub)
+        self.subtitle_label = QLabel(ui_strings.MV_SUBTITLE)
+        self.subtitle_label.setStyleSheet("color: #64748B; font-size: 13px;")
+        layout.addWidget(self.subtitle_label)
         layout.addSpacing(4)
 
         # ---- Exchange selector ------------------------------------------------
@@ -128,6 +129,14 @@ class MainView(QWidget):
 
         # Initial panel sync
         self._sync_exchange_panels()
+        LanguageManager.instance().language_changed.connect(self._retranslate)
+
+    def _retranslate(self, _lang: str = "") -> None:
+        self.section_label.setText(ui_strings.MV_SECTION)
+        self.title_label.setText(ui_strings.MV_TITLE)
+        self.subtitle_label.setText(ui_strings.MV_SUBTITLE)
+        self.settings_btn.setText(ui_strings.MV_SETTINGS_BUTTON)
+        self.run_btn.setText(ui_strings.MV_RUN_BUTTON)
 
     # ---- panel visibility --------------------------------------------------
 
@@ -149,7 +158,9 @@ class MainView(QWidget):
         for ex in self.exchange_selector.selected():
             panel = self._panels[ex]
             if panel.has_pending():
-                warnings.append(f"{ex.display_name}{ui_strings.MV_UNCONFIRMED_SUFFIX}")
+                warnings.append(
+                    f"{self._exchange_name_for(ex)}{ui_strings.MV_UNCONFIRMED_SUFFIX}"
+                )
             tickers.extend(panel.resolved_tickers())
 
         if not tickers:
@@ -242,3 +253,13 @@ class MainView(QWidget):
 
     def _on_log(self, level: str, message: str) -> None:
         getattr(logger, level if hasattr(logger, level) else "info")(message)
+
+    @staticmethod
+    def _exchange_name_for(exchange: Exchange) -> str:
+        return {
+            Exchange.A_SHARE: ui_strings.ES_NAME_A_SHARE,
+            Exchange.HK: ui_strings.ES_NAME_HK,
+            Exchange.US: ui_strings.ES_NAME_US,
+            Exchange.KR: ui_strings.ES_NAME_KR,
+            Exchange.TW: ui_strings.ES_NAME_TW,
+        }[exchange]

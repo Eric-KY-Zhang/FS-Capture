@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from app.core.models import Exchange
 from app.ui import strings as ui_strings
+from app.ui.i18n import LanguageManager
 from app.ui.styles.palette import exchange_accent
 
 
@@ -39,12 +40,12 @@ class ExchangeChip(QPushButton):
         text_box = QVBoxLayout()
         text_box.setSpacing(2)
         text_box.setContentsMargins(0, 0, 0, 0)
-        name = QLabel(self._zh_name(exchange))
-        name.setObjectName("ExchangeChipName")
-        meta = QLabel(self._meta(exchange))
-        meta.setObjectName("ExchangeChipMeta")
-        text_box.addWidget(name)
-        text_box.addWidget(meta)
+        self.name_label = QLabel(self._zh_name(exchange))
+        self.name_label.setObjectName("ExchangeChipName")
+        self.meta_label = QLabel(self._meta(exchange))
+        self.meta_label.setObjectName("ExchangeChipMeta")
+        text_box.addWidget(self.name_label)
+        text_box.addWidget(self.meta_label)
 
         layout.addWidget(accent)
         layout.addLayout(text_box, 1)
@@ -52,6 +53,7 @@ class ExchangeChip(QPushButton):
         self.check_indicator = QLabel("○")
         self.check_indicator.setStyleSheet("color: #CBD5E1; font-size: 18px; font-weight: 700;")
         layout.addWidget(self.check_indicator)
+        LanguageManager.instance().language_changed.connect(self._retranslate)
 
     def _sync_active_property(self, checked: bool) -> None:
         self.setProperty("active", "true" if checked else "false")
@@ -62,6 +64,10 @@ class ExchangeChip(QPushButton):
             f"color: {exchange_accent(self.exchange) if checked else '#CBD5E1'};"
             f" font-size: 18px; font-weight: 700;"
         )
+
+    def _retranslate(self, _lang: str = "") -> None:
+        self.name_label.setText(self._zh_name(self.exchange))
+        self.meta_label.setText(self._meta(self.exchange))
 
     @staticmethod
     def _zh_name(exchange: Exchange) -> str:
@@ -78,8 +84,8 @@ class ExchangeChip(QPushButton):
         return {
             Exchange.A_SHARE: ui_strings.ES_META_A_SHARE,
             Exchange.HK: ui_strings.ES_META_HK,
-            Exchange.US: "NYSE · NASDAQ",
-            Exchange.KR: "KOSPI · KOSDAQ",
+            Exchange.US: ui_strings.ES_META_US,
+            Exchange.KR: ui_strings.ES_META_KR,
             Exchange.TW: ui_strings.ES_META_TW,
         }[exchange]
 
@@ -105,6 +111,11 @@ class ExchangeSelector(QWidget):
 
         # Default: A-share enabled
         self.chips[Exchange.A_SHARE].setChecked(True)
+        LanguageManager.instance().language_changed.connect(self._retranslate)
 
     def selected(self) -> list[Exchange]:
         return [ex for ex, c in self.chips.items() if c.isChecked()]
+
+    def _retranslate(self, _lang: str = "") -> None:
+        for chip in self.chips.values():
+            chip._retranslate()

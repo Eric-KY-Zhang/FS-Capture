@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui import strings as ui_strings
+from app.ui.i18n import LanguageManager
 
 
 class OutputCard(QFrame):
@@ -35,9 +36,9 @@ class OutputCard(QFrame):
         header.setObjectName("CardHeader")
         h = QHBoxLayout(header)
         h.setContentsMargins(20, 16, 20, 8)
-        title = QLabel(ui_strings.OC_TITLE)
-        title.setObjectName("CardTitle")
-        h.addWidget(title)
+        self.title_label = QLabel(ui_strings.OC_TITLE)
+        self.title_label.setObjectName("CardTitle")
+        h.addWidget(self.title_label)
         h.addStretch(1)
         outer.addWidget(header)
 
@@ -49,20 +50,26 @@ class OutputCard(QFrame):
 
         self.path_input = QLineEdit(initial_path)
         self.path_input.textChanged.connect(self.path_changed.emit)
-        browse = QPushButton(ui_strings.OC_BROWSE)
-        browse.setCursor(Qt.PointingHandCursor)
-        browse.clicked.connect(self._browse)
-        open_btn = QPushButton(ui_strings.OC_OPEN_DIR)
-        open_btn.setCursor(Qt.PointingHandCursor)
-        open_btn.clicked.connect(self._open_dir)
+        self.browse_btn = QPushButton(ui_strings.OC_BROWSE)
+        self.browse_btn.setCursor(Qt.PointingHandCursor)
+        self.browse_btn.clicked.connect(self._browse)
+        self.open_btn = QPushButton(ui_strings.OC_OPEN_DIR)
+        self.open_btn.setCursor(Qt.PointingHandCursor)
+        self.open_btn.clicked.connect(self._open_dir)
 
         b.addWidget(self.path_input, 1)
-        b.addWidget(browse)
-        b.addWidget(open_btn)
+        b.addWidget(self.browse_btn)
+        b.addWidget(self.open_btn)
         outer.addWidget(body)
+        LanguageManager.instance().language_changed.connect(self._retranslate)
 
     def path(self) -> str:
         return self.path_input.text().strip()
+
+    def _retranslate(self, _lang: str = "") -> None:
+        self.title_label.setText(ui_strings.OC_TITLE)
+        self.browse_btn.setText(ui_strings.OC_BROWSE)
+        self.open_btn.setText(ui_strings.OC_OPEN_DIR)
 
     def _browse(self) -> None:
         d = QFileDialog.getExistingDirectory(

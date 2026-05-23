@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from app.core.models import Period, PeriodType
 from app.ui import strings as ui_strings
+from app.ui.i18n import LanguageManager
 
 
 class PeriodSelector(QFrame):
@@ -39,13 +40,13 @@ class PeriodSelector(QFrame):
         h.setContentsMargins(20, 16, 20, 8)
         h.setSpacing(12)
 
-        title = QLabel(ui_strings.PS_TITLE)
-        title.setObjectName("CardTitle")
-        sub = QLabel(ui_strings.PS_SUBTITLE)
-        sub.setObjectName("CardSubtitle")
-        sub.setStyleSheet("color: #94A3B8; font-size: 12px;")
-        h.addWidget(title)
-        h.addWidget(sub)
+        self.title_label = QLabel(ui_strings.PS_TITLE)
+        self.title_label.setObjectName("CardTitle")
+        self.subtitle_label = QLabel(ui_strings.PS_SUBTITLE)
+        self.subtitle_label.setObjectName("CardSubtitle")
+        self.subtitle_label.setStyleSheet("color: #94A3B8; font-size: 12px;")
+        h.addWidget(self.title_label)
+        h.addWidget(self.subtitle_label)
         h.addStretch(1)
         outer.addWidget(header)
 
@@ -58,7 +59,8 @@ class PeriodSelector(QFrame):
         # Year range
         year_row = QHBoxLayout()
         year_row.setSpacing(10)
-        year_row.addWidget(QLabel(ui_strings.PS_FROM_YEAR))
+        self.from_year_label = QLabel(ui_strings.PS_FROM_YEAR)
+        year_row.addWidget(self.from_year_label)
         self.from_year = QComboBox()
         self.to_year = QComboBox()
         cur = dt.date.today().year
@@ -78,7 +80,8 @@ class PeriodSelector(QFrame):
         dash.setStyleSheet("color: #94A3B8; font-size: 16px;")
         year_row.addWidget(dash)
         year_row.addSpacing(8)
-        year_row.addWidget(QLabel(ui_strings.PS_TO_YEAR))
+        self.to_year_label = QLabel(ui_strings.PS_TO_YEAR)
+        year_row.addWidget(self.to_year_label)
         year_row.addWidget(self.to_year)
         year_row.addStretch(1)
         b.addLayout(year_row)
@@ -86,9 +89,9 @@ class PeriodSelector(QFrame):
         # Period checkboxes
         type_row = QHBoxLayout()
         type_row.setSpacing(20)
-        label = QLabel(ui_strings.PS_TYPE_LABEL)
-        label.setStyleSheet("color: #475569;")
-        type_row.addWidget(label)
+        self.type_label = QLabel(ui_strings.PS_TYPE_LABEL)
+        self.type_label.setStyleSheet("color: #475569;")
+        type_row.addWidget(self.type_label)
 
         self.cb_annual = QCheckBox(ui_strings.PS_ANNUAL)
         self.cb_annual.setChecked(True)
@@ -103,6 +106,7 @@ class PeriodSelector(QFrame):
         b.addLayout(type_row)
 
         outer.addWidget(body)
+        LanguageManager.instance().language_changed.connect(self._retranslate)
 
     def periods(self) -> list[Period]:
         from_y = int(self.from_year.currentData())
@@ -125,3 +129,15 @@ class PeriodSelector(QFrame):
             for t in types:
                 out.append(Period(year=y, type=t))
         return out
+
+    def _retranslate(self, _lang: str = "") -> None:
+        self.title_label.setText(ui_strings.PS_TITLE)
+        self.subtitle_label.setText(ui_strings.PS_SUBTITLE)
+        self.from_year_label.setText(ui_strings.PS_FROM_YEAR)
+        self.to_year_label.setText(ui_strings.PS_TO_YEAR)
+        self.type_label.setText(ui_strings.PS_TYPE_LABEL)
+        self.cb_annual.setText(ui_strings.PS_ANNUAL)
+        self.cb_q3.setText(ui_strings.PS_Q3)
+        self.cb_q2.setText(ui_strings.PS_Q2)
+        self.cb_q1.setText(ui_strings.PS_Q1)
+        self.cb_ipo.setText(ui_strings.PS_IPO)

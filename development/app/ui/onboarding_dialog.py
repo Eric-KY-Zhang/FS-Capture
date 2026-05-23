@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui import strings as ui_strings
+from app.ui.i18n import LanguageManager
 
 
 class OnboardingDialog(QDialog):
@@ -27,31 +28,40 @@ class OnboardingDialog(QDialog):
         layout.setContentsMargins(24, 22, 24, 20)
         layout.setSpacing(14)
 
-        title = QLabel(ui_strings.OB_TITLE)
-        title.setObjectName("CardTitle")
-        title.setWordWrap(True)
-        layout.addWidget(title)
+        self.title_label = QLabel(ui_strings.OB_TITLE)
+        self.title_label.setObjectName("CardTitle")
+        self.title_label.setWordWrap(True)
+        layout.addWidget(self.title_label)
 
-        hint = QLabel(ui_strings.OB_HINT)
-        hint.setWordWrap(True)
-        layout.addWidget(hint)
+        self.hint_label = QLabel(ui_strings.OB_HINT)
+        self.hint_label.setWordWrap(True)
+        layout.addWidget(self.hint_label)
 
-        dart = QLabel(ui_strings.OB_DART_BODY)
-        dart.setOpenExternalLinks(True)
-        dart.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        dart.setWordWrap(True)
-        layout.addWidget(dart)
+        self.dart_label = QLabel(ui_strings.OB_DART_BODY)
+        self.dart_label.setOpenExternalLinks(True)
+        self.dart_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        self.dart_label.setWordWrap(True)
+        layout.addWidget(self.dart_label)
 
         actions = QHBoxLayout()
         actions.addStretch(1)
-        later_btn = QPushButton(ui_strings.OB_LATER)
-        later_btn.clicked.connect(self.accept)
-        settings_btn = QPushButton(ui_strings.OB_SETTINGS)
-        settings_btn.setProperty("variant", "primary")
-        settings_btn.clicked.connect(self._accept_for_settings)
-        actions.addWidget(later_btn)
-        actions.addWidget(settings_btn)
+        self.later_btn = QPushButton(ui_strings.OB_LATER)
+        self.later_btn.clicked.connect(self.accept)
+        self.settings_btn = QPushButton(ui_strings.OB_SETTINGS)
+        self.settings_btn.setProperty("variant", "primary")
+        self.settings_btn.clicked.connect(self._accept_for_settings)
+        actions.addWidget(self.later_btn)
+        actions.addWidget(self.settings_btn)
         layout.addLayout(actions)
+        LanguageManager.instance().language_changed.connect(self._retranslate)
+
+    def _retranslate(self, _lang: str = "") -> None:
+        self.setWindowTitle(ui_strings.OB_WINDOW_TITLE)
+        self.title_label.setText(ui_strings.OB_TITLE)
+        self.hint_label.setText(ui_strings.OB_HINT)
+        self.dart_label.setText(ui_strings.OB_DART_BODY)
+        self.later_btn.setText(ui_strings.OB_LATER)
+        self.settings_btn.setText(ui_strings.OB_SETTINGS)
 
     def _accept_for_settings(self) -> None:
         self.open_settings_requested = True

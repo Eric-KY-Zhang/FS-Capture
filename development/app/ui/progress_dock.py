@@ -14,7 +14,9 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.job import TaskResult, TaskStatus
+from app.core.models import Exchange, Period, PeriodType
 from app.ui import strings as ui_strings
+from app.ui.i18n import LanguageManager
 from app.ui.styles.palette import exchange_accent
 
 
@@ -22,6 +24,11 @@ class _TaskRow(QFrame):
     def __init__(self, task: TaskResult, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.task = task
+        self._status_key: str | None = "PD_WAITING"
+        self._status_text = ui_strings.PD_WAITING
+        self._detail_key: str | None = None
+        self._detail_count: int | None = None
+        self._detail_text = ""
         self.setObjectName("ProgressItemRow")
         h = QHBoxLayout(self)
         h.setContentsMargins(12, 8, 12, 8)
@@ -35,7 +42,7 @@ class _TaskRow(QFrame):
         )
         h.addWidget(accent)
 
-        self.code_label = QLabel(f"{task.ticker.exchange.display_name} · {task.ticker.code}")
+        self.code_label = QLabel(_ticker_label(task))
         self.code_label.setStyleSheet("font-weight: 600;")
         self.code_label.setMinimumWidth(120)
 
@@ -43,7 +50,7 @@ class _TaskRow(QFrame):
         self.name_label.setStyleSheet("color: #475569;")
         self.name_label.setMinimumWidth(130)
 
-        self.period_label = QLabel(task.label())
+        self.period_label = QLabel(_period_label(task.period))
         self.period_label.setStyleSheet("color: #64748B;")
         self.period_label.setMinimumWidth(80)
 
@@ -63,7 +70,21 @@ class _TaskRow(QFrame):
         h.addWidget(self.status_label)
         h.addWidget(self.detail_label, 1)
 
-    def update_status(self, text: str, state: str, detail: str = "") -> None:
+    def update_status(
+        self,
+        text: str,
+        state: str,
+        detail: str = "",
+        *,
+        status_key: str | None = None,
+        detail_key: str | None = None,
+        detail_count: int | None = None,
+    ) -> None:
+        self._status_key = status_key
+        self._status_text = text
+        self._detail_key = detail_key
+        self._detail_count = detail_count
+        self._detail_text = detail
         self.status_label.setText(text)
         self.status_label.setProperty("state", state)
         self.status_label.style().unpolish(self.status_label)
@@ -71,6 +92,22 @@ class _TaskRow(QFrame):
         self.detail_label.setText(detail)
         if self.task.ticker.name:
             self.name_label.setText(self.task.ticker.name)
+
+    def retranslate(self) -> None:
+        self.code_label.setText(_ticker_label(self.task))
+        self.period_label.setText(_period_label(self.task.period))
+        if self._status_key is not None:
+            self.status_label.setText(getattr(ui_strings, self._status_key))
+        else:
+            self.status_label.setText(self._status_text)
+        if self._detail_key == "PD_FILE_COUNT_FORMAT" and self._detail_count is not None:
+            self.detail_label.setText(
+                ui_strings.PD_FILE_COUNT_FORMAT.format(count=self._detail_count)
+            )
+        elif self._detail_key == "PD_NO_FILE":
+            self.detail_label.setText(ui_strings.PD_NO_FILE)
+        else:
+            self.detail_label.setText(self._detail_text)
 
 
 class ProgressDock(QFrame):
@@ -94,9 +131,9 @@ class ProgressDock(QFrame):
         h.setContentsMargins(20, 16, 20, 8)
         h.setSpacing(12)
 
-        title = QLabel(ui_strings.PD_TITLE)
-        title.setObjectName("CardTitle")
-        h.addWidget(title)
+        self.title_label = QLabel(ui_strings.PD_TITLE)
+        self.title_label.setObjectName("CardTitle")
+        h.addWidget(self.title_label)
         self.summary_label = QLabel("")
         self.summary_label.setStyleSheet("color: #475569;")
         h.addWidget(self.summary_label)
@@ -136,6 +173,7 @@ class ProgressDock(QFrame):
         self._rows: dict[int, _TaskRow] = {}
         self._completed = 0
         self._total = 0
+        LanguageManager.instance().language_changed.connect(self._retranslate)
 
     # ---- API ---------------------------------------------------------------
 
@@ -158,7 +196,7 @@ class ProgressDock(QFrame):
         row = _TaskRow(task)
         self._list_layout.insertWidget(self._list_layout.count() - 1, row)
         self._rows[id(task)] = row
-        row.update_status(ui_strings.PD_STARTED, "pending", "")
+        row.update_status(ui_strings.PD_STARTED, "pending", "", status_key="PD_STARTED")
 
     def on_task_progress(self, task: TaskResult, status_text: str) -> None:
         row = self._rows.get(id(task))
@@ -166,7 +204,12 @@ class ProgressDock(QFrame):
             self.on_task_started(task)
             row = self._rows.get(id(task))
         if row:
-            row.update_status(ui_strings.PD_RUNNING, "pending", status_text)
+            row.update_status(
+                ui_strings.PD_RUNNING,
+                "pending",
+                status_text,
+                status_key="PD_RUNNING",
+            )
 
     def on_task_finished(self, task: TaskResult) -> None:
         row = self._rows.get(id(task))
@@ -175,17 +218,38 @@ class ProgressDock(QFrame):
             row = self._rows.get(id(task))
         if row:
             if task.status is TaskStatus.DONE:
-                details: list[str] = []
                 if task.reports:
-                    details.append(
-                        ui_strings.PD_FILE_COUNT_FORMAT.format(count=len(task.reports))
+                    report_count = len(task.reports)
+                    row.update_status(
+                        ui_strings.PD_DONE,
+                        "ok",
+                        ui_strings.PD_FILE_COUNT_FORMAT.format(count=report_count),
+                        status_key="PD_DONE",
+                        detail_key="PD_FILE_COUNT_FORMAT",
+                        detail_count=report_count,
                     )
-                detail = " · ".join(details) if details else ui_strings.PD_NO_FILE
-                row.update_status(ui_strings.PD_DONE, "ok", detail)
+                else:
+                    row.update_status(
+                        ui_strings.PD_DONE,
+                        "ok",
+                        ui_strings.PD_NO_FILE,
+                        status_key="PD_DONE",
+                        detail_key="PD_NO_FILE",
+                    )
             elif task.status is TaskStatus.FAILED:
-                row.update_status(ui_strings.PD_FAILED, "error", task.error or "")
+                row.update_status(
+                    ui_strings.PD_FAILED,
+                    "error",
+                    task.error or "",
+                    status_key="PD_FAILED",
+                )
             elif task.status is TaskStatus.CANCELLED:
-                row.update_status(ui_strings.PD_CANCELLED, "pending", task.error or "")
+                row.update_status(
+                    ui_strings.PD_CANCELLED,
+                    "pending",
+                    task.error or "",
+                    status_key="PD_CANCELLED",
+                )
             else:
                 row.update_status(task.status.value, "pending", task.error or "")
 
@@ -194,3 +258,40 @@ class ProgressDock(QFrame):
         self.summary_label.setText(f"{self._completed} / {self._total}")
         if self._completed >= self._total:
             self.cancel_btn.setEnabled(False)
+
+    def _retranslate(self, _lang: str = "") -> None:
+        self.title_label.setText(ui_strings.PD_TITLE)
+        self.cancel_btn.setText(ui_strings.COMMON_CANCEL)
+        for row in self._rows.values():
+            row.retranslate()
+
+
+def _ticker_label(task: TaskResult) -> str:
+    return f"{_exchange_name_for(task.ticker.exchange)} · {task.ticker.code}"
+
+
+def _exchange_name_for(exchange: Exchange) -> str:
+    return {
+        Exchange.A_SHARE: ui_strings.ES_NAME_A_SHARE,
+        Exchange.HK: ui_strings.ES_NAME_HK,
+        Exchange.US: ui_strings.ES_NAME_US,
+        Exchange.KR: ui_strings.ES_NAME_KR,
+        Exchange.TW: ui_strings.ES_NAME_TW,
+    }[exchange]
+
+
+def _period_label(period: Period) -> str:
+    return ui_strings.PD_PERIOD_LABEL_FORMAT.format(
+        year=period.year,
+        period_type=_period_type_name(period.type),
+    )
+
+
+def _period_type_name(period_type: PeriodType) -> str:
+    return {
+        PeriodType.ANNUAL: ui_strings.PS_ANNUAL,
+        PeriodType.Q1: ui_strings.PS_Q1,
+        PeriodType.Q2: ui_strings.PS_Q2,
+        PeriodType.Q3: ui_strings.PS_Q3,
+        PeriodType.IPO_PROSPECTUS: ui_strings.PS_IPO,
+    }[period_type]

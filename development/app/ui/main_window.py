@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from app.core.settings import Settings
 from app.ui import strings as ui_strings
+from app.ui.i18n import LanguageManager
 
 
 class _TitleBar(QWidget):
@@ -54,6 +55,10 @@ class _TitleBar(QWidget):
         layout.addWidget(self.btn_min)
         layout.addWidget(self.btn_max)
         layout.addWidget(self.btn_close)
+        LanguageManager.instance().language_changed.connect(self._retranslate)
+
+    def _retranslate(self, _lang: str = "") -> None:
+        self.subtitle.setText(ui_strings.MW_SUBTITLE)
 
     @staticmethod
     def _make_btn(text: str, role: str) -> QPushButton:
@@ -126,6 +131,7 @@ class MainWindow(QMainWindow):
         self._resize_edge: str | None = None
         self._resize_start_geom: QRect | None = None
         self._resize_start_pos: QPoint | None = None
+        LanguageManager.instance().language_changed.connect(self._retranslate)
 
     # ---- public API ------------------------------------------------------
 
@@ -137,6 +143,9 @@ class MainWindow(QMainWindow):
                 w.deleteLater()
         widget.setParent(self._body_host)
         self._body_layout.addWidget(widget)
+
+    def _retranslate(self, _lang: str = "") -> None:
+        self.setWindowTitle(ui_strings.MW_WINDOW_TITLE)
 
     # ---- maximize toggle -------------------------------------------------
 

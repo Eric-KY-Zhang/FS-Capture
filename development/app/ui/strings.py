@@ -34,6 +34,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "EP_TITLE_TW": "台股 · Taiwan",
         "EP_SUBTITLE_A_SHARE": "巨潮资讯网 · 东方财富",
         "EP_SUBTITLE_HK": "披露易 · 东方财富",
+        "EP_SUBTITLE_US": "SEC EDGAR 披露系统",
         "EP_SUBTITLE_KR": "DART 电子公示",
         "EP_SUBTITLE_TW": "公開資訊觀測站 MOPS",
         # exchange_selector
@@ -44,6 +45,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "ES_NAME_TW": "台股",
         "ES_META_A_SHARE": "上交所 · 深交所 · 北交所",
         "ES_META_HK": "香港交易所",
+        "ES_META_US": "纽交所 · 纳斯达克",
+        "ES_META_KR": "韩国交易所 KOSPI · KOSDAQ",
         "ES_META_TW": "台交所 · 櫃買中心",
         # main_view
         "MV_SECTION": "FILINGS ATLAS · 一键抓取",
@@ -110,12 +113,19 @@ STRINGS: dict[str, dict[str, str]] = {
         "PD_DONE": "✓ 完成",
         "PD_FAILED": "× 失败",
         "PD_CANCELLED": "已取消",
+        "PD_PERIOD_LABEL_FORMAT": "{year}年度 {period_type}",
         # settings_dialog
         "SD_TITLE": "设置",
         "SD_DART_PLACEHOLDER": "可选——留空走 DART 公网爬虫",
         "SD_DART_LABEL": "DART OpenAPI Key（可选，韩股加速）",
         "SD_WORKERS_LABEL": "并发数",
         "SD_THEME_LABEL": "主题（重启生效）",
+        "SD_THEME_LIGHT": "浅色",
+        "SD_THEME_DARK": "深色",
+        "SD_LANGUAGE_LABEL": "界面语言",
+        "SD_LANGUAGE_ZH": "中文",
+        "SD_LANGUAGE_EN": "英文",
+        "SD_SEC_UA_LABEL": "SEC User-Agent（美国市场）",
         "SD_SAVE": "保存",
         # ticker_row
         "TR_CONFIRM": "确认",
@@ -161,6 +171,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "EP_TITLE_TW": "Taiwan",
         "EP_SUBTITLE_A_SHARE": "CNINFO · Eastmoney",
         "EP_SUBTITLE_HK": "HKEXnews · Eastmoney",
+        "EP_SUBTITLE_US": "SEC EDGAR",
         "EP_SUBTITLE_KR": "DART electronic disclosure",
         "EP_SUBTITLE_TW": "MOPS disclosure portal",
         # exchange_selector
@@ -171,6 +182,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "ES_NAME_TW": "Taiwan",
         "ES_META_A_SHARE": "SSE · SZSE · BSE",
         "ES_META_HK": "Hong Kong Exchange",
+        "ES_META_US": "NYSE · NASDAQ",
+        "ES_META_KR": "KOSPI · KOSDAQ",
         "ES_META_TW": "TWSE · TPEx",
         # main_view
         "MV_SECTION": "FILINGS ATLAS · One-click download",
@@ -237,12 +250,19 @@ STRINGS: dict[str, dict[str, str]] = {
         "PD_DONE": "Done",
         "PD_FAILED": "Failed",
         "PD_CANCELLED": "Cancelled",
+        "PD_PERIOD_LABEL_FORMAT": "{period_type} {year}",
         # settings_dialog
         "SD_TITLE": "Settings",
         "SD_DART_PLACEHOLDER": "Optional - leave blank to use the public DART crawler",
         "SD_DART_LABEL": "DART OpenAPI key (Optional, speeds up Korea)",
         "SD_WORKERS_LABEL": "Concurrency",
         "SD_THEME_LABEL": "Theme (restart required)",
+        "SD_THEME_LIGHT": "Light",
+        "SD_THEME_DARK": "Dark",
+        "SD_LANGUAGE_LABEL": "UI language",
+        "SD_LANGUAGE_ZH": "Chinese",
+        "SD_LANGUAGE_EN": "English",
+        "SD_SEC_UA_LABEL": "SEC User-Agent",
         "SD_SAVE": "Save",
         # ticker_row
         "TR_CONFIRM": "Confirm",

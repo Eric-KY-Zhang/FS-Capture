@@ -138,7 +138,8 @@ def test_save_invalidates_dart_cache_when_key_changes(monkeypatch: pytest.Monkey
         settings=Settings.model_validate({"dart": {"api_key": "old-key"}}),
         dart_key=SimpleNamespace(text=lambda: "new-key"),
         workers=SimpleNamespace(value=lambda: 4),
-        theme=SimpleNamespace(currentText=lambda: "light"),
+        theme=SimpleNamespace(currentData=lambda: "light"),
+        language=SimpleNamespace(currentData=lambda: "zh"),
         sec_ua=SimpleNamespace(text=lambda: "Filings Atlas test"),
         accept=Mock(),
     )

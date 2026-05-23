@@ -4,7 +4,7 @@
 **Planner**：Claude Code (Opus 4.7)
 **Worker**：Codex
 **Reviewer**：Claude Code
-**状态**：实施中（批次 3 strings.py 双语拆分已完成，下一步批次 4 语言开关与 live re-translate）
+**状态**：实施中（批次 4 语言开关与 live re-translate 已完成，等待 Reviewer Checkpoint A；暂停批次 5）
 **预计工作量**：4-6 周
 **发布策略**：**首个 GitHub release**（v1.0.0），含 PyInstaller bundle artifact + 双语 README + CHANGELOG
 
@@ -1140,4 +1140,4 @@ cd ..
 
 ---
 
-**最后更新**：2026-05-23（批次 3 strings.py 双语拆分完成）
+**最后更新**：2026-05-23（批次 4 语言开关与 live re-translate 完成，等待 Reviewer Checkpoint A）

@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from app.core.models import Exchange
 from app.ui import strings as ui_strings
+from app.ui.i18n import LanguageManager
 
 _CELL_SPLIT_RE = re.compile(r"[\t,，;；、]+")
 _SPACE_SPLIT_RE = re.compile(r"\s+")
@@ -130,7 +131,9 @@ class BatchImportDialog(QDialog):
         super().__init__(parent)
         self.exchange = exchange
         self.setWindowTitle(
-            ui_strings.BID_WINDOW_TITLE_FORMAT.format(exchange_name=exchange.display_name)
+            ui_strings.BID_WINDOW_TITLE_FORMAT.format(
+                exchange_name=self._exchange_name_for(exchange)
+            )
         )
         self.setModal(True)
         self.setMinimumSize(520, 380)
@@ -139,13 +142,13 @@ class BatchImportDialog(QDialog):
         layout.setContentsMargins(24, 22, 24, 20)
         layout.setSpacing(12)
 
-        title = QLabel(ui_strings.BID_TITLE)
-        title.setObjectName("CardTitle")
-        layout.addWidget(title)
+        self.title_label = QLabel(ui_strings.BID_TITLE)
+        self.title_label.setObjectName("CardTitle")
+        layout.addWidget(self.title_label)
 
-        hint = QLabel(ui_strings.BID_HINT)
-        hint.setWordWrap(True)
-        layout.addWidget(hint)
+        self.hint_label = QLabel(ui_strings.BID_HINT)
+        self.hint_label.setWordWrap(True)
+        layout.addWidget(self.hint_label)
 
         self.editor = QTextEdit()
         self.editor.setPlaceholderText(self._placeholder_for(exchange))
@@ -156,15 +159,38 @@ class BatchImportDialog(QDialog):
         self.auto_confirm.setChecked(True)
         layout.addWidget(self.auto_confirm)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.button(QDialogButtonBox.Ok).setText(ui_strings.BID_ADD)
-        buttons.button(QDialogButtonBox.Cancel).setText(ui_strings.COMMON_CANCEL)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttons.button(QDialogButtonBox.Ok).setText(ui_strings.BID_ADD)
+        self.buttons.button(QDialogButtonBox.Cancel).setText(ui_strings.COMMON_CANCEL)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        layout.addWidget(self.buttons)
+        LanguageManager.instance().language_changed.connect(self._retranslate)
 
     def codes(self) -> tuple[list[str], list[str]]:
         return parse_ticker_codes(self.editor.toPlainText(), self.exchange)
+
+    def _retranslate(self, _lang: str = "") -> None:
+        self.setWindowTitle(
+            ui_strings.BID_WINDOW_TITLE_FORMAT.format(
+                exchange_name=self._exchange_name_for(self.exchange)
+            )
+        )
+        self.title_label.setText(ui_strings.BID_TITLE)
+        self.hint_label.setText(ui_strings.BID_HINT)
+        self.auto_confirm.setText(ui_strings.BID_AUTO_CONFIRM)
+        self.buttons.button(QDialogButtonBox.Ok).setText(ui_strings.BID_ADD)
+        self.buttons.button(QDialogButtonBox.Cancel).setText(ui_strings.COMMON_CANCEL)
+
+    @staticmethod
+    def _exchange_name_for(exchange: Exchange) -> str:
+        return {
+            Exchange.A_SHARE: ui_strings.ES_NAME_A_SHARE,
+            Exchange.HK: ui_strings.ES_NAME_HK,
+            Exchange.US: ui_strings.ES_NAME_US,
+            Exchange.KR: ui_strings.ES_NAME_KR,
+            Exchange.TW: ui_strings.ES_NAME_TW,
+        }[exchange]
 
     @staticmethod
     def _placeholder_for(exchange: Exchange) -> str:
