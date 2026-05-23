@@ -114,7 +114,7 @@ def load_settings() -> Settings:
     if not cfg_file.exists():
         s = Settings()
         save_settings(s)
-        return Settings.model_validate({})
+        return s
     with cfg_file.open("rb") as f:
         data: dict[str, Any] = tomllib.load(f)
     return Settings.model_validate(data)

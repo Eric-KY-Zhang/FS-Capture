@@ -59,6 +59,21 @@ def test_saved_settings_use_dart_section_only() -> None:
     assert "[opendart]" not in text
 
 
+def test_load_settings_creates_and_returns_default_on_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg_file = SimpleNamespace(exists=lambda: False)
+    save_mock = Mock()
+    monkeypatch.setattr(settings_module, "config_path", lambda: cfg_file)
+    monkeypatch.setattr(settings_module, "save_settings", save_mock)
+
+    settings = settings_module.load_settings()
+
+    assert isinstance(settings, Settings)
+    assert settings == Settings()
+    save_mock.assert_called_once_with(settings)
+
+
 def test_dart_client_cache_invalidation_is_optional(monkeypatch: pytest.MonkeyPatch) -> None:
     def raise_import_error(_name: str):
         raise ImportError

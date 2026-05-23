@@ -59,7 +59,17 @@ class RateLimiterRegistry:
         with self._lock:
             if source not in self._buckets:
                 self._buckets[source] = TokenBucket(rate)
-            return self._buckets[source]
+            bucket = self._buckets[source]
+            new_rate = float(rate)
+            new_capacity = float(max(1, int(rate)))
+            if bucket.rate != new_rate or bucket.capacity != new_capacity:
+                with bucket._lock:
+                    bucket._refill()
+                    bucket.rate = new_rate
+                    bucket.capacity = new_capacity
+                    bucket._tokens = min(bucket._tokens, bucket.capacity)
+                    bucket._last = time.monotonic()
+            return bucket
 
 
 _registry = RateLimiterRegistry()
