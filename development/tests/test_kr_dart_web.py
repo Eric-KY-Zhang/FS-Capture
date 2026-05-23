@@ -2,11 +2,26 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
+
+from app.core.settings import Settings
+from plugins.kr import KRShare
 from plugins.kr import dart_web
 
 
 def _fixture(name: str) -> str:
     return (Path(__file__).parent / "fixtures" / name).read_text(encoding="utf-8")
+
+
+class _Cache:
+    def __init__(self) -> None:
+        self.store = {}
+
+    def get(self, key):
+        return self.store.get(key)
+
+    def set(self, key, value, expire=None) -> None:
+        self.store[key] = value
 
 
 def test_dart_web_resolve_corp_parses_search_result(monkeypatch) -> None:
@@ -56,3 +71,50 @@ def test_dart_web_list_filings_schema_matches_opendartreader(monkeypatch) -> Non
             "final": True,
         }
     ]
+
+
+def test_kr_no_api_key_falls_back_to_public_crawler(monkeypatch) -> None:
+    from plugins.kr import dart_web as dart_web_module
+    from plugins.kr import name_resolver
+
+    monkeypatch.setattr(name_resolver, "load_settings", lambda: Settings())
+    monkeypatch.setattr(name_resolver, "get_cache", lambda: _Cache())
+    monkeypatch.setattr(
+        dart_web_module,
+        "resolve_corp",
+        lambda _code: {"corp_code": "00126380", "corp_name": "삼성전자"},
+    )
+
+    ticker = KRShare().resolve_name("005930")
+
+    assert ticker.code == "005930"
+    assert ticker.name == "삼성전자"
+    assert ticker.external_id == "00126380"
+
+
+def test_kr_with_api_key_prefers_openapi_path(monkeypatch) -> None:
+    from plugins.kr import dart_web as dart_web_module
+    from plugins.kr import name_resolver
+
+    class _Dart:
+        corp_codes = pd.DataFrame(
+            [{"stock_code": "005930", "corp_code": "00126380", "corp_name": "삼성전자"}]
+        )
+
+    monkeypatch.setattr(
+        name_resolver,
+        "load_settings",
+        lambda: Settings.model_validate({"dart": {"api_key": "test-key"}}),
+    )
+    monkeypatch.setattr(name_resolver, "get_cache", lambda: _Cache())
+    monkeypatch.setattr(name_resolver, "_dart_for_key", lambda _api_key: _Dart())
+    monkeypatch.setattr(
+        dart_web_module,
+        "resolve_corp",
+        lambda _code: (_ for _ in ()).throw(AssertionError("public crawler should not run")),
+    )
+
+    ticker = KRShare().resolve_name("005930")
+
+    assert ticker.name == "삼성전자"
+    assert ticker.external_id == "00126380"

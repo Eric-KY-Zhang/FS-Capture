@@ -200,8 +200,8 @@ def test_kr_resolve_name_uses_corp_code_map(monkeypatch) -> None:
 
     monkeypatch.setattr(
         name_resolver,
-        "_load_map",
-        lambda: {"005930": {"corp_code": "00126380", "corp_name": "삼성전자"}},
+        "resolve_one",
+        lambda _code: {"corp_code": "00126380", "corp_name": "삼성전자"},
     )
 
     ticker = KRShare().resolve_name("005930")

@@ -127,19 +127,25 @@ def _list_filings(ticker: Ticker, period: Period) -> pd.DataFrame:
     dart = _dart()
     bgn = f"{period.year}0101"
     end = f"{period.year + 1}0630" if period.type is PeriodType.ANNUAL else f"{period.year}1231"
-    try:
-        df = dart.list(
-            corp=_corp(ticker),
-            start=bgn,
-            end=end,
-            kind="A",
-            kind_detail=_DETAIL_KIND[period.type],
-            final=True,
-        )
-    except Exception as exc:
-        logger.warning(f"DART list failed for {ticker.code}: {exc}")
-        return pd.DataFrame()
-    return df if isinstance(df, pd.DataFrame) else pd.DataFrame()
+    detail = _DETAIL_KIND[period.type]
+    if dart is not None:
+        try:
+            df = dart.list(
+                corp=_corp(ticker),
+                start=bgn,
+                end=end,
+                kind="A",
+                kind_detail=detail,
+                final=True,
+            )
+        except Exception as exc:
+            logger.warning(f"DART list failed for {ticker.code}: {exc}")
+            return pd.DataFrame()
+        return df if isinstance(df, pd.DataFrame) else pd.DataFrame()
+
+    from .dart_web import list_filings
+
+    return list_filings(_corp(ticker), bgn, end, detail)
 
 
 def _list_ipo_filings(ticker: Ticker) -> pd.DataFrame:

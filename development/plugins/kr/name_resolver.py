@@ -1,11 +1,4 @@
-"""KR ticker resolution via DART OpenAPI corpCode.
-
-DART OpenAPI requires a free API key (set in Settings → DART API key, persisted
-in config.toml). The corpCode endpoint returns a ZIP containing all listed
-companies' corp_code, corp_name, stock_code, modify_date.
-
-We rely on OpenDartReader to manage the ZIP/XML extraction.
-"""
+"""KR ticker resolution via DART OpenAPI or public DART disclosure pages."""
 
 from __future__ import annotations
 
@@ -38,10 +31,7 @@ def _dart_for_key(api_key: str):
 def _dart():
     api_key = (load_settings().dart.api_key or "").strip()
     if not api_key:
-        raise ValueError(
-            "尚未配置 DART API 密钥。韩股官方披露数据需要 DART OpenAPI，"
-            "请在『设置』中填入密钥；如暂时无法注册，可先取消勾选韩股。"
-        )
+        return None
     return _dart_for_key(api_key)
 
 
@@ -49,32 +39,42 @@ def reset_dart_client() -> None:
     _dart_for_key.cache_clear()
 
 
-def _load_map() -> dict[str, dict]:
-    """stock_code -> {corp_code, corp_name}"""
+def resolve_one(stock_code: str) -> dict | None:
+    """stock_code -> {corp_code, corp_name}; cache permanently."""
     cache = get_cache()
-    cached = cache.get(_CACHE_KEY_CORP_MAP)
+    cache_key = f"kr:corp:{stock_code}"
+    cached = cache.get(cache_key)
     if cached:
         return cached  # type: ignore[return-value]
 
-    logger.info("Loading DART corpCode map ...")
     dart = _dart()
-    df = dart.corp_codes  # full DataFrame; columns include stock_code, corp_code, corp_name
-    df = df[df["stock_code"].astype(str).str.strip() != ""]
-    out: dict[str, dict] = {}
-    for _, r in df.iterrows():
-        sc = str(r["stock_code"]).strip().zfill(6)
-        out[sc] = {
-            "corp_code": str(r["corp_code"]),
-            "corp_name": str(r["corp_name"]),
-        }
-    cache.set(_CACHE_KEY_CORP_MAP, out, expire=_TTL)
-    return out
+    if dart is not None:
+        try:
+            df = dart.corp_codes
+            df = df[df["stock_code"].astype(str).str.zfill(6) == stock_code]
+            if not df.empty:
+                row = df.iloc[0]
+                info = {
+                    "corp_code": str(row["corp_code"]),
+                    "corp_name": str(row["corp_name"]),
+                }
+                cache.set(cache_key, info)
+                return info
+        except Exception as exc:
+            logger.warning(f"DART OpenAPI corp lookup failed for {stock_code}: {exc}")
+
+    from .dart_web import resolve_corp
+
+    logger.info(f"DART OpenAPI not configured; falling back to public crawler for {stock_code}")
+    info = resolve_corp(stock_code)
+    if info is not None:
+        cache.set(cache_key, info)
+    return info
 
 
 def resolve(code: str) -> Ticker:
     norm = _normalize_code(code)
-    m = _load_map()
-    info = m.get(norm)
+    info = resolve_one(norm)
     if not info:
         raise ValueError(f"未找到韩股代码 {code}（请确认代码格式，如 005930）")
     return Ticker(
@@ -88,17 +88,18 @@ def resolve(code: str) -> Ticker:
 def fetch_company(ticker: Ticker) -> Company:
     industry: str | None = None
     extra: dict = {}
-    try:
-        dart = _dart()
-        info_df = dart.company(corp=ticker.external_id or ticker.code)
-        if info_df is not None and not info_df.empty:
-            row = info_df.iloc[0]
-            # DART OpenAPI spells this field as "induty_code"; keep the upstream name.
-            industry_value = row.get("induty_code", row.get("industry_code", ""))
-            industry = str(industry_value) or None
-            extra = {k: str(v) for k, v in row.items()}
-    except Exception as exc:
-        logger.warning(f"DART company info failed for {ticker.code}: {exc}")
+    dart = _dart()
+    if dart is not None:
+        try:
+            info_df = dart.company(corp=ticker.external_id or ticker.code)
+            if info_df is not None and not info_df.empty:
+                row = info_df.iloc[0]
+                # DART OpenAPI spells this field as "induty_code"; keep the upstream name.
+                industry_value = row.get("induty_code", row.get("industry_code", ""))
+                industry = str(industry_value) or None
+                extra = {k: str(v) for k, v in row.items()}
+        except Exception as exc:
+            logger.warning(f"DART company info failed for {ticker.code}: {exc}")
 
     return Company(
         ticker=ticker,
