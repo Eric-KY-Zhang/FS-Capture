@@ -13,19 +13,11 @@ from selectolax.parser import HTMLParser
 
 from app.core.http import default_client, stream_to_file
 from app.core.models import Period, PeriodType, ReportFile, Ticker
-from app.core.output_paths import report_output_path
+from app.core.output_paths import report_output_path, report_output_path_for_filing
 from app.core.ratelimit import limiter
 
 from ._pdf_verify import verify_pdf_year_and_kind
 from .fiscal_year import fiscal_year_end_month
-
-try:
-    from app.core.output_paths import (
-        report_output_path_for_filing as _report_output_path_for_filing,
-    )
-except ImportError:  # Main agent adds this public helper; keep HK importable meanwhile.
-    _report_output_path_for_filing = None
-
 
 _TITLESEARCH_URL = "https://www1.hkexnews.hk/search/titlesearch.xhtml"
 _PDF_HOST = "https://www1.hkexnews.hk"
@@ -33,7 +25,6 @@ _HKEX_RATE = 3.0
 _TITLE_SEARCH_START = "19990401"
 
 _STOCK_CODE_RE = re.compile(r"\b\d{5}\b")
-_BAD_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
 # HKEXnews Title Search headline category codes.
@@ -454,51 +445,6 @@ def _select_main(rows: list[dict], ticker: Ticker, period: Period) -> dict | Non
     return scored[0][1]
 
 
-def _fallback_safe_filename(value: str, *, fallback: str = "file", max_len: int = 120) -> str:
-    cleaned = _BAD_FILENAME_CHARS.sub("_", value).strip(" ._")
-    if not cleaned:
-        cleaned = fallback
-    if len(cleaned) > max_len:
-        cleaned = cleaned[:max_len].rstrip(" ._")
-    return cleaned or fallback
-
-
-def _filing_output_path(
-    output_root: Path,
-    ticker: Ticker,
-    *,
-    sequence: int,
-    label: str,
-    filing_date: dt.date | None,
-    is_amendment: bool,
-    suffix: str,
-    source_id: str | None,
-) -> Path:
-    filing_date_text = filing_date.isoformat() if filing_date else None
-    path_label = _fallback_safe_filename(label, fallback="ipo_document")
-    if _report_output_path_for_filing is not None:
-        return _report_output_path_for_filing(
-            output_root,
-            ticker,
-            "ipo",
-            sequence,
-            path_label,
-            suffix,
-            filing_date=filing_date_text,
-            is_amendment=is_amendment,
-            source_id=source_id,
-        )
-
-    date_part = filing_date_text or "undated"
-    amend_part = "_amendment" if is_amendment else ""
-    filename = _fallback_safe_filename(
-        f"{ticker.exchange.value}_{ticker.code}_ipo_{sequence:03d}_{date_part}{amend_part}_{path_label}{suffix}",
-        fallback=f"{ticker.exchange.value}_{ticker.code}_ipo_{sequence:03d}{suffix}",
-        max_len=180,
-    )
-    return output_root / filename
-
-
 def _make_report_file(**kwargs) -> ReportFile:
     try:
         return ReportFile(**kwargs)
@@ -720,14 +666,15 @@ def download_ipo_documents(ticker: Ticker, output_root: Path) -> list[ReportFile
             filing_date = row.get("filing_date")
             is_amendment = _is_ipo_amendment(row)
             label = row.get("title") or row.get("doc_type") or "ipo_document"
-            dest = _filing_output_path(
+            dest = report_output_path_for_filing(
                 output_root,
                 ticker,
-                sequence=sequence,
-                label=label,
-                filing_date=filing_date,
+                "ipo",
+                sequence,
+                label,
+                suffix,
+                filing_date=filing_date.isoformat() if filing_date else None,
                 is_amendment=is_amendment,
-                suffix=suffix,
                 source_id=row.get("source_id"),
             )
             n_bytes = stream_to_file(client, url, dest, source="hkexnews", rate=_HKEX_RATE)

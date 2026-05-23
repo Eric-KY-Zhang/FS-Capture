@@ -21,15 +21,7 @@ from loguru import logger
 
 from app.core.http import default_client, post_json, stream_to_file
 from app.core.models import Period, PeriodType, ReportFile, Ticker
-from app.core.output_paths import report_output_path
-
-try:
-    from app.core.output_paths import (
-        report_output_path_for_filing as _report_output_path_for_filing,
-    )
-except ImportError:  # Main agent adds this public helper; keep this module importable meanwhile.
-    _report_output_path_for_filing = None
-
+from app.core.output_paths import report_output_path, report_output_path_for_filing
 
 _HISANNOUNCEMENT_URL = "http://www.cninfo.com.cn/new/hisAnnouncement/query"
 _PDF_BASE = "http://static.cninfo.com.cn/"
@@ -110,7 +102,6 @@ _IPO_EXCLUDE_KEYWORDS = (
 _AMENDMENT_KEYWORDS = ("修订", "更正", "补充", "更新")
 
 _TITLE_TAG_RE = re.compile(r"<[^>]+>")
-_BAD_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
 def _column_for(code: str) -> str:
@@ -303,47 +294,6 @@ def _is_ipo_document(announcement: dict) -> bool:
     return any(keyword in title for keyword in _IPO_PRIMARY_KEYWORDS)
 
 
-def _fallback_safe_filename(value: str, *, fallback: str = "file", max_len: int = 120) -> str:
-    cleaned = _BAD_FILENAME_CHARS.sub("_", value).strip(" ._")
-    if not cleaned:
-        cleaned = fallback
-    if len(cleaned) > max_len:
-        cleaned = cleaned[:max_len].rstrip(" ._")
-    return cleaned or fallback
-
-
-def _ipo_output_path(
-    output_root: Path,
-    ticker: Ticker,
-    *,
-    sequence: int,
-    label: str,
-    filing_date: dt.date | None,
-    is_amendment: bool,
-) -> Path:
-    if _report_output_path_for_filing is not None:
-        return _report_output_path_for_filing(
-            output_root,
-            ticker,
-            "ipo",
-            sequence,
-            label,
-            ".pdf",
-            filing_date=filing_date,
-            is_amendment=is_amendment,
-        )
-
-    date_part = filing_date.isoformat() if filing_date else "undated"
-    amend_part = "_amendment" if is_amendment else ""
-    safe_label = _fallback_safe_filename(label, fallback="ipo_document")
-    filename = _fallback_safe_filename(
-        f"{ticker.exchange.value}_{ticker.code}_ipo_{sequence:03d}_{date_part}{amend_part}_{safe_label}.pdf",
-        fallback=f"{ticker.exchange.value}_{ticker.code}_ipo_{sequence:03d}.pdf",
-        max_len=180,
-    )
-    return output_root / filename
-
-
 def _make_report_file(**kwargs) -> ReportFile:
     try:
         return ReportFile(**kwargs)
@@ -486,12 +436,14 @@ def download_ipo_documents(ticker: Ticker, output_root: Path) -> list[ReportFile
             filing_date = _announcement_date(announcement)
             is_amendment = _is_ipo_amendment(title)
             pdf_url = _pdf_url(adjunct_url)
-            dest = _ipo_output_path(
+            dest = report_output_path_for_filing(
                 output_root,
                 ticker,
-                sequence=sequence,
-                label=title or "ipo_document",
-                filing_date=filing_date,
+                "ipo",
+                sequence,
+                title or "ipo_document",
+                ".pdf",
+                filing_date=filing_date.isoformat() if filing_date else None,
                 is_amendment=is_amendment,
             )
             n_bytes = stream_to_file(
