@@ -21,6 +21,7 @@ from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
 
 from app.core.cache import close_cache
+from app.core.pdf_renderer import shutdown_renderer
 from app.core.settings import Settings, config_path, load_settings
 from app.ui.main_view import MainView
 from app.ui.main_window import MainWindow
@@ -75,6 +76,7 @@ def main() -> int:
 
     palette = light_palette if settings.ui.theme == "light" else dark_palette
     app.setStyleSheet(load_qss(palette))
+    app.aboutToQuit.connect(shutdown_renderer)
     app.aboutToQuit.connect(close_cache)
 
     window = MainWindow(settings)
