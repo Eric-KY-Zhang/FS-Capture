@@ -190,6 +190,22 @@ def list_filings(corp_code: str, bgn_de: str, end_de: str, detail_type: str) -> 
     return _rows_to_frame([])
 
 
+def list_audit_filings(corp_code: str, bgn_de: str, end_de: str) -> pd.DataFrame:
+    """List external-audit related filings via public DART search."""
+    try:
+        html = _detail_search_html(
+            corp_code=corp_code,
+            bgn_de=bgn_de,
+            end_de=end_de,
+            detail_type="I001",
+            final=False,
+        )
+    except Exception as exc:
+        logger.warning(f"DART public audit filing list failed for {corp_code}: {exc}")
+        return _rows_to_frame([])
+    return _rows_to_frame(_parse_detail_rows(html))
+
+
 def _dedupe_frame(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df

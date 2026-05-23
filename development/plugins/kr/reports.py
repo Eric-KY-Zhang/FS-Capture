@@ -129,6 +129,7 @@ def _list_filings(ticker: Ticker, period: Period) -> pd.DataFrame:
     end = f"{period.year + 1}0630" if period.type is PeriodType.ANNUAL else f"{period.year}1231"
     detail = _DETAIL_KIND[period.type]
     if dart is not None:
+        frames: list[pd.DataFrame] = []
         try:
             df = dart.list(
                 corp=_corp(ticker),
@@ -141,11 +142,37 @@ def _list_filings(ticker: Ticker, period: Period) -> pd.DataFrame:
         except Exception as exc:
             logger.warning(f"DART list failed for {ticker.code}: {exc}")
             return pd.DataFrame()
-        return df if isinstance(df, pd.DataFrame) else pd.DataFrame()
+        if isinstance(df, pd.DataFrame) and not df.empty:
+            frames.append(df)
+        if period.type is PeriodType.ANNUAL:
+            try:
+                audit_df = dart.list(
+                    corp=_corp(ticker),
+                    start=bgn,
+                    end=end,
+                    kind="I",
+                    kind_detail="I001",
+                    final=False,
+                )
+            except Exception as exc:
+                logger.warning(f"DART audit list failed for {ticker.code}: {exc}")
+            else:
+                if isinstance(audit_df, pd.DataFrame) and not audit_df.empty:
+                    frames.append(audit_df)
+        if not frames:
+            return pd.DataFrame()
+        return pd.concat(frames, ignore_index=True)
 
-    from .dart_web import list_filings
+    from .dart_web import list_audit_filings, list_filings
 
-    return list_filings(_corp(ticker), bgn, end, detail)
+    df = list_filings(_corp(ticker), bgn, end, detail)
+    if period.type is not PeriodType.ANNUAL:
+        return df
+    audit_df = list_audit_filings(_corp(ticker), bgn, end)
+    frames = [frame for frame in (df, audit_df) if isinstance(frame, pd.DataFrame) and not frame.empty]
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True)
 
 
 def _list_ipo_filings(ticker: Ticker) -> pd.DataFrame:
@@ -239,10 +266,22 @@ def _select_audit_filing(df: pd.DataFrame, period: Period) -> dict | None:
         row.to_dict()
         for _, row in df.iterrows()
         if "\uac10\uc0ac\ubcf4\uace0\uc11c" in str(row.get(title_col, ""))
-        and str(period.year) in str(row.get(title_col, ""))
     ]
     if not rows:
         return None
+    title_matches = [r for r in rows if str(period.year) in str(r.get(title_col, ""))]
+    if title_matches:
+        rows = title_matches
+    else:
+        next_year_rows = [
+            r
+            for r in rows
+            if (parsed := _parse_date(_date_text(r))) is not None
+            and parsed.year == period.year + 1
+            and parsed.month <= 6
+        ]
+        if next_year_rows:
+            rows = next_year_rows
     rows.sort(key=_date_text)
     return rows[-1]
 

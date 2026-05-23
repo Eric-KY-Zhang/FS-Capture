@@ -4,6 +4,7 @@ import pandas as pd
 
 from app.core.models import Period, PeriodType
 from plugins.ashare.reports import _column_for as ashare_column_for
+from plugins.kr.reports import _select_audit_filing as select_kr_audit_filing
 from plugins.kr.reports import _select_filing as select_kr_filing
 from plugins.us.reports import _filter_table as filter_us_table
 
@@ -44,3 +45,16 @@ def test_kr_quarterly_reports_choose_q1_and_q3_by_receipt_month() -> None:
 
     assert q1["rcept_no"] == "q1"
     assert q3["rcept_no"] == "q3"
+
+
+def test_kr_audit_report_can_match_following_year_receipt_without_title_year() -> None:
+    df = pd.DataFrame(
+        [
+            {"rcept_no": "audit-2023", "report_nm": "감사보고서제출", "rcept_dt": "20240219"},
+            {"rcept_no": "audit-2024", "report_nm": "감사보고서제출", "rcept_dt": "20250218"},
+        ]
+    )
+
+    selected = select_kr_audit_filing(df, Period(year=2024, type=PeriodType.ANNUAL))
+
+    assert selected["rcept_no"] == "audit-2024"

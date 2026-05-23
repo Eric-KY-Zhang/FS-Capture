@@ -89,6 +89,45 @@ def test_dart_web_list_filings_retries_without_final_filter(monkeypatch) -> None
     assert [call["final"] for call in calls] == [True, False]
 
 
+def test_dart_web_list_audit_filings_uses_i001_search(monkeypatch) -> None:
+    calls = []
+    html = """
+    <tbody id="tbody">
+      <tr>
+        <td></td>
+        <td><a href="javascript:openCorpInfoNew('00126380');">삼성전자</a></td>
+        <td><a href="/dsaf001/main.do?rcpNo=20250218800508">감사보고서제출</a></td>
+        <td></td>
+        <td>2025.02.18</td>
+      </tr>
+    </tbody>
+    """
+
+    def fake_detail_search(**kwargs):
+        calls.append(kwargs)
+        return html
+
+    monkeypatch.setattr(dart_web, "_detail_search_html", fake_detail_search)
+
+    df = dart_web.list_audit_filings("00126380", "20240101", "20250630")
+
+    assert df.iloc[0].to_dict() == {
+        "rcept_no": "20250218800508",
+        "report_nm": "감사보고서제출",
+        "rcept_dt": "20250218",
+        "corp_code": "00126380",
+    }
+    assert calls == [
+        {
+            "corp_code": "00126380",
+            "bgn_de": "20240101",
+            "end_de": "20250630",
+            "detail_type": "I001",
+            "final": False,
+        }
+    ]
+
+
 def test_kr_no_api_key_falls_back_to_public_crawler(monkeypatch) -> None:
     from plugins.kr import dart_web as dart_web_module
     from plugins.kr import name_resolver
