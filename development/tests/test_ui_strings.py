@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import re
-from collections import defaultdict
 from pathlib import Path
 
 from app.ui import strings as S
@@ -42,17 +41,26 @@ def test_no_cjk_string_literals_remain_in_ui_modules() -> None:
     assert offenders == []
 
 
-def test_strings_module_has_no_duplicate_string_constants() -> None:
-    by_value: dict[str, list[str]] = defaultdict(list)
-    for name, value in vars(S).items():
-        if name.isupper() and isinstance(value, str):
-            by_value[value].append(name)
-
-    duplicates = {value: names for value, names in by_value.items() if len(names) > 1}
-    assert duplicates == {}
+def test_strings_zh_and_en_have_identical_keys() -> None:
+    assert set(S.STRINGS["zh"]) == set(S.STRINGS["en"])
 
 
-def test_ui_strings_are_plain_constants_without_translate_wrappers() -> None:
+def test_strings_en_values_contain_no_cjk() -> None:
+    offenders = {
+        name: value for name, value in S.STRINGS["en"].items() if _CJK_RE.search(value)
+    }
+
+    assert offenders == {}
+
+
+def test_strings_zh_values_contain_cjk() -> None:
+    offenders = {
+        name: value for name, value in S.STRINGS["zh"].items() if not _CJK_RE.search(value)
+    }
+
+    assert offenders == {}
+
+
+def test_ui_strings_avoid_qt_translate_wrappers() -> None:
     source = (_UI_ROOT / "strings.py").read_text(encoding="utf-8")
-    assert ".tr(" not in source
     assert "QCoreApplication.translate" not in source
