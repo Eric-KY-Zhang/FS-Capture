@@ -5,8 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from app.core.settings import Settings
-from plugins.kr import KRShare
-from plugins.kr import dart_web
+from plugins.kr import KRShare, dart_web
 
 
 def _fixture(name: str) -> str:
