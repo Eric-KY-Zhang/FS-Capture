@@ -98,6 +98,10 @@ def test_tw_2330_2024_q2_interim() -> None:
     _assert_downloaded_reports(reports)
 
 
+@pytest.mark.skipif(
+    os.environ.get("FS_CAPTURE_RUN_SLOW_E2E") != "1",
+    reason="set FS_CAPTURE_RUN_SLOW_E2E=1 to run the long TW IPO sweep",
+)
 def test_tw_2330_ipo_prospectus() -> None:
     """TSMC IPO prospectus via MOPS mtype=B sweep."""
     plugin = get_plugin(Exchange.TW)
