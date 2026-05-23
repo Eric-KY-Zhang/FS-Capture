@@ -93,7 +93,9 @@ def fetch_company(ticker: Ticker) -> Company:
         info_df = dart.company(corp=ticker.external_id or ticker.code)
         if info_df is not None and not info_df.empty:
             row = info_df.iloc[0]
-            industry = str(row.get("induty_code", "")) or None
+            # DART OpenAPI spells this field as "induty_code"; keep the upstream name.
+            industry_value = row.get("induty_code", row.get("industry_code", ""))
+            industry = str(industry_value) or None
             extra = {k: str(v) for k, v in row.items()}
     except Exception as exc:
         logger.warning(f"DART company info failed for {ticker.code}: {exc}")

@@ -154,7 +154,7 @@ def test_us_download_reports_uses_recent_filings(monkeypatch) -> None:
     assert result[0].form == "10-K"
 
 
-def test_us_html_filings_are_rendered_from_downloaded_local_file(monkeypatch, tmp_path) -> None:
+def test_us_html_filings_are_rendered_from_downloaded_local_file(monkeypatch) -> None:
     from plugins.us import reports
 
     calls = {}
@@ -164,12 +164,10 @@ def test_us_html_filings_are_rendered_from_downloaded_local_file(monkeypatch, tm
         calls["url"] = url
         calls["dest"] = Path(dest)
         calls["kwargs"] = kwargs
-        Path(dest).write_text("<html><body>10-K</body></html>", encoding="utf-8")
         return 28
 
     def fake_render_url_to_pdf(url, dest):
         calls["render_url"] = url
-        Path(dest).write_bytes(b"%PDF-1.7\n")
         return 100_001
 
     monkeypatch.setattr(reports, "stream_to_file", fake_stream_to_file)
@@ -180,7 +178,7 @@ def test_us_html_filings_are_rendered_from_downloaded_local_file(monkeypatch, tm
         "accessionNumber": "0000320193-24-000123",
         "primaryDocument": "aapl-20240928.htm",
     }
-    dest = tmp_path / "US_AAPL_Apple Inc_2024_年报.pdf"
+    dest = Path("US_AAPL_Apple Inc_2024_年报.pdf")
 
     source_url, source_format, n_bytes = reports._download_primary_as_pdf(
         client, "0000320193", row, dest
@@ -211,6 +209,23 @@ def test_kr_resolve_name_uses_corp_code_map(monkeypatch) -> None:
     assert ticker.code == "005930"
     assert ticker.name == "삼성전자"
     assert ticker.external_id == "00126380"
+
+
+def test_kr_fetch_company_uses_dart_induty_code(monkeypatch) -> None:
+    from plugins.kr import name_resolver
+
+    class _Dart:
+        def company(self, corp: str):
+            assert corp == "00126380"
+            return pd.DataFrame([{"corp_name": "삼성전자", "induty_code": "264"}])
+
+    monkeypatch.setattr(name_resolver, "_dart", lambda: _Dart())
+
+    ticker = Ticker(exchange=Exchange.KR, code="005930", name="삼성전자", external_id="00126380")
+    company = KRShare().fetch_company(ticker)
+
+    assert company.industry == "264"
+    assert company.extra["induty_code"] == "264"
 
 
 def test_kr_download_reports_selects_q3_by_month(monkeypatch) -> None:

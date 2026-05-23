@@ -25,6 +25,14 @@ _NAME_MAP_TTL = 24 * 3600
 _ORGID_TTL = 30 * 24 * 3600
 
 
+def _strict_dict(left, right, *, context: str) -> dict[str, str]:
+    try:
+        return dict(zip(left, right, strict=True))
+    except ValueError as exc:
+        logger.error(f"akshare 返回的 {context} 列长度不一致：{exc}")
+        return dict(zip(left, right, strict=False))
+
+
 def _normalize(code: str) -> str:
     """User may enter 600519, sh600519, SH600519, 600519.SH, etc. -> 600519"""
     c = code.strip().upper()
@@ -59,7 +67,7 @@ def _load_name_map() -> dict[str, str]:
 
     logger.info("Loading A-share code↔name map from akshare ...")
     df = ak.stock_info_a_code_name()
-    name_map = dict(zip(df["code"].astype(str), df["name"].astype(str), strict=False))
+    name_map = _strict_dict(df["code"].astype(str), df["name"].astype(str), context="code/name")
     cache.set(_CACHE_KEY_NAME_MAP, name_map, expire=_NAME_MAP_TTL)
     return name_map
 
@@ -129,7 +137,7 @@ def fetch_company(ticker: Ticker) -> Company:
         import akshare as ak
 
         df = ak.stock_individual_info_em(symbol=ticker.code)
-        d = dict(zip(df["item"].astype(str), df["value"].astype(str), strict=False))
+        d = _strict_dict(df["item"].astype(str), df["value"].astype(str), context="item/value")
         industry = d.get("行业")
         listing_date = d.get("上市时间")
         extra = {k: v for k, v in d.items() if k not in {"行业", "上市时间"}}
