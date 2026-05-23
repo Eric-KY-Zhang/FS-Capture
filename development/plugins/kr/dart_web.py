@@ -6,6 +6,7 @@ import datetime as dt
 import re
 from typing import Any
 
+import pandas as pd
 from bs4 import BeautifulSoup
 from loguru import logger
 
@@ -26,6 +27,7 @@ _RCEPT_NO_RE = re.compile(
     r"(?:rcpNo=|openReportViewer\(\s*['\"])(?P<rcept_no>\d+)", re.IGNORECASE
 )
 _SPACE_RE = re.compile(r"\s+")
+_FILINGS_COLUMNS = ["rcept_no", "report_nm", "rcept_dt", "corp_code"]
 
 
 def _dart_web_rate() -> float:
@@ -155,3 +157,30 @@ def resolve_corp(stock_code: str) -> dict[str, str] | None:
     for row in _parse_detail_rows(html):
         return {"corp_code": row["corp_code"], "corp_name": row["corp_name"]}
     return None
+
+
+def _rows_to_frame(rows: list[dict[str, str]]) -> pd.DataFrame:
+    normalized = [
+        {column: str(row.get(column, "")) for column in _FILINGS_COLUMNS} for row in rows
+    ]
+    return pd.DataFrame(normalized, columns=_FILINGS_COLUMNS)
+
+
+def list_filings(corp_code: str, bgn_de: str, end_de: str, detail_type: str) -> pd.DataFrame:
+    """List regular DART filings via public search.
+
+    Returned columns intentionally match the subset used from OpenDartReader:
+    rcept_no / report_nm / rcept_dt / corp_code.
+    """
+    try:
+        html = _detail_search_html(
+            corp_code=corp_code,
+            bgn_de=bgn_de,
+            end_de=end_de,
+            detail_type=detail_type,
+            final=True,
+        )
+    except Exception as exc:
+        logger.warning(f"DART public filing list failed for {corp_code}: {exc}")
+        return _rows_to_frame([])
+    return _rows_to_frame(_parse_detail_rows(html))

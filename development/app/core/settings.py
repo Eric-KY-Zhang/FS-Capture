@@ -33,6 +33,7 @@ class RateLimitsCfg(BaseModel):
     hkexnews: float = 3.0
     sec: float = 8.0
     dart: float = 5.0
+    dart_web: float = 3.0
     akshare: float = 4.0
     twse: float = 2.0
 
