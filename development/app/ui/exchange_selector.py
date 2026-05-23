@@ -77,6 +77,7 @@ class ExchangeChip(QPushButton):
             Exchange.US: ui_strings.ES_NAME_US,
             Exchange.KR: ui_strings.ES_NAME_KR,
             Exchange.TW: ui_strings.ES_NAME_TW,
+            Exchange.JP: ui_strings.ES_NAME_JP,
         }[exchange]
 
     @staticmethod
@@ -87,6 +88,7 @@ class ExchangeChip(QPushButton):
             Exchange.US: ui_strings.ES_META_US,
             Exchange.KR: ui_strings.ES_META_KR,
             Exchange.TW: ui_strings.ES_META_TW,
+            Exchange.JP: ui_strings.ES_META_JP,
         }[exchange]
 
 
@@ -103,7 +105,14 @@ class ExchangeSelector(QWidget):
         layout.setSpacing(12)
 
         self.chips: dict[Exchange, ExchangeChip] = {}
-        for ex in (Exchange.A_SHARE, Exchange.HK, Exchange.US, Exchange.KR, Exchange.TW):
+        for ex in (
+            Exchange.A_SHARE,
+            Exchange.HK,
+            Exchange.US,
+            Exchange.KR,
+            Exchange.TW,
+            Exchange.JP,
+        ):
             chip = ExchangeChip(ex, self)
             chip.toggled.connect(lambda *_: self.selection_changed.emit())
             self.chips[ex] = chip

@@ -6,7 +6,7 @@ from unittest.mock import Mock
 import pytest
 
 from app.core import settings as settings_module
-from app.core.settings import Settings, invalidate_dart_client_cache
+from app.core.settings import Settings, invalidate_dart_client_cache, invalidate_edinet_client_cache
 
 
 def test_dart_api_key_is_canonical_over_opendart_alias() -> None:
@@ -107,6 +107,17 @@ def test_dart_client_cache_invalidation_prefers_reset_hook(
     cached_factory.cache_clear.assert_not_called()
 
 
+def test_edinet_client_cache_invalidation_calls_reset_hook(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reset = Mock()
+    module = SimpleNamespace(reset_edinet_client=reset)
+    monkeypatch.setattr(settings_module.importlib, "import_module", lambda _name: module)
+
+    assert invalidate_edinet_client_cache()
+    reset.assert_called_once_with()
+
+
 def test_kr_dart_client_cache_is_key_aware(monkeypatch: pytest.MonkeyPatch) -> None:
     from plugins.kr import name_resolver
 
@@ -137,6 +148,7 @@ def test_save_invalidates_dart_cache_when_key_changes(monkeypatch: pytest.Monkey
     dialog = SimpleNamespace(
         settings=Settings.model_validate({"dart": {"api_key": "old-key"}}),
         dart_key=SimpleNamespace(text=lambda: "new-key"),
+        edinet_key=SimpleNamespace(text=lambda: ""),
         workers=SimpleNamespace(value=lambda: 4),
         theme=SimpleNamespace(currentData=lambda: "light"),
         language=SimpleNamespace(currentData=lambda: "zh"),
@@ -147,6 +159,34 @@ def test_save_invalidates_dart_cache_when_key_changes(monkeypatch: pytest.Monkey
     invalidate_mock = Mock()
     monkeypatch.setattr("app.ui.settings_dialog.save_settings", save_mock)
     monkeypatch.setattr("app.ui.settings_dialog.invalidate_dart_client_cache", invalidate_mock)
+
+    SettingsDialog._save(dialog)
+
+    save_mock.assert_called_once_with(dialog.settings)
+    invalidate_mock.assert_called_once_with()
+    dialog.accept.assert_called_once_with()
+
+
+def test_save_invalidates_edinet_cache_when_key_changes(monkeypatch: pytest.MonkeyPatch) -> None:
+    try:
+        from app.ui.settings_dialog import SettingsDialog
+    except ImportError as exc:
+        pytest.skip(f"PySide6 unavailable: {exc}")
+
+    dialog = SimpleNamespace(
+        settings=Settings.model_validate({"edinet": {"api_key": "old-key"}}),
+        dart_key=SimpleNamespace(text=lambda: ""),
+        edinet_key=SimpleNamespace(text=lambda: "new-key"),
+        workers=SimpleNamespace(value=lambda: 4),
+        theme=SimpleNamespace(currentData=lambda: "light"),
+        language=SimpleNamespace(currentData=lambda: "zh"),
+        sec_ua=SimpleNamespace(text=lambda: "Filings Atlas test"),
+        accept=Mock(),
+    )
+    save_mock = Mock()
+    invalidate_mock = Mock()
+    monkeypatch.setattr("app.ui.settings_dialog.save_settings", save_mock)
+    monkeypatch.setattr("app.ui.settings_dialog.invalidate_edinet_client_cache", invalidate_mock)
 
     SettingsDialog._save(dialog)
 

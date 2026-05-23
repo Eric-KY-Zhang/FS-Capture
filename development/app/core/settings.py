@@ -36,6 +36,7 @@ class RateLimitsCfg(BaseModel):
     dart_web: float = 3.0
     akshare: float = 4.0
     twse: float = 2.0
+    edinet: float = 2.0
 
 
 class SECCfg(BaseModel):
@@ -43,6 +44,10 @@ class SECCfg(BaseModel):
 
 
 class DARTCfg(BaseModel):
+    api_key: str = ""
+
+
+class EDINETCfg(BaseModel):
     api_key: str = ""
 
 
@@ -72,6 +77,7 @@ class Settings(BaseModel):
     rate_limits: RateLimitsCfg = Field(default_factory=RateLimitsCfg)
     sec: SECCfg = Field(default_factory=SECCfg)
     dart: DARTCfg = Field(default_factory=DARTCfg)
+    edinet: EDINETCfg = Field(default_factory=EDINETCfg)
     ui: UICfg = Field(default_factory=UICfg)
 
     @model_validator(mode="before")
@@ -98,6 +104,29 @@ class Settings(BaseModel):
             if fallback_key:
                 dart["api_key"] = fallback_key
                 normalized["dart"] = dart
+
+        return normalized
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_edinet_key(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        normalized = dict(data)
+        edinet = dict(normalized.get("edinet") or {})
+        key = str(edinet.get("api_key") or "").strip()
+        env_key = (
+            os.environ.get("EDINET_API_KEY", "").strip()
+            or os.environ.get("EDINET_SUBSCRIPTION_KEY", "").strip()
+        )
+
+        if key:
+            edinet["api_key"] = key
+            normalized["edinet"] = edinet
+        elif env_key:
+            edinet["api_key"] = env_key
+            normalized["edinet"] = edinet
 
         return normalized
 
@@ -166,6 +195,24 @@ def invalidate_dart_client_cache() -> bool:
 
     try:
         cache_clear()
+    except Exception:
+        return False
+    return True
+
+
+def invalidate_edinet_client_cache() -> bool:
+    """Clear cached JP EDINET clients if that plugin is available."""
+    try:
+        module = importlib.import_module("plugins.jp.name_resolver")
+    except Exception:
+        return False
+
+    reset_client = getattr(module, "reset_edinet_client", None)
+    if not callable(reset_client):
+        return False
+
+    try:
+        reset_client()
     except Exception:
         return False
     return True

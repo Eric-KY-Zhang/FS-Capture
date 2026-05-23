@@ -30,4 +30,8 @@ def get_plugin(exchange: Exchange) -> ExchangePlugin:
         from .tw import TWShare
 
         return TWShare()
+    if exchange is Exchange.JP:
+        from .jp import JPShare
+
+        return JPShare()
     raise ValueError(f"No plugin registered for exchange={exchange}")

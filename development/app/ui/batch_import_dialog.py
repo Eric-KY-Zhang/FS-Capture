@@ -24,6 +24,7 @@ _HK_RE = re.compile(r"^(?:HK)?\d{1,5}(?:\.HK)?$", re.IGNORECASE)
 _US_RE = re.compile(r"^[A-Z]{1,5}(?:[.-][A-Z]{1,2})?$", re.IGNORECASE)
 _KR_RE = re.compile(r"^\d{1,6}(?:\.(?:KS|KQ))?$", re.IGNORECASE)
 _TW_RE = re.compile(r"^(?:TW)?\d{4}(?:\.(?:TW|TWO))?$", re.IGNORECASE)
+_JP_RE = re.compile(r"^(?:JP)?\d{4}(?:\.(?:T|JP))?$", re.IGNORECASE)
 
 _PATTERNS = {
     Exchange.A_SHARE: _A_SHARE_RE,
@@ -31,6 +32,7 @@ _PATTERNS = {
     Exchange.US: _US_RE,
     Exchange.KR: _KR_RE,
     Exchange.TW: _TW_RE,
+    Exchange.JP: _JP_RE,
 }
 
 _US_STOPWORDS = {
@@ -121,6 +123,10 @@ def _normalize_token(token: str, exchange: Exchange) -> str:
         code = code.removeprefix("TW")
         code = re.sub(r"\.(TW|TWO)$", "", code)
         return code.zfill(4)
+    if exchange == Exchange.JP:
+        code = code.removeprefix("JP")
+        code = re.sub(r"\.(T|JP)$", "", code)
+        return code.zfill(4)
     return code
 
 
@@ -190,6 +196,7 @@ class BatchImportDialog(QDialog):
             Exchange.US: ui_strings.ES_NAME_US,
             Exchange.KR: ui_strings.ES_NAME_KR,
             Exchange.TW: ui_strings.ES_NAME_TW,
+            Exchange.JP: ui_strings.ES_NAME_JP,
         }[exchange]
 
     @staticmethod
@@ -200,4 +207,5 @@ class BatchImportDialog(QDialog):
             Exchange.US: "AAPL\nMSFT\nBRK.B",
             Exchange.KR: "005930\n000660\n035420",
             Exchange.TW: "2330\n2317\n2454",
+            Exchange.JP: "7203\n6758\n9984",
         }[exchange]

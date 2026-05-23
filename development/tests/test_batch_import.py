@@ -49,6 +49,15 @@ def test_parse_tw_codes_normalizes_to_four_digits() -> None:
     assert rejected == []
 
 
+def test_parse_jp_codes_normalizes_to_four_digits() -> None:
+    text = "7203 Toyota\nJP6758\n9984.T\n7203"
+
+    codes, rejected = parse_ticker_codes(text, Exchange.JP)
+
+    assert codes == ["7203", "6758", "9984"]
+    assert rejected == []
+
+
 def test_parse_returns_rejected_tokens() -> None:
     codes, rejected = parse_ticker_codes("600519\nINVALID\n000001", Exchange.A_SHARE)
 

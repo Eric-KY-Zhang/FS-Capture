@@ -32,22 +32,26 @@ STRINGS: dict[str, dict[str, str]] = {
         "EP_TITLE_US": "美股 · United States",
         "EP_TITLE_KR": "韩股 · Korea",
         "EP_TITLE_TW": "台股 · Taiwan",
+        "EP_TITLE_JP": "日股 · Japan",
         "EP_SUBTITLE_A_SHARE": "巨潮资讯网 · 东方财富",
         "EP_SUBTITLE_HK": "披露易 · 东方财富",
         "EP_SUBTITLE_US": "SEC EDGAR 披露系统",
         "EP_SUBTITLE_KR": "DART 电子公示",
         "EP_SUBTITLE_TW": "公開資訊觀測站 MOPS",
+        "EP_SUBTITLE_JP": "EDINET · 东京证券交易所",
         # exchange_selector
         "ES_NAME_A_SHARE": "A股",
         "ES_NAME_HK": "港股",
         "ES_NAME_US": "美股",
         "ES_NAME_KR": "韩股",
         "ES_NAME_TW": "台股",
+        "ES_NAME_JP": "日股",
         "ES_META_A_SHARE": "上交所 · 深交所 · 北交所",
         "ES_META_HK": "香港交易所",
         "ES_META_US": "纽交所 · 纳斯达克",
         "ES_META_KR": "韩国交易所 KOSPI · KOSDAQ",
         "ES_META_TW": "台交所 · 櫃買中心",
+        "ES_META_JP": "EDINET · 东京证券交易所",
         # main_view
         "MV_SECTION": "FILINGS ATLAS · 一键抓取",
         "MV_TITLE": "上市公司官方披露 PDF 下载",
@@ -62,6 +66,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "MV_ONLY_CONFIRMED_BODY": "\n\n仅继续抓取已确认的股票？",
         "MV_NO_PERIOD_BODY": "请至少选择一种报告类型",
         "MV_KR_NO_KEY_LOG": "未配置 DART OpenAPI Key，韩股将使用 DART 公网披露页，速度可能较慢。",
+        "MV_JP_NO_KEY_LOG": "未配置 EDINET API Key，日股将尝试 EDINET 公网兜底；如接口要求 Key，可能无法下载。",
         "MV_INVALID_PATH_TITLE": "无效路径",
         "MV_INVALID_PATH_BODY": "请选择有效的输出文件夹",
         "MV_JOB_SUBMITTED_FORMAT": (
@@ -82,7 +87,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "MW_SUBTITLE": "· 上市公司披露报告一键下载",
         # onboarding_dialog
         "OB_WINDOW_TITLE": "欢迎使用 Filings Atlas / 全球披露图谱",
-        "OB_TITLE": "Filings Atlas / 全球披露图谱帮你一键下载 5 市场上市公司官方披露 PDF",
+        "OB_TITLE": "Filings Atlas / 全球披露图谱帮你一键下载 6 市场上市公司官方披露 PDF",
         "OB_HINT": "输入第一个股票代码试试。确认公司名称后，选择年份和报告类型即可开始下载。",
         "OB_DART_BODY": (
             "韩股默认通过 DART 公网披露页抓取，无需配置。如需更快更稳的体验，"
@@ -122,6 +127,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "SD_TITLE": "设置",
         "SD_DART_PLACEHOLDER": "可选——留空走 DART 公网爬虫",
         "SD_DART_LABEL": "DART OpenAPI Key（可选，韩股加速）",
+        "SD_EDINET_PLACEHOLDER": "可选——留空尝试 EDINET 公网兜底",
+        "SD_EDINET_LABEL": "EDINET API Key（可选，日股）",
         "SD_WORKERS_LABEL": "并发数",
         "SD_THEME_LABEL": "主题（重启生效）",
         "SD_THEME_LIGHT": "浅色",
@@ -145,6 +152,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "TR_PLACEHOLDER_US": "如 AAPL / TSLA",
         "TR_PLACEHOLDER_KR": "如 005930 / 000660",
         "TR_PLACEHOLDER_TW": "如 2330 / 2317",
+        "TR_PLACEHOLDER_JP": "如 7203 / 6758",
     },
     "en": {
         # Common
@@ -173,22 +181,26 @@ STRINGS: dict[str, dict[str, str]] = {
         "EP_TITLE_US": "United States",
         "EP_TITLE_KR": "Korea",
         "EP_TITLE_TW": "Taiwan",
+        "EP_TITLE_JP": "Japan",
         "EP_SUBTITLE_A_SHARE": "CNINFO · Eastmoney",
         "EP_SUBTITLE_HK": "HKEXnews · Eastmoney",
         "EP_SUBTITLE_US": "SEC EDGAR",
         "EP_SUBTITLE_KR": "DART electronic disclosure",
         "EP_SUBTITLE_TW": "MOPS disclosure portal",
+        "EP_SUBTITLE_JP": "EDINET · TSE",
         # exchange_selector
         "ES_NAME_A_SHARE": "A-Share",
         "ES_NAME_HK": "Hong Kong",
         "ES_NAME_US": "United States",
         "ES_NAME_KR": "Korea",
         "ES_NAME_TW": "Taiwan",
+        "ES_NAME_JP": "Japan",
         "ES_META_A_SHARE": "SSE · SZSE · BSE",
         "ES_META_HK": "Hong Kong Exchange",
         "ES_META_US": "NYSE · NASDAQ",
         "ES_META_KR": "KOSPI · KOSDAQ",
         "ES_META_TW": "TWSE · TPEx",
+        "ES_META_JP": "EDINET · TSE",
         # main_view
         "MV_SECTION": "FILINGS ATLAS · One-click download",
         "MV_TITLE": "Official disclosure PDF downloader",
@@ -203,6 +215,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "MV_ONLY_CONFIRMED_BODY": "\n\nContinue with confirmed tickers only?",
         "MV_NO_PERIOD_BODY": "Select at least one report type",
         "MV_KR_NO_KEY_LOG": "No DART OpenAPI key configured. Korea will use the public DART disclosure pages and may be slower.",
+        "MV_JP_NO_KEY_LOG": "No EDINET API key configured. Japan will try the public EDINET fallback; downloads may fail if the endpoint requires a key.",
         "MV_INVALID_PATH_TITLE": "Invalid path",
         "MV_INVALID_PATH_BODY": "Choose a valid output folder",
         "MV_JOB_SUBMITTED_FORMAT": (
@@ -223,7 +236,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "MW_SUBTITLE": "· Official disclosure report downloader",
         # onboarding_dialog
         "OB_WINDOW_TITLE": "Welcome to Filings Atlas",
-        "OB_TITLE": "Filings Atlas downloads official disclosure PDFs across 5 markets",
+        "OB_TITLE": "Filings Atlas downloads official disclosure PDFs across 6 markets",
         "OB_HINT": "Try your first ticker code. Confirm the company name, choose years and report types, then start downloading.",
         "OB_DART_BODY": (
             "Korea uses the public DART disclosure pages by default and does not require setup. "
@@ -263,6 +276,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "SD_TITLE": "Settings",
         "SD_DART_PLACEHOLDER": "Optional - leave blank to use the public DART crawler",
         "SD_DART_LABEL": "DART OpenAPI key (Optional, speeds up Korea)",
+        "SD_EDINET_PLACEHOLDER": "Optional - leave blank to try the public EDINET fallback",
+        "SD_EDINET_LABEL": "EDINET API key (Optional, Japan)",
         "SD_WORKERS_LABEL": "Concurrency",
         "SD_THEME_LABEL": "Theme (restart required)",
         "SD_THEME_LIGHT": "Light",
@@ -286,6 +301,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "TR_PLACEHOLDER_US": "e.g. AAPL / TSLA",
         "TR_PLACEHOLDER_KR": "e.g. 005930 / 000660",
         "TR_PLACEHOLDER_TW": "e.g. 2330 / 2317",
+        "TR_PLACEHOLDER_JP": "e.g. 7203 / 6758",
     },
 }
 

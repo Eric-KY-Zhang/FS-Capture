@@ -13,11 +13,15 @@ sec = 8
 dart = 5
 akshare = 4
 twse = 2
+edinet = 2
 
 [sec]
 user_agent = "Filings Atlas (your_email@example.com)"
 
 [dart]
+api_key = ""
+
+[edinet]
 api_key = ""
 
 [ui]

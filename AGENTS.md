@@ -8,7 +8,7 @@
 
 ## 1. 项目一句话
 
-Filings Atlas / 全球披露图谱（原 FS Capture）是跨市场上市公司**官方披露 PDF**一键下载工具，覆盖 A股 / 港股 / 美股 / 韩股 / 台股（v0.6 起 5 市场，v1.0 计划 +日本/英国）。**不抓数据、不算指标、不导 Excel**——这是 v0.2 重定位后的硬约束，任何"顺手做一下"的提议都要先质疑。
+Filings Atlas / 全球披露图谱（原 FS Capture）是跨市场上市公司**官方披露 PDF**一键下载工具，覆盖 A股 / 港股 / 美股 / 韩股 / 台股 / 日股（v1.0 批次 8 起 6 市场，v1.0 计划 +英国）。**不抓数据、不算指标、不导 Excel**——这是 v0.2 重定位后的硬约束，任何"顺手做一下"的提议都要先质疑。
 
 仓库根：`E:\Claude+CODEX Project\FS Capture`
 源码：`development/`
@@ -66,7 +66,7 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 ### 代码
 - `development/app/core/` — orchestrator / http / ratelimit / cache / pdf_renderer / sidecar / models / settings / output_paths / job
 - `development/app/ui/` — PySide6 GUI（main_window / main_view / exchange_panel / ticker_row / progress_dock / settings_dialog / batch_import_dialog / onboarding_dialog / period_selector / output_card）
-- `development/plugins/{ashare,hk,us,kr,tw}/` — 5 个市场插件（每个含 `name_resolver.py` + `reports.py`；hk 多 `fiscal_year.py` + `_pdf_verify.py`）
+- `development/plugins/{ashare,hk,us,kr,tw,jp}/` — 6 个市场插件（每个含 `name_resolver.py` + `reports.py`；hk 多 `fiscal_year.py` + `_pdf_verify.py`；jp 多 `edinet_api.py` + `edinet_web.py`）
 - `development/plugins/base.py` — Plugin ABC 契约
 - `development/tests/` — pytest 测试（含 integration / e2e）
 
@@ -90,7 +90,7 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 
 ---
 
-## 5. 5 市场技术债速查（Planner 起草 Sprint 时高频参考）
+## 5. 6 市场技术债速查（Planner 起草 Sprint 时高频参考）
 
 | 市场 | 数据源 | 已知坑 | 状态 |
 |---|---|---|---|
@@ -99,6 +99,7 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 | **美股** | SEC submissions API | 字段名陷阱：`reportDate` 不是 `periodOfReport`（已修）；老 ticker 走 `submissions.files[]` 分页 fallback 已补单测 | v0.7 已测 |
 | **韩股** | OpenDartReader（DART OpenAPI）+ DART 公网披露页 | Key 可选；无 Key 走 `dart_web.py` 公网 fallback；选择器集中在 `_SELECTORS` | v0.7 已完成 |
 | **台股** | TWSE ISIN + MOPS | TWSE 证书 hygiene 缺陷必须 `verify=False`；MOPS Big5 编码（不能用 `resp.text`）；ROC 年份 = AD - 1911；mtype=F 是股东会年份 | e2e 已覆盖 |
+| **日股** | EDINET API v2 + EDINET 公网页 | API Key 可选但真实无 Key API 返回 401；`edinet_web.py` 保留公网 fallback 入口；选择器集中在 `_SELECTORS` | v1.0 批次 8 已完成 |
 
 ---
 
@@ -185,7 +186,7 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 | v0.6.1 | ✅ **已完成 2026-05-23**（6 commit `dfa461d → 3fa6c12`，72/72 tests，5 票 smoke 实跑） | `roadmap/SPRINT_v0.6.1_patch.md` |
 | v0.7 | ✅ **已完成 2026-05-23**（11 commit `2dc5fd2 → d07d133`，85/85 tests，KR 无 Key 4 家实跑） | `roadmap/SPRINT_v0.7_kr_public_crawler.md` |
 | v0.8 | ✅ **已完成 2026-05-23**（6 批次，100/100 tests，Playwright 池化 + 断点续传 + UI strings + lint 锁定） | `roadmap/SPRINT_v0.8_perf_and_ui_strings.md` |
-| **v1.0** | 🟡 **实施中：批次 7 IPO 统一 + sidecar 迁移 + 增量更新已完成，等待 Reviewer Checkpoint B**（11 批次 + 3 Reviewer Checkpoint，首发 GitHub release）— Filings Atlas / 全球披露图谱 + 双语 UI + sidecar 迁移 + JP/UK + 增量 | `roadmap/SPRINT_v1.0_filings_atlas.md` |
+| **v1.0** | 🟡 **实施中：批次 8 JP/EDINET 双模式已完成，继续批次 9 UK/NSM**（11 批次 + 3 Reviewer Checkpoint，首发 GitHub release）— Filings Atlas / 全球披露图谱 + 双语 UI + sidecar 迁移 + JP/UK + 增量 | `roadmap/SPRINT_v1.0_filings_atlas.md` |
 
 **发布策略**：v0.6.x / v0.7 / v0.8 内部迭代不发 release；**GitHub Release 只发 v1.0**。意味着 v0.7/v0.8 期间：
 - 不更新 README 顶部版本号或 "What's new" 段
@@ -225,4 +226,4 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 
 ---
 
-**最后更新**：2026-05-23（v1.0 批次 7 IPO 统一 + sidecar 迁移 + 增量更新完成，等待 Reviewer Checkpoint B）
+**最后更新**：2026-05-23（v1.0 批次 8 JP/EDINET 双模式完成，继续批次 9 UK/NSM）

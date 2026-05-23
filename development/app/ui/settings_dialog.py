@@ -12,7 +12,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.core.settings import Settings, invalidate_dart_client_cache, save_settings
+from app.core.settings import (
+    Settings,
+    invalidate_dart_client_cache,
+    invalidate_edinet_client_cache,
+    save_settings,
+)
 from app.ui import strings as ui_strings
 from app.ui.i18n import LanguageManager
 
@@ -36,6 +41,12 @@ class SettingsDialog(QDialog):
         self.dart_key.setEchoMode(QLineEdit.Password)
         self.dart_label = QLabel(ui_strings.SD_DART_LABEL)
         form.addRow(self.dart_label, self.dart_key)
+
+        self.edinet_key = QLineEdit(settings.edinet.api_key)
+        self.edinet_key.setPlaceholderText(ui_strings.SD_EDINET_PLACEHOLDER)
+        self.edinet_key.setEchoMode(QLineEdit.Password)
+        self.edinet_label = QLabel(ui_strings.SD_EDINET_LABEL)
+        form.addRow(self.edinet_label, self.edinet_key)
 
         self.workers = QSpinBox()
         self.workers.setRange(1, 16)
@@ -76,9 +87,12 @@ class SettingsDialog(QDialog):
     def _save(self) -> None:
         old_dart_key = self.settings.dart.api_key
         new_dart_key = self.dart_key.text().strip()
+        old_edinet_key = self.settings.edinet.api_key
+        new_edinet_key = self.edinet_key.text().strip()
         old_language = self.settings.ui.language
         new_language = self.language.currentData()
         self.settings.dart.api_key = new_dart_key
+        self.settings.edinet.api_key = new_edinet_key
         self.settings.concurrency.max_workers = self.workers.value()
         self.settings.ui.theme = self.theme.currentData()
         self.settings.ui.language = new_language
@@ -86,6 +100,8 @@ class SettingsDialog(QDialog):
         save_settings(self.settings)
         if new_dart_key != old_dart_key:
             invalidate_dart_client_cache()
+        if new_edinet_key != old_edinet_key:
+            invalidate_edinet_client_cache()
         if new_language != old_language:
             LanguageManager.instance().set_language(new_language)
         self.accept()
@@ -94,6 +110,8 @@ class SettingsDialog(QDialog):
         self.setWindowTitle(ui_strings.SD_TITLE)
         self.dart_key.setPlaceholderText(ui_strings.SD_DART_PLACEHOLDER)
         self.dart_label.setText(ui_strings.SD_DART_LABEL)
+        self.edinet_key.setPlaceholderText(ui_strings.SD_EDINET_PLACEHOLDER)
+        self.edinet_label.setText(ui_strings.SD_EDINET_LABEL)
         self.workers_label.setText(ui_strings.SD_WORKERS_LABEL)
         self.theme_label.setText(ui_strings.SD_THEME_LABEL)
         light_idx = self.theme.findData("light")

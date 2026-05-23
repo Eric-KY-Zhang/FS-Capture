@@ -7,6 +7,7 @@ import pandas as pd
 from app.core.models import Exchange, Period, PeriodType, Ticker
 from plugins.ashare import AShare
 from plugins.hk import HKShare
+from plugins.jp import JPShare
 from plugins.kr import KRShare
 from plugins.us import USShare
 
@@ -249,3 +250,9 @@ def test_kr_download_reports_selects_q3_by_month(monkeypatch) -> None:
 
     assert result[0].accession_number == "q3"
     assert result[0].kind == "q3_report"
+
+
+def test_jp_plugin_is_registered() -> None:
+    from plugins import get_plugin
+
+    assert isinstance(get_plugin(Exchange.JP), JPShare)

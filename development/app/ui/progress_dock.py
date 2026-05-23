@@ -277,6 +277,7 @@ def _exchange_name_for(exchange: Exchange) -> str:
         Exchange.US: ui_strings.ES_NAME_US,
         Exchange.KR: ui_strings.ES_NAME_KR,
         Exchange.TW: ui_strings.ES_NAME_TW,
+        Exchange.JP: ui_strings.ES_NAME_JP,
     }[exchange]
 
 

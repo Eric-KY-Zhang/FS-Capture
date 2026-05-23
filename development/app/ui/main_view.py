@@ -85,7 +85,14 @@ class MainView(QWidget):
 
         # ---- Per-exchange panels ---------------------------------------------
         self._panels: dict[Exchange, ExchangePanel] = {}
-        for ex in (Exchange.A_SHARE, Exchange.HK, Exchange.US, Exchange.KR, Exchange.TW):
+        for ex in (
+            Exchange.A_SHARE,
+            Exchange.HK,
+            Exchange.US,
+            Exchange.KR,
+            Exchange.TW,
+            Exchange.JP,
+        ):
             panel = ExchangePanel(ex)
             self._panels[ex] = panel
             layout.addWidget(panel)
@@ -198,6 +205,9 @@ class MainView(QWidget):
             logger.info(
                 ui_strings.MV_KR_NO_KEY_LOG
             )
+        jp_in_use = any(t.exchange == Exchange.JP for t in tickers)
+        if jp_in_use and not self.settings.edinet.api_key:
+            logger.info(ui_strings.MV_JP_NO_KEY_LOG)
 
         out_path = self.output_card.path()
         if not out_path:
@@ -290,4 +300,5 @@ class MainView(QWidget):
             Exchange.US: ui_strings.ES_NAME_US,
             Exchange.KR: ui_strings.ES_NAME_KR,
             Exchange.TW: ui_strings.ES_NAME_TW,
+            Exchange.JP: ui_strings.ES_NAME_JP,
         }[exchange]

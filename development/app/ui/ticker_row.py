@@ -163,4 +163,5 @@ class TickerRow(QWidget):
             Exchange.US: ui_strings.TR_PLACEHOLDER_US,
             Exchange.KR: ui_strings.TR_PLACEHOLDER_KR,
             Exchange.TW: ui_strings.TR_PLACEHOLDER_TW,
+            Exchange.JP: ui_strings.TR_PLACEHOLDER_JP,
         }[exchange]
