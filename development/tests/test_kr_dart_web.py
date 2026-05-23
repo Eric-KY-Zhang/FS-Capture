@@ -73,6 +73,23 @@ def test_dart_web_list_filings_schema_matches_opendartreader(monkeypatch) -> Non
     ]
 
 
+def test_dart_web_list_filings_retries_without_final_filter(monkeypatch) -> None:
+    calls = []
+
+    def fake_detail_search(**kwargs):
+        calls.append(kwargs)
+        if kwargs["final"]:
+            return "<tbody></tbody>"
+        return _fixture("dart_search_005930.html")
+
+    monkeypatch.setattr(dart_web, "_detail_search_html", fake_detail_search)
+
+    df = dart_web.list_filings("00126380", "20240101", "20250630", "A001")
+
+    assert len(df) == 2
+    assert [call["final"] for call in calls] == [True, False]
+
+
 def test_kr_no_api_key_falls_back_to_public_crawler(monkeypatch) -> None:
     from plugins.kr import dart_web as dart_web_module
     from plugins.kr import name_resolver
@@ -134,4 +151,5 @@ def test_dart_web_list_ipo_filings_uses_c001_search(monkeypatch) -> None:
     assert "투자설명서" in set(df["report_nm"])
     assert "증권발행실적보고서" in set(df["report_nm"])
     assert set(df.columns) == {"rcept_no", "report_nm", "rcept_dt", "corp_code"}
-    assert [call["detail_type"] for call in calls] == ["C001", ""]
+    assert calls[0]["detail_type"] == "C001"
+    assert "" in {call["detail_type"] for call in calls}

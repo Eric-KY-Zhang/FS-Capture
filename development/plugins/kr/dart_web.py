@@ -172,18 +172,22 @@ def list_filings(corp_code: str, bgn_de: str, end_de: str, detail_type: str) -> 
     Returned columns intentionally match the subset used from OpenDartReader:
     rcept_no / report_nm / rcept_dt / corp_code.
     """
-    try:
-        html = _detail_search_html(
-            corp_code=corp_code,
-            bgn_de=bgn_de,
-            end_de=end_de,
-            detail_type=detail_type,
-            final=True,
-        )
-    except Exception as exc:
-        logger.warning(f"DART public filing list failed for {corp_code}: {exc}")
-        return _rows_to_frame([])
-    return _rows_to_frame(_parse_detail_rows(html))
+    for final in (True, False):
+        try:
+            html = _detail_search_html(
+                corp_code=corp_code,
+                bgn_de=bgn_de,
+                end_de=end_de,
+                detail_type=detail_type,
+                final=final,
+            )
+        except Exception as exc:
+            logger.warning(f"DART public filing list failed for {corp_code}: {exc}")
+            continue
+        rows = _parse_detail_rows(html)
+        if rows:
+            return _rows_to_frame(rows)
+    return _rows_to_frame([])
 
 
 def _dedupe_frame(df: pd.DataFrame) -> pd.DataFrame:
@@ -192,28 +196,41 @@ def _dedupe_frame(df: pd.DataFrame) -> pd.DataFrame:
     return df.drop_duplicates(subset=["rcept_no"], keep="first").reset_index(drop=True)
 
 
+def _date_windows(start_year: int = 1999, years_per_window: int = 5) -> list[tuple[str, str]]:
+    today = dt.date.today()
+    windows: list[tuple[str, str]] = []
+    end_year = today.year
+    while end_year >= start_year:
+        window_start = max(start_year, end_year - years_per_window + 1)
+        end_date = today if end_year == today.year else dt.date(end_year, 12, 31)
+        windows.append((f"{window_start}0101", end_date.strftime("%Y%m%d")))
+        end_year = window_start - 1
+    return windows
+
+
 def list_ipo_filings(corp_code: str) -> pd.DataFrame:
     """List IPO/prospectus filings via public DART search."""
-    end_de = dt.date.today().strftime("%Y%m%d")
     frames: list[pd.DataFrame] = []
     for detail_type in ("C001", ""):
-        try:
-            html = _detail_search_html(
-                corp_code=corp_code,
-                bgn_de="19990101",
-                end_de=end_de,
-                detail_type=detail_type,
-                final=False,
-                max_results=100,
-            )
-        except Exception as exc:
-            logger.warning(
-                f"DART public IPO filing list failed for {corp_code} detail={detail_type}: {exc}"
-            )
-            continue
-        rows = _parse_detail_rows(html)
-        if rows:
-            frames.append(_rows_to_frame(rows))
+        for bgn_de, end_de in _date_windows():
+            try:
+                html = _detail_search_html(
+                    corp_code=corp_code,
+                    bgn_de=bgn_de,
+                    end_de=end_de,
+                    detail_type=detail_type,
+                    final=False,
+                    max_results=100,
+                )
+            except Exception as exc:
+                logger.warning(
+                    f"DART public IPO filing list failed for {corp_code} "
+                    f"detail={detail_type} {bgn_de}-{end_de}: {exc}"
+                )
+                continue
+            rows = _parse_detail_rows(html)
+            if rows:
+                frames.append(_rows_to_frame(rows))
     if not frames:
         return _rows_to_frame([])
     return _dedupe_frame(pd.concat(frames, ignore_index=True))
