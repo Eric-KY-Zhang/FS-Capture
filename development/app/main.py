@@ -23,6 +23,7 @@ from PySide6.QtWidgets import QApplication
 from app.core.cache import close_cache
 from app.core.pdf_renderer import shutdown_renderer
 from app.core.settings import Settings, config_path, load_settings
+from app.core.sidecar import migrate_legacy_sidecars
 from app.ui.i18n import LanguageManager
 from app.ui.main_view import MainView
 from app.ui.main_window import MainWindow
@@ -75,6 +76,11 @@ def main() -> int:
     LanguageManager.instance().set_language(settings.ui.language)
     _setup_logging(settings)
     logger.info("Filings Atlas starting up")
+    moved_sidecars = migrate_legacy_sidecars(settings.output_path())
+    if moved_sidecars:
+        logger.info(
+            f"Migrated {moved_sidecars} legacy sidecars from output/ to data/cache/sidecars/"
+        )
 
     palette = light_palette if settings.ui.theme == "light" else dark_palette
     app.setStyleSheet(load_qss(palette))
