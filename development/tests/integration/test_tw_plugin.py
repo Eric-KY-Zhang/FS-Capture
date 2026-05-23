@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import io
+from contextlib import suppress
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -120,7 +123,7 @@ def test_build_pdf_url_uses_step_9_with_mtype_letter_as_kind() -> None:
     assert "filename=2024_2330_20250603F04.pdf" in url
 
 
-def test_download_annual_returns_report_when_pdf_succeeds(monkeypatch, tmp_path: Path) -> None:
+def test_download_annual_returns_report_when_pdf_succeeds(monkeypatch) -> None:
     """Wire up the happy path for annual: monkeypatch the listing fetch and
     PDF download; expect one ReportFile with kind=annual_report.
     """
@@ -135,25 +138,23 @@ def test_download_annual_returns_report_when_pdf_succeeds(monkeypatch, tmp_path:
     monkeypatch.setattr(tw_reports, "_fetch_listing", fake_fetch)
 
     def fake_download(url: str, dest: Path) -> int:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(b"%PDF-1.4\n%fake")
-        return dest.stat().st_size
+        return 100_001
 
     monkeypatch.setattr(tw_reports, "_download_pdf", fake_download)
 
     ticker = Ticker(exchange=Exchange.TW, code="2330", name="台積電", external_id="2330")
     reports_out = TWShare().download_reports(
-        ticker, Period(year=2024, type=PeriodType.ANNUAL), tmp_path
+        ticker, Period(year=2024, type=PeriodType.ANNUAL), Path("out")
     )
     assert len(reports_out) == 1
     rep = reports_out[0]
     assert rep.kind == "annual_report"
     assert rep.title == "2024_2330_20250603F04.pdf"  # Chinese annual preferred
     assert "kind=F" in rep.source_url
-    assert Path(rep.local_path).exists()
+    assert Path(rep.local_path).name == "TW_2330_台積電_2024_年报.pdf"
 
 
-def test_download_quarter_picks_correct_quarter_pdf(monkeypatch, tmp_path: Path) -> None:
+def test_download_quarter_picks_correct_quarter_pdf(monkeypatch) -> None:
     listing_html = """
     readfile2("A","2330","202401_2330_AI1.pdf");
     readfile2("A","2330","202402_2330_AI1.pdf");
@@ -163,15 +164,13 @@ def test_download_quarter_picks_correct_quarter_pdf(monkeypatch, tmp_path: Path)
     monkeypatch.setattr(tw_reports, "_fetch_listing", lambda *_a, **_k: listing_html)
 
     def fake_download(url: str, dest: Path) -> int:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(b"%PDF-1.4\n%fake")
-        return dest.stat().st_size
+        return 100_001
 
     monkeypatch.setattr(tw_reports, "_download_pdf", fake_download)
 
     ticker = Ticker(exchange=Exchange.TW, code="2330", name="台積電", external_id="2330")
     reports_out = TWShare().download_reports(
-        ticker, Period(year=2024, type=PeriodType.Q2), tmp_path
+        ticker, Period(year=2024, type=PeriodType.Q2), Path("out")
     )
     assert len(reports_out) == 1
     rep = reports_out[0]
@@ -179,7 +178,7 @@ def test_download_quarter_picks_correct_quarter_pdf(monkeypatch, tmp_path: Path)
     assert rep.title == "202402_2330_AI1.pdf"
 
 
-def test_download_pdf_retries_temporary_twse_pdf_failure(monkeypatch, tmp_path: Path) -> None:
+def test_download_pdf_retries_temporary_twse_pdf_failure(monkeypatch) -> None:
     class FakeLimiter:
         def acquire_blocking(self) -> None:
             return None
@@ -206,8 +205,16 @@ def test_download_pdf_retries_temporary_twse_pdf_failure(monkeypatch, tmp_path: 
         attempts["count"] += 1
         if attempts["count"] == 1:
             raise RuntimeError("illegal status line")
-        Path(dest).write_bytes(b"%PDF-1.4\n%fake")
-        return Path(dest).stat().st_size
+        return 100_001
+
+    class _Dest:
+        parent = SimpleNamespace(mkdir=lambda **_kwargs: None)
+
+        def open(self, *_args, **_kwargs):
+            return io.BytesIO(b"%PDF-1.4\n%fake")
+
+        def unlink(self, *_args, **_kwargs) -> None:
+            return None
 
     monkeypatch.setattr(tw_reports, "default_client", lambda **_kwargs: FakeClient())
     monkeypatch.setattr(tw_reports, "stream_to_file", fake_stream_to_file)
@@ -215,17 +222,22 @@ def test_download_pdf_retries_temporary_twse_pdf_failure(monkeypatch, tmp_path: 
     monkeypatch.setattr(tw_reports.time, "sleep", lambda _seconds: None)
 
     url = _build_pdf_url("2330", "202402_2330_AI1.pdf", "A")
-    n_bytes = tw_reports._download_pdf(url, tmp_path / "tw-q2.pdf")
+    dest = _Dest()
+    try:
+        n_bytes = tw_reports._download_pdf(url, dest)
 
-    assert attempts["count"] == 2
-    assert n_bytes is not None
-    assert n_bytes > 0
+        assert attempts["count"] == 2
+        assert n_bytes is not None
+        assert n_bytes > 0
+    finally:
+        with suppress(FileNotFoundError, PermissionError):
+            dest.unlink()
 
 
-def test_download_reports_returns_empty_when_no_candidates(monkeypatch, tmp_path: Path) -> None:
+def test_download_reports_returns_empty_when_no_candidates(monkeypatch) -> None:
     monkeypatch.setattr(tw_reports, "_fetch_listing", lambda *_a, **_k: "<html></html>")
     ticker = Ticker(exchange=Exchange.TW, code="9999", name="無此公司", external_id="9999")
     reports_out = TWShare().download_reports(
-        ticker, Period(year=2024, type=PeriodType.ANNUAL), tmp_path
+        ticker, Period(year=2024, type=PeriodType.ANNUAL), Path("out")
     )
     assert reports_out == []

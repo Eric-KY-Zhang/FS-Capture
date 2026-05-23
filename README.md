@@ -1,6 +1,8 @@
 # FS Capture
 
 > 一键批量下载 A 股 / 港股 / 美股 / 韩股 / 台股上市公司的官方披露文件（年报 / 审计报告 / 季报 / 半年报 / IPO 招股书）。
+>
+> 当前版本：v0.6.1
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Eric-KY-Zhang/FS-Capture)](https://github.com/Eric-KY-Zhang/FS-Capture/releases/latest)
@@ -9,6 +11,12 @@
 FS Capture 是一个 Windows 桌面工具，专注解决「批量拿到原始 PDF」这一件事——**不抓三大报表数字、不算财务指标、不生成 Excel 底稿**。需要财务数据 / Excel 装填的场景请使用相关 VBA 工具。
 
 ![FS Capture 主界面](docs/screenshots/main_window.png)
+
+---
+
+## What's new in v0.6.1
+
+v0.6.1 修复了限流设置热更新、港股年报选片校验、非 12 月财年港股覆盖、A 股代码表脏数据诊断、韩股行业字段读取和批量导入失败行反馈等问题。
 
 ---
 
@@ -40,7 +48,7 @@ FS Capture 是一个 Windows 桌面工具，专注解决「批量拿到原始 PD
 
 ### 第一步：输入股票代码
 
-- 勾选目标交易所（A 股 / 港股 / 美股 / 韩股）
+- 勾选目标交易所（A 股 / 港股 / 美股 / 韩股 / 台股）
 - 点击「批量添加」可从 Excel / 网页 / 文本一次粘贴多只股票代码；也可以用「单只添加」逐行录入
   - A 股：`600519`（贵州茅台）
   - 港股：`00700`（腾讯控股）
@@ -61,7 +69,7 @@ FS Capture 是一个 Windows 桌面工具，专注解决「批量拿到原始 PD
 - 下载完成后，PDF 保存在程序同目录下的 `output/` 文件夹
 
 **文件命名格式**：`市场_代码_公司名_年份_报告类型.pdf`
-例：`HK_00700_腾讯控股_2024_annual_report.pdf`
+例：`HK_00700_腾讯控股_2024_年报.pdf`
 
 ---
 
@@ -73,7 +81,7 @@ FS Capture 是一个 Windows 桌面工具，专注解决「批量拿到原始 PD
 2. 申请 API Key（审核通常当天通过）
 3. 打开 FS Capture → 点击右上角「设置」→ 粘贴 API Key → 保存
 
-> 暂时没有 Key？不勾选韩股即可，A / 港 / 美三个市场不受影响。
+> 暂时没有 Key？不勾选韩股即可，A / 港 / 美 / 台四个市场不受影响。
 
 ---
 
