@@ -145,7 +145,15 @@ class ExchangePanel(QFrame):
         if dialog.exec() != dialog.DialogCode.Accepted:
             return
 
-        codes = dialog.codes()
+        codes, rejected = dialog.codes()
+        if rejected:
+            preview = "\n".join(rejected[:20])
+            suffix = "" if len(rejected) <= 20 else f"\n... 另有 {len(rejected) - 20} 行未显示"
+            QMessageBox.information(
+                self,
+                "存在未识别代码",
+                f"以下 {len(rejected)} 项未识别，可能格式错误或与所选市场不匹配：\n{preview}{suffix}",
+            )
         if not codes:
             QMessageBox.warning(self, "没有可添加的代码", "未识别到有效股票代码")
             return

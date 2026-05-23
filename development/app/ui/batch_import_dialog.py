@@ -47,30 +47,54 @@ _US_STOPWORDS = {
 }
 
 
-def parse_ticker_codes(text: str, exchange: Exchange) -> list[str]:
-    """Parse pasted ticker text from lines, CSV cells, or Excel columns."""
+def parse_ticker_codes(text: str, exchange: Exchange) -> tuple[list[str], list[str]]:
+    """Parse pasted ticker text and return (valid_codes, rejected_raw_tokens)."""
     out: list[str] = []
+    rejected: list[str] = []
     seen: set[str] = set()
-    for token in _candidate_tokens(text, exchange):
-        code = _normalize_token(token, exchange)
-        if not code or code in seen:
-            continue
-        seen.add(code)
-        out.append(code)
-    return out
+    for line in text.splitlines():
+        line_rejected: list[str] = []
+        line_has_valid_code = False
+        for token in _candidate_tokens_from_line(line, exchange):
+            code = _normalize_token(token, exchange)
+            if not code:
+                if not _is_ignored_token(token, exchange):
+                    line_rejected.append(token)
+                continue
+            line_has_valid_code = True
+            if code in seen:
+                continue
+            seen.add(code)
+            out.append(code)
+        if not line_has_valid_code:
+            rejected.extend(line_rejected)
+    return out, rejected
 
 
 def _candidate_tokens(text: str, exchange: Exchange):
     for line in text.splitlines():
-        for cell in _CELL_SPLIT_RE.split(line):
-            cell = cell.strip()
-            if not cell:
-                continue
-            tokens = [t for t in _SPACE_SPLIT_RE.split(cell) if t]
-            if exchange == Exchange.US and len(tokens) > 1:
-                yield tokens[0]
-            else:
-                yield from tokens
+        yield from _candidate_tokens_from_line(line, exchange)
+
+
+def _candidate_tokens_from_line(line: str, exchange: Exchange):
+    for cell in _CELL_SPLIT_RE.split(line):
+        cell = cell.strip()
+        if not cell:
+            continue
+        tokens = [t for t in _SPACE_SPLIT_RE.split(cell) if t]
+        if exchange == Exchange.US and len(tokens) > 1:
+            yield tokens[0]
+        else:
+            yield from tokens
+
+
+def _is_ignored_token(token: str, exchange: Exchange) -> bool:
+    code = token.strip().strip("'\"`“”‘’()[]{}").upper().rstrip(".")
+    if not code:
+        return True
+    if exchange == Exchange.US and code in _US_STOPWORDS:
+        return True
+    return any("\u4e00" <= char <= "\u9fff" for char in token)
 
 
 def _normalize_token(token: str, exchange: Exchange) -> str:
@@ -136,7 +160,7 @@ class BatchImportDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-    def codes(self) -> list[str]:
+    def codes(self) -> tuple[list[str], list[str]]:
         return parse_ticker_codes(self.editor.toPlainText(), self.exchange)
 
     @staticmethod
