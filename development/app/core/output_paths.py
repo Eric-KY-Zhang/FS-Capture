@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import time
 from pathlib import Path
 
 from .models import Period, PeriodType, Ticker
@@ -132,3 +133,19 @@ def report_output_path_for_filing(
         parts.append(source_id)
 
     return output_root / safe_filename("_".join(str(p) for p in parts if p) + suffix)
+
+
+def cleanup_stale_parts(output_root: Path, max_age_days: int = 7) -> int:
+    """Delete orphan ``.part`` download files older than ``max_age_days``."""
+    if not output_root.exists():
+        return 0
+    cutoff = time.time() - max_age_days * 24 * 3600
+    removed = 0
+    for path in output_root.rglob("*.part"):
+        try:
+            if path.is_file() and path.stat().st_mtime < cutoff:
+                path.unlink()
+                removed += 1
+        except OSError:
+            continue
+    return removed

@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal, Slot
 
 from .job import Job, TaskResult, TaskStatus
 from .models import Exchange, Ticker
+from .output_paths import cleanup_stale_parts
 from .settings import Settings
 
 
@@ -128,6 +129,12 @@ class Orchestrator(QObject):
         self._cancel_event.clear()
         output_root = Path(job.output_dir)
         output_root.mkdir(parents=True, exist_ok=True)
+        try:
+            removed_parts = cleanup_stale_parts(output_root)
+            if removed_parts:
+                self.signals.log.emit("info", f"已清理 {removed_parts} 个过期临时下载文件")
+        except Exception as exc:  # noqa: BLE001
+            self.signals.log.emit("warning", f"临时下载文件清理失败，继续执行任务：{exc}")
 
         tasks: list[TaskResult] = [
             TaskResult(ticker=t, period=p) for t in job.tickers for p in job.periods

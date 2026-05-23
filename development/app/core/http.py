@@ -112,7 +112,15 @@ def stream_to_file(
     limiter(source, rate).acquire_blocking()
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp_dest = dest.with_name(f"{dest.name}.part")
-    n = 0
+    resume_from = tmp_dest.stat().st_size if tmp_dest.exists() else 0
+    headers: dict[str, str] = {}
+    open_mode = "wb"
+    if resume_from > 0:
+        headers["Range"] = f"bytes={resume_from}-"
+        open_mode = "ab"
+        logger.info(f"resuming {url} from byte {resume_from}")
+
+    n = resume_from
     try:
         stream_timeout = httpx.Timeout(
             connect=30.0,
@@ -120,15 +128,27 @@ def stream_to_file(
             write=30.0,
             pool=30.0,
         )
-        with client.stream("GET", url, timeout=stream_timeout) as r:
+        with client.stream("GET", url, headers=headers, timeout=stream_timeout) as r:
+            if resume_from > 0 and r.status_code == 416:
+                logger.warning(f"server rejected Range header for {url}, restarting next retry")
+                tmp_dest.unlink(missing_ok=True)
+                r.raise_for_status()
+            if resume_from > 0 and r.status_code == 200:
+                logger.warning(f"server ignored Range header for {url}, restarting from 0")
+                resume_from = 0
+                n = 0
+                open_mode = "wb"
             r.raise_for_status()
-            with tmp_dest.open("wb") as f:
+            with tmp_dest.open(open_mode) as f:
                 for chunk in r.iter_bytes(chunk_size):
                     f.write(chunk)
                     n += len(chunk)
         tmp_dest.replace(dest)
     except Exception:
-        tmp_dest.unlink(missing_ok=True)
+        if tmp_dest.exists():
+            logger.warning(f"stream_to_file failed for {url}, kept .part ({n} bytes) for resume")
+        else:
+            logger.warning(f"stream_to_file failed for {url}, removed unusable .part")
         raise
     logger.debug(f"downloaded {url} -> {dest} ({n} bytes)")
     return n
