@@ -424,9 +424,25 @@ def _select_main(rows: list[dict], ticker: Ticker, period: Period) -> dict | Non
         verified_ids: set[int] = set()
         verify_kind = _period_verify_kind(period.type)
         for _score, row in top:
-            if verify_pdf_year_and_kind(row.get("url") or "", period.year, verify_kind):
+            url = row.get("url") or ""
+            verified = verify_pdf_year_and_kind(url, period.year, verify_kind)
+            logger.info(
+                "HK PDF verification result={} url={} expected_year={} expected_kind={}",
+                verified,
+                url,
+                period.year,
+                verify_kind,
+            )
+            if verified:
                 verified_ids.add(id(row))
-        scored = [(score + (10 if id(row) in verified_ids else 0), row) for score, row in scored]
+        if verified_ids:
+            scored = [(score, row) for score, row in scored if id(row) in verified_ids]
+        else:
+            logger.warning(
+                "HK PDF verification found no confirmed candidates for {} {}; falling back to title/date scoring",
+                ticker.code,
+                period.label(),
+            )
 
     scored.sort(
         key=lambda item: (

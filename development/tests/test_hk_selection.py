@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from types import SimpleNamespace
 
 import pytest
 
@@ -157,6 +158,71 @@ def test_china_mobile_accepts_mixed_chinese_english_title() -> None:
     selected = select_hk_main(rows, ticker, Period(year=2023, type=PeriodType.ANNUAL))
 
     assert selected["url"] == "https://example.com/china-mobile-annual.pdf"
+
+
+def test_pdf_verification_drops_wrong_year_candidate(monkeypatch: pytest.MonkeyPatch) -> None:
+    ticker = Ticker(exchange=Exchange.HK, code="09988")
+    rows = [
+        _row(
+            "Annual Report 2024",
+            "2024-07-25",
+            url="https://example.com/wrong-year.pdf",
+            file_size=8_000_000,
+            code="09988",
+        ),
+        _row(
+            "Annual Report 2024",
+            "2024-11-01",
+            url="https://example.com/verified.pdf",
+            file_size=500_000,
+            code="09988",
+        ),
+    ]
+    monkeypatch.setattr(
+        hk_reports,
+        "verify_pdf_year_and_kind",
+        lambda url, _year, _kind: url == "https://example.com/verified.pdf",
+    )
+
+    selected = select_hk_main(rows, ticker, Period(year=2024, type=PeriodType.ANNUAL))
+
+    assert selected["url"] == "https://example.com/verified.pdf"
+
+
+def test_pdf_verification_all_fail_falls_back_with_warning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    warnings: list[str] = []
+    ticker = Ticker(exchange=Exchange.HK, code="00700")
+    rows = [
+        _row(
+            "Annual Report 2024",
+            "2025-03-22",
+            url="https://example.com/high-score.pdf",
+            file_size=5_000_000,
+        ),
+        _row(
+            "Annual Report 2024",
+            "2025-11-01",
+            url="https://example.com/low-score.pdf",
+            file_size=500_000,
+        ),
+    ]
+    monkeypatch.setattr(hk_reports, "verify_pdf_year_and_kind", lambda *_args: False)
+    monkeypatch.setattr(
+        hk_reports,
+        "logger",
+        SimpleNamespace(
+            info=lambda *_args, **_kwargs: None,
+            warning=lambda message, *_args, **_kwargs: warnings.append(message),
+        ),
+    )
+
+    selected = select_hk_main(rows, ticker, Period(year=2024, type=PeriodType.ANNUAL))
+
+    assert selected["url"] == "https://example.com/high-score.pdf"
+    assert warnings
+    assert "falling back" in warnings[0]
 
 
 def test_fiscal_year_lookup_returns_default_december() -> None:
