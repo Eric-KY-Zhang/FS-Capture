@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.settings import Settings
+from app.ui import strings as ui_strings
 
 
 class _TitleBar(QWidget):
@@ -35,7 +36,7 @@ class _TitleBar(QWidget):
         self.logo = QLabel("FS Capture")
         self.logo.setObjectName("TitleBarLogo")
 
-        self.subtitle = QLabel("· 上市公司披露报告一键下载")
+        self.subtitle = QLabel(ui_strings.MW_SUBTITLE)
         self.subtitle.setObjectName("TitleBarSubtitle")
 
         layout.addWidget(self.logo)

@@ -12,13 +12,14 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.settings import Settings, invalidate_dart_client_cache, save_settings
+from app.ui import strings as ui_strings
 
 
 class SettingsDialog(QDialog):
     def __init__(self, settings: Settings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.settings = settings
-        self.setWindowTitle("设置")
+        self.setWindowTitle(ui_strings.SD_TITLE)
         self.setMinimumWidth(460)
 
         layout = QVBoxLayout(self)
@@ -29,19 +30,19 @@ class SettingsDialog(QDialog):
         form.setSpacing(10)
 
         self.dart_key = QLineEdit(settings.dart.api_key)
-        self.dart_key.setPlaceholderText("可选——留空走 DART 公网爬虫")
+        self.dart_key.setPlaceholderText(ui_strings.SD_DART_PLACEHOLDER)
         self.dart_key.setEchoMode(QLineEdit.Password)
-        form.addRow("DART OpenAPI Key（可选，韩股加速）", self.dart_key)
+        form.addRow(ui_strings.SD_DART_LABEL, self.dart_key)
 
         self.workers = QSpinBox()
         self.workers.setRange(1, 16)
         self.workers.setValue(settings.concurrency.max_workers)
-        form.addRow("并发数", self.workers)
+        form.addRow(ui_strings.SD_WORKERS_LABEL, self.workers)
 
         self.theme = QComboBox()
         self.theme.addItems(["light", "dark"])
         self.theme.setCurrentText(settings.ui.theme)
-        form.addRow("主题（重启生效）", self.theme)
+        form.addRow(ui_strings.SD_THEME_LABEL, self.theme)
 
         self.sec_ua = QLineEdit(settings.sec.user_agent)
         form.addRow("SEC User-Agent", self.sec_ua)
@@ -49,8 +50,8 @@ class SettingsDialog(QDialog):
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.button(QDialogButtonBox.Ok).setText("保存")
-        buttons.button(QDialogButtonBox.Cancel).setText("取消")
+        buttons.button(QDialogButtonBox.Ok).setText(ui_strings.SD_SAVE)
+        buttons.button(QDialogButtonBox.Cancel).setText(ui_strings.COMMON_CANCEL)
         buttons.accepted.connect(self._save)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

@@ -19,6 +19,7 @@ from app.core.job import Job, TaskResult
 from app.core.models import Exchange, Period, Ticker
 from app.core.orchestrator import Orchestrator
 from app.core.settings import Settings
+from app.ui import strings as ui_strings
 from app.ui.exchange_panel import ExchangePanel
 from app.ui.exchange_selector import ExchangeSelector
 from app.ui.output_card import OutputCard
@@ -63,15 +64,15 @@ class MainView(QWidget):
         layout.setSpacing(20)
 
         # ---- Hero / heading ---------------------------------------------------
-        section = QLabel("FS CAPTURE · 一键抓取")
+        section = QLabel(ui_strings.MV_SECTION)
         section.setObjectName("SectionLabel")
         layout.addWidget(section)
 
-        title = QLabel("上市公司官方披露 PDF 下载")
+        title = QLabel(ui_strings.MV_TITLE)
         title.setStyleSheet("font-size: 22px; font-weight: 700; color: #0F172A;")
         layout.addWidget(title)
 
-        sub = QLabel("勾选交易所 → 录入股票代码 → 选择期间 → 下载披露文件 PDF")
+        sub = QLabel(ui_strings.MV_SUBTITLE)
         sub.setStyleSheet("color: #64748B; font-size: 13px;")
         layout.addWidget(sub)
         layout.addSpacing(4)
@@ -107,11 +108,11 @@ class MainView(QWidget):
         actions = QHBoxLayout()
         actions.setSpacing(12)
 
-        self.settings_btn = QPushButton("⚙  设置")
+        self.settings_btn = QPushButton(ui_strings.MV_SETTINGS_BUTTON)
         self.settings_btn.setCursor(Qt.PointingHandCursor)
         self.settings_btn.clicked.connect(self._open_settings)
 
-        self.run_btn = QPushButton("▶  抓报告")
+        self.run_btn = QPushButton(ui_strings.MV_RUN_BUTTON)
         self.run_btn.setProperty("variant", "primary")
         self.run_btn.setMinimumHeight(40)
         self.run_btn.setMinimumWidth(160)
@@ -148,17 +149,19 @@ class MainView(QWidget):
         for ex in self.exchange_selector.selected():
             panel = self._panels[ex]
             if panel.has_pending():
-                warnings.append(f"{ex.display_name} 中存在尚未确认的股票代码")
+                warnings.append(f"{ex.display_name}{ui_strings.MV_UNCONFIRMED_SUFFIX}")
             tickers.extend(panel.resolved_tickers())
 
         if not tickers:
-            QMessageBox.warning(self, "无法开始", "请先添加并确认至少一只股票")
+            QMessageBox.warning(
+                self, ui_strings.MV_CANNOT_START_TITLE, ui_strings.MV_NO_TICKERS_BODY
+            )
             return
         if warnings:
             ret = QMessageBox.question(
                 self,
-                "继续？",
-                "\n".join(warnings) + "\n\n仅继续抓取已确认的股票？",
+                ui_strings.MV_CONTINUE_TITLE,
+                "\n".join(warnings) + ui_strings.MV_ONLY_CONFIRMED_BODY,
                 QMessageBox.Yes | QMessageBox.No,
             )
             if ret != QMessageBox.Yes:
@@ -166,27 +169,32 @@ class MainView(QWidget):
 
         periods: list[Period] = self.period_selector.periods()
         if not periods:
-            QMessageBox.warning(self, "无法开始", "请至少选择一种报告类型")
+            QMessageBox.warning(
+                self, ui_strings.MV_CANNOT_START_TITLE, ui_strings.MV_NO_PERIOD_BODY
+            )
             return
 
         # Korea: DART API key is optional; without it we fall back to public crawler.
         kr_in_use = any(t.exchange == Exchange.KR for t in tickers)
         if kr_in_use and not self.settings.dart.api_key:
             logger.info(
-                "未配置 DART OpenAPI Key，韩股将使用 DART 公网披露页，速度可能较慢。"
+                ui_strings.MV_KR_NO_KEY_LOG
             )
 
         out_path = self.output_card.path()
         if not out_path:
-            QMessageBox.warning(self, "无效路径", "请选择有效的输出文件夹")
+            QMessageBox.warning(
+                self, ui_strings.MV_INVALID_PATH_TITLE, ui_strings.MV_INVALID_PATH_BODY
+            )
             return
 
         job = Job(tickers=tickers, periods=periods, output_dir=out_path)
         self._set_action_buttons_enabled(False)
         self.progress_dock.reset(job.task_count())
         logger.info(
-            f"提交报告下载任务：{len(tickers)} 只股票 × {len(periods)} 个期间 = "
-            f"{job.task_count()} 个 task"
+            ui_strings.MV_JOB_SUBMITTED_FORMAT.format(
+                tickers=len(tickers), periods=len(periods), tasks=job.task_count()
+            )
         )
         self.orchestrator.submit_job(job)
 
@@ -203,7 +211,7 @@ class MainView(QWidget):
     # ---- orchestrator slots ------------------------------------------------
 
     def _on_job_started(self, total: int) -> None:
-        logger.info(f"Job 开始，共 {total} 个 task")
+        logger.info(ui_strings.MV_JOB_STARTED_FORMAT.format(total=total))
 
     def _on_task_started(self, task: TaskResult) -> None:
         self.progress_dock.on_task_started(task)
@@ -222,10 +230,14 @@ class MainView(QWidget):
 
         QMessageBox.information(
             self,
-            "下载完成",
-            f"总计 {len(job.results)} 个 task：成功 {ok}，失败 {fail}\n\n"
-            f"已下载 {report_count} 个 PDF\n"
-            f"输出位置：{job.output_dir}",
+            ui_strings.MV_DONE_TITLE,
+            ui_strings.MV_DONE_BODY_FORMAT.format(
+                total=len(job.results),
+                ok=ok,
+                fail=fail,
+                reports=report_count,
+                output_dir=job.output_dir,
+            ),
         )
 
     def _on_log(self, level: str, message: str) -> None:

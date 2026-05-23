@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.models import Exchange, Ticker
+from app.ui import strings as ui_strings
 
 
 class _ResolveSignals(QObject):
@@ -59,12 +60,12 @@ class TickerRow(QWidget):
         self.code_input.returnPressed.connect(self.confirm)
         self.code_input.textChanged.connect(self._on_text_changed)
 
-        self.confirm_btn = QPushButton("确认")
+        self.confirm_btn = QPushButton(ui_strings.TR_CONFIRM)
         self.confirm_btn.setProperty("variant", "primary")
         self.confirm_btn.setCursor(Qt.PointingHandCursor)
         self.confirm_btn.clicked.connect(self.confirm)
 
-        self.status_pill = QLabel("待确认")
+        self.status_pill = QLabel(ui_strings.TR_PENDING)
         self.status_pill.setObjectName("StatusPill")
         self.status_pill.setProperty("state", "pending")
         self.status_pill.setAlignment(Qt.AlignCenter)
@@ -79,7 +80,7 @@ class TickerRow(QWidget):
         self.delete_btn.setProperty("variant", "danger-icon")
         self.delete_btn.setCursor(Qt.PointingHandCursor)
         self.delete_btn.clicked.connect(self._on_delete_clicked)
-        self.delete_btn.setToolTip("移除此行")
+        self.delete_btn.setToolTip(ui_strings.TR_DELETE_TOOLTIP)
 
         layout.addWidget(self.code_input)
         layout.addWidget(self.confirm_btn)
@@ -101,9 +102,9 @@ class TickerRow(QWidget):
     def confirm(self) -> None:
         code = self.code_input.text().strip()
         if not code:
-            self._set_state("error", "请输入代码", "")
+            self._set_state("error", ui_strings.TR_ENTER_CODE, "")
             return
-        self._set_state("resolving", "解析中…", "")
+        self._set_state("resolving", ui_strings.TR_RESOLVING, "")
         self.confirm_btn.setEnabled(False)
         self.code_input.setEnabled(False)
 
@@ -119,10 +120,10 @@ class TickerRow(QWidget):
             self.code_input.setText(ticker.code)
             del blocker
             self._ticker = ticker
-            self._set_state("ok", "✓ 已确认", ticker.name or "")
+            self._set_state("ok", ui_strings.TR_RESOLVED, ticker.name or "")
         else:
             self._ticker = None
-            self._set_state("error", "未找到", error or "无法解析此代码")
+            self._set_state("error", ui_strings.TR_NOT_FOUND, error or ui_strings.TR_UNRESOLVABLE)
         self.resolved.emit(self)
 
     # ---- internals ----------------------------------------------------------
@@ -138,7 +139,7 @@ class TickerRow(QWidget):
     def _on_text_changed(self, _text: str) -> None:
         if self._ticker is not None:
             self._ticker = None
-            self._set_state("pending", "待确认", "")
+            self._set_state("pending", ui_strings.TR_PENDING, "")
             self.resolved.emit(self)
 
     def _on_delete_clicked(self) -> None:
@@ -147,9 +148,9 @@ class TickerRow(QWidget):
     @staticmethod
     def _placeholder_for(exchange: Exchange) -> str:
         return {
-            Exchange.A_SHARE: "如 600519 / 000001",
-            Exchange.HK: "如 00700 / 9988",
-            Exchange.US: "如 AAPL / TSLA",
-            Exchange.KR: "如 005930 / 000660",
-            Exchange.TW: "如 2330 / 2317",
+            Exchange.A_SHARE: ui_strings.TR_PLACEHOLDER_A_SHARE,
+            Exchange.HK: ui_strings.TR_PLACEHOLDER_HK,
+            Exchange.US: ui_strings.TR_PLACEHOLDER_US,
+            Exchange.KR: ui_strings.TR_PLACEHOLDER_KR,
+            Exchange.TW: ui_strings.TR_PLACEHOLDER_TW,
         }[exchange]

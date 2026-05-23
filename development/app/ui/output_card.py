@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui import strings as ui_strings
+
 
 class OutputCard(QFrame):
     path_changed = Signal(str)
@@ -33,7 +35,7 @@ class OutputCard(QFrame):
         header.setObjectName("CardHeader")
         h = QHBoxLayout(header)
         h.setContentsMargins(20, 16, 20, 8)
-        title = QLabel("输出位置")
+        title = QLabel(ui_strings.OC_TITLE)
         title.setObjectName("CardTitle")
         h.addWidget(title)
         h.addStretch(1)
@@ -47,10 +49,10 @@ class OutputCard(QFrame):
 
         self.path_input = QLineEdit(initial_path)
         self.path_input.textChanged.connect(self.path_changed.emit)
-        browse = QPushButton("浏览…")
+        browse = QPushButton(ui_strings.OC_BROWSE)
         browse.setCursor(Qt.PointingHandCursor)
         browse.clicked.connect(self._browse)
-        open_btn = QPushButton("打开文件夹")
+        open_btn = QPushButton(ui_strings.OC_OPEN_DIR)
         open_btn.setCursor(Qt.PointingHandCursor)
         open_btn.clicked.connect(self._open_dir)
 
@@ -64,7 +66,7 @@ class OutputCard(QFrame):
 
     def _browse(self) -> None:
         d = QFileDialog.getExistingDirectory(
-            self, "选择输出文件夹", self.path() or str(Path.home())
+            self, ui_strings.OC_SELECT_DIR_TITLE, self.path() or str(Path.home())
         )
         if d:
             self.path_input.setText(d)

@@ -10,6 +10,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui import strings as ui_strings
+
 
 class OnboardingDialog(QDialog):
     """First-run guide for the PDF download workflow."""
@@ -17,7 +19,7 @@ class OnboardingDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.open_settings_requested = False
-        self.setWindowTitle("欢迎使用 FS Capture")
+        self.setWindowTitle(ui_strings.OB_WINDOW_TITLE)
         self.setModal(True)
         self.setMinimumWidth(460)
 
@@ -25,20 +27,16 @@ class OnboardingDialog(QDialog):
         layout.setContentsMargins(24, 22, 24, 20)
         layout.setSpacing(14)
 
-        title = QLabel("FS Capture 帮你一键下载 5 市场上市公司官方披露 PDF")
+        title = QLabel(ui_strings.OB_TITLE)
         title.setObjectName("CardTitle")
         title.setWordWrap(True)
         layout.addWidget(title)
 
-        hint = QLabel("输入第一个股票代码试试。确认公司名称后，选择年份和报告类型即可开始下载。")
+        hint = QLabel(ui_strings.OB_HINT)
         hint.setWordWrap(True)
         layout.addWidget(hint)
 
-        dart = QLabel(
-            "韩股默认通过 DART 公网披露页抓取，无需配置。如需更快更稳的体验，"
-            '可在 <a href="https://opendart.fss.or.kr/">opendart.fss.or.kr</a> '
-            "免费申请 API Key 后填入设置。"
-        )
+        dart = QLabel(ui_strings.OB_DART_BODY)
         dart.setOpenExternalLinks(True)
         dart.setTextInteractionFlags(Qt.TextBrowserInteraction)
         dart.setWordWrap(True)
@@ -46,9 +44,9 @@ class OnboardingDialog(QDialog):
 
         actions = QHBoxLayout()
         actions.addStretch(1)
-        later_btn = QPushButton("稍后再说")
+        later_btn = QPushButton(ui_strings.OB_LATER)
         later_btn.clicked.connect(self.accept)
-        settings_btn = QPushButton("先填 Key（可选）")
+        settings_btn = QPushButton(ui_strings.OB_SETTINGS)
         settings_btn.setProperty("variant", "primary")
         settings_btn.clicked.connect(self._accept_for_settings)
         actions.addWidget(later_btn)

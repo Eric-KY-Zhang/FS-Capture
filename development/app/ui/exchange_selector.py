@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.models import Exchange
+from app.ui import strings as ui_strings
 from app.ui.styles.palette import exchange_accent
 
 
@@ -65,21 +66,21 @@ class ExchangeChip(QPushButton):
     @staticmethod
     def _zh_name(exchange: Exchange) -> str:
         return {
-            Exchange.A_SHARE: "A股",
-            Exchange.HK: "港股",
-            Exchange.US: "美股",
-            Exchange.KR: "韩股",
-            Exchange.TW: "台股",
+            Exchange.A_SHARE: ui_strings.ES_NAME_A_SHARE,
+            Exchange.HK: ui_strings.ES_NAME_HK,
+            Exchange.US: ui_strings.ES_NAME_US,
+            Exchange.KR: ui_strings.ES_NAME_KR,
+            Exchange.TW: ui_strings.ES_NAME_TW,
         }[exchange]
 
     @staticmethod
     def _meta(exchange: Exchange) -> str:
         return {
-            Exchange.A_SHARE: "上交所 · 深交所 · 北交所",
-            Exchange.HK: "香港交易所",
+            Exchange.A_SHARE: ui_strings.ES_META_A_SHARE,
+            Exchange.HK: ui_strings.ES_META_HK,
             Exchange.US: "NYSE · NASDAQ",
             Exchange.KR: "KOSPI · KOSDAQ",
-            Exchange.TW: "台交所 · 櫃買中心",
+            Exchange.TW: ui_strings.ES_META_TW,
         }[exchange]
 
 

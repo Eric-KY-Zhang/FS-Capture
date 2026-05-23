@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.job import TaskResult, TaskStatus
+from app.ui import strings as ui_strings
 from app.ui.styles.palette import exchange_accent
 
 
@@ -46,7 +47,7 @@ class _TaskRow(QFrame):
         self.period_label.setStyleSheet("color: #64748B;")
         self.period_label.setMinimumWidth(80)
 
-        self.status_label = QLabel("等待中")
+        self.status_label = QLabel(ui_strings.PD_WAITING)
         self.status_label.setObjectName("StatusPill")
         self.status_label.setProperty("state", "pending")
         self.status_label.setAlignment(Qt.AlignCenter)
@@ -93,7 +94,7 @@ class ProgressDock(QFrame):
         h.setContentsMargins(20, 16, 20, 8)
         h.setSpacing(12)
 
-        title = QLabel("抓取进度")
+        title = QLabel(ui_strings.PD_TITLE)
         title.setObjectName("CardTitle")
         h.addWidget(title)
         self.summary_label = QLabel("")
@@ -106,7 +107,7 @@ class ProgressDock(QFrame):
         self.progress_bar.setRange(0, 1)
         self.progress_bar.setValue(0)
         h.addWidget(self.progress_bar)
-        self.cancel_btn = QPushButton("取消")
+        self.cancel_btn = QPushButton(ui_strings.COMMON_CANCEL)
         self.cancel_btn.setCursor(Qt.PointingHandCursor)
         self.cancel_btn.clicked.connect(self.cancel_requested.emit)
         h.addWidget(self.cancel_btn)
@@ -157,7 +158,7 @@ class ProgressDock(QFrame):
         row = _TaskRow(task)
         self._list_layout.insertWidget(self._list_layout.count() - 1, row)
         self._rows[id(task)] = row
-        row.update_status("已开始", "pending", "")
+        row.update_status(ui_strings.PD_STARTED, "pending", "")
 
     def on_task_progress(self, task: TaskResult, status_text: str) -> None:
         row = self._rows.get(id(task))
@@ -165,7 +166,7 @@ class ProgressDock(QFrame):
             self.on_task_started(task)
             row = self._rows.get(id(task))
         if row:
-            row.update_status("进行中", "pending", status_text)
+            row.update_status(ui_strings.PD_RUNNING, "pending", status_text)
 
     def on_task_finished(self, task: TaskResult) -> None:
         row = self._rows.get(id(task))
@@ -176,13 +177,15 @@ class ProgressDock(QFrame):
             if task.status is TaskStatus.DONE:
                 details: list[str] = []
                 if task.reports:
-                    details.append(f"文件 {len(task.reports)}")
-                detail = " · ".join(details) if details else "无文件"
-                row.update_status("✓ 完成", "ok", detail)
+                    details.append(
+                        ui_strings.PD_FILE_COUNT_FORMAT.format(count=len(task.reports))
+                    )
+                detail = " · ".join(details) if details else ui_strings.PD_NO_FILE
+                row.update_status(ui_strings.PD_DONE, "ok", detail)
             elif task.status is TaskStatus.FAILED:
-                row.update_status("× 失败", "error", task.error or "")
+                row.update_status(ui_strings.PD_FAILED, "error", task.error or "")
             elif task.status is TaskStatus.CANCELLED:
-                row.update_status("已取消", "pending", task.error or "")
+                row.update_status(ui_strings.PD_CANCELLED, "pending", task.error or "")
             else:
                 row.update_status(task.status.value, "pending", task.error or "")
 

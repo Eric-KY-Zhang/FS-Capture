@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.models import Exchange
+from app.ui import strings as ui_strings
 
 _CELL_SPLIT_RE = re.compile(r"[\t,，;；、]+")
 _SPACE_SPLIT_RE = re.compile(r"\s+")
@@ -94,7 +95,7 @@ def _is_ignored_token(token: str, exchange: Exchange) -> bool:
         return True
     if exchange == Exchange.US and code in _US_STOPWORDS:
         return True
-    return any("\u4e00" <= char <= "\u9fff" for char in token)
+    return any(0x4E00 <= ord(char) <= 0x9FFF for char in token)
 
 
 def _normalize_token(token: str, exchange: Exchange) -> str:
@@ -128,7 +129,9 @@ class BatchImportDialog(QDialog):
     def __init__(self, exchange: Exchange, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.exchange = exchange
-        self.setWindowTitle(f"批量添加{exchange.display_name}股票")
+        self.setWindowTitle(
+            ui_strings.BID_WINDOW_TITLE_FORMAT.format(exchange_name=exchange.display_name)
+        )
         self.setModal(True)
         self.setMinimumSize(520, 380)
 
@@ -136,11 +139,11 @@ class BatchImportDialog(QDialog):
         layout.setContentsMargins(24, 22, 24, 20)
         layout.setSpacing(12)
 
-        title = QLabel("粘贴股票代码")
+        title = QLabel(ui_strings.BID_TITLE)
         title.setObjectName("CardTitle")
         layout.addWidget(title)
 
-        hint = QLabel("支持从 Excel、网页或文本复制，多行、逗号和制表符会自动拆分。")
+        hint = QLabel(ui_strings.BID_HINT)
         hint.setWordWrap(True)
         layout.addWidget(hint)
 
@@ -149,13 +152,13 @@ class BatchImportDialog(QDialog):
         self.editor.setAcceptRichText(False)
         layout.addWidget(self.editor, 1)
 
-        self.auto_confirm = QCheckBox("添加后自动确认公司名称")
+        self.auto_confirm = QCheckBox(ui_strings.BID_AUTO_CONFIRM)
         self.auto_confirm.setChecked(True)
         layout.addWidget(self.auto_confirm)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.button(QDialogButtonBox.Ok).setText("添加")
-        buttons.button(QDialogButtonBox.Cancel).setText("取消")
+        buttons.button(QDialogButtonBox.Ok).setText(ui_strings.BID_ADD)
+        buttons.button(QDialogButtonBox.Cancel).setText(ui_strings.COMMON_CANCEL)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

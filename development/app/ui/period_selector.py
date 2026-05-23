@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.models import Period, PeriodType
+from app.ui import strings as ui_strings
 
 
 class PeriodSelector(QFrame):
@@ -38,9 +39,9 @@ class PeriodSelector(QFrame):
         h.setContentsMargins(20, 16, 20, 8)
         h.setSpacing(12)
 
-        title = QLabel("报告期间")
+        title = QLabel(ui_strings.PS_TITLE)
         title.setObjectName("CardTitle")
-        sub = QLabel("选择年份区间和期间报告")
+        sub = QLabel(ui_strings.PS_SUBTITLE)
         sub.setObjectName("CardSubtitle")
         sub.setStyleSheet("color: #94A3B8; font-size: 12px;")
         h.addWidget(title)
@@ -57,7 +58,7 @@ class PeriodSelector(QFrame):
         # Year range
         year_row = QHBoxLayout()
         year_row.setSpacing(10)
-        year_row.addWidget(QLabel("起始年份"))
+        year_row.addWidget(QLabel(ui_strings.PS_FROM_YEAR))
         self.from_year = QComboBox()
         self.to_year = QComboBox()
         cur = dt.date.today().year
@@ -77,7 +78,7 @@ class PeriodSelector(QFrame):
         dash.setStyleSheet("color: #94A3B8; font-size: 16px;")
         year_row.addWidget(dash)
         year_row.addSpacing(8)
-        year_row.addWidget(QLabel("终止年份"))
+        year_row.addWidget(QLabel(ui_strings.PS_TO_YEAR))
         year_row.addWidget(self.to_year)
         year_row.addStretch(1)
         b.addLayout(year_row)
@@ -85,16 +86,16 @@ class PeriodSelector(QFrame):
         # Period checkboxes
         type_row = QHBoxLayout()
         type_row.setSpacing(20)
-        label = QLabel("期间类型")
+        label = QLabel(ui_strings.PS_TYPE_LABEL)
         label.setStyleSheet("color: #475569;")
         type_row.addWidget(label)
 
-        self.cb_annual = QCheckBox("年报")
+        self.cb_annual = QCheckBox(ui_strings.PS_ANNUAL)
         self.cb_annual.setChecked(True)
-        self.cb_q3 = QCheckBox("三季报")
-        self.cb_q2 = QCheckBox("半年报")
-        self.cb_q1 = QCheckBox("一季报")
-        self.cb_ipo = QCheckBox("IPO 招股书")
+        self.cb_q3 = QCheckBox(ui_strings.PS_Q3)
+        self.cb_q2 = QCheckBox(ui_strings.PS_Q2)
+        self.cb_q1 = QCheckBox(ui_strings.PS_Q1)
+        self.cb_ipo = QCheckBox(ui_strings.PS_IPO)
         for cb in (self.cb_annual, self.cb_q3, self.cb_q2, self.cb_q1, self.cb_ipo):
             cb.toggled.connect(lambda *_: self.selection_changed.emit())
             type_row.addWidget(cb)
