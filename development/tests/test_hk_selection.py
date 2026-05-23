@@ -6,6 +6,7 @@ import pytest
 
 from app.core.models import Exchange, Period, PeriodType, Ticker
 from plugins.hk import reports as hk_reports
+from plugins.hk.fiscal_year import fiscal_year_end_month
 from plugins.hk.reports import _select_main as select_hk_main
 
 
@@ -156,3 +157,20 @@ def test_china_mobile_accepts_mixed_chinese_english_title() -> None:
     selected = select_hk_main(rows, ticker, Period(year=2023, type=PeriodType.ANNUAL))
 
     assert selected["url"] == "https://example.com/china-mobile-annual.pdf"
+
+
+def test_fiscal_year_lookup_returns_default_december() -> None:
+    assert fiscal_year_end_month("00700") == 12
+
+
+def test_fiscal_year_lookup_known_march_year_end() -> None:
+    assert fiscal_year_end_month("09988") == 3
+    assert fiscal_year_end_month("00823") == 3
+
+
+def test_fiscal_year_lookup_known_june_year_end() -> None:
+    assert fiscal_year_end_month("00016") == 6
+
+
+def test_fiscal_year_lookup_known_may_year_end() -> None:
+    assert fiscal_year_end_month("09901") == 5
