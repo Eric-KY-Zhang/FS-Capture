@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e development/
+          python -m pip install pyinstaller
+
+      - name: Test
+        working-directory: development
+        run: python -m pytest -m "not e2e" -v
+
+      - name: Lint
+        run: python -m ruff check development/ --no-cache
+
+      - name: Build
+        working-directory: development
+        run: python -m PyInstaller --noconfirm filings_atlas.spec
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $dist = "development/dist/Filings Atlas"
+          $zip = "FilingsAtlas-${{ github.ref_name }}-windows.zip"
+          if (-not (Test-Path "$dist/Filings Atlas.exe")) { throw "Missing Filings Atlas.exe" }
+          if (-not (Test-Path "$dist/_internal")) { throw "Missing _internal" }
+          Compress-Archive -Path "$dist/Filings Atlas.exe", "$dist/_internal" -DestinationPath $zip -Force
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: FilingsAtlas-${{ github.ref_name }}-windows.zip
+          body_path: CHANGELOG.md

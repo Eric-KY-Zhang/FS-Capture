@@ -18,8 +18,10 @@ crash.log
 
 # Packaged app runtime (PyInstaller-built EXE bundle)
 FS Capture.exe
+Filings Atlas.exe
 _internal/
 FS-Capture-v*-windows.zip
+FilingsAtlas-v*-windows.zip
 
 # Python build / cache artifacts
 __pycache__/

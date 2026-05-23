@@ -31,6 +31,7 @@ a = Analysis(
     datas=ak_datas + odr_datas + pykrx_datas + certifi_datas + playwright_datas + openpyxl_datas + extra_datas,
     hiddenimports=ak_hiddenimports + odr_hiddenimports + [
         "plugins.ashare", "plugins.hk", "plugins.us", "plugins.kr",
+        "plugins.tw", "plugins.jp", "plugins.uk",
         "tomli_w", "certifi",
     ] + playwright_hiddenimports + openpyxl_hiddenimports,
     hookspath=[],
@@ -67,6 +68,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon="app/assets/filings_atlas.ico",
+    version="version_info.txt",
 )
 
 coll = COLLECT(

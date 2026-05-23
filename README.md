@@ -1,120 +1,135 @@
 # Filings Atlas / 全球披露图谱
 
-> 一键批量下载 A 股 / 港股 / 美股 / 韩股 / 台股上市公司的官方披露文件（年报 / 审计报告 / 季报 / 半年报 / IPO 招股书）。
->
-> 当前版本：v0.6.1
+[English](#english) | [中文](#chinese)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Eric-KY-Zhang/FS-Capture)](https://github.com/Eric-KY-Zhang/FS-Capture/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue.svg)]()
 
-Filings Atlas / 全球披露图谱 是一个 Windows 桌面工具，专注解决「批量拿到原始 PDF」这一件事——**不抓三大报表数字、不算财务指标、不生成 Excel 底稿**。需要财务数据 / Excel 装填的场景请使用相关 VBA 工具。
+---
 
-![Filings Atlas 主界面](docs/screenshots/main_window.png)
+## English
+
+Filings Atlas is a Windows desktop tool for one-click downloading of official disclosure PDFs across 7 markets. It focuses on the original filing files only: no financial statement extraction, no ratio calculation, and no Excel workbook generation.
+
+![Filings Atlas English UI](docs/screenshots/main_window_en.png)
+
+### Supported Markets
+
+| Market | Source | Reports | Key required |
+|---|---|---|---|
+| A-Share | CNINFO + akshare | Annual, Q1, Interim, Q3, IPO prospectus | No |
+| Hong Kong | HKEXnews + Eastmoney | Annual, audit report, IPO prospectus | No |
+| United States | SEC EDGAR | Annual, quarterly, IPO prospectus | No |
+| Korea | DART | Annual, Q1, Interim, Q3 | Optional DART API key |
+| Taiwan | TWSE + MOPS | Annual, Q1, Interim, Q3, IPO prospectus | No |
+| Japan | EDINET | Annual, Q1, Interim, Q3 | Strongly recommended EDINET Subscription-Key |
+| United Kingdom | FCA NSM | Annual, interim and trading updates where available | No |
+
+### Quick Start
+
+1. Download `FilingsAtlas-v1.0.0-windows.zip` from [Releases](https://github.com/Eric-KY-Zhang/FS-Capture/releases/latest).
+2. Extract the zip to any writable folder.
+3. Double-click `Filings Atlas.exe`.
+4. Select one or more markets, enter ticker codes, and click **Confirm** to resolve company names.
+5. Choose years and report types, then click **Download Reports**.
+6. PDFs are saved flat under `output/` with names like `UK_ULVR_Unilever PLC_2024_年报.pdf`.
+
+### Ticker Examples
+
+| Market | Examples |
+|---|---|
+| A-Share | `600519`, `000001` |
+| Hong Kong | `00700`, `09988` |
+| United States | `AAPL`, `BRK.B` |
+| Korea | `005930`, `000660` |
+| Taiwan | `2330`, `2317` |
+| Japan | `7203`, `6758`, `9984.T` |
+| United Kingdom | `ULVR`, `HSBA.L`, `AZN` |
+
+### Optional Keys
+
+Korea works without a key by using the public DART disclosure pages. Adding a free DART API key in **Settings** can make Korea faster and more stable.
+
+Japan supports a public fallback, but v1.0 strongly recommends an EDINET Subscription-Key. The official EDINET API v2 uses `Subscription-Key` for document list and document download requests. Register for a free key through [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API key registration](https://api.edinet-fsa.go.jp/api/auth/index.aspx), then paste it in **Settings**. Without a key, Japanese downloads may fail when the API endpoint rejects unauthenticated requests.
+
+United Kingdom uses the FCA National Storage Mechanism and does not require a key.
+
+### Privacy And Scope
+
+- Uses public disclosure endpoints only.
+- Does not bypass login, scrape private data, or access unauthorized systems.
+- Keeps API keys, cache, sidecars and downloaded files on your local machine.
+- Does not provide investment advice or trading functionality.
+
+### Developer Notes
+
+- Source code lives under `development/`.
+- Architecture and extension guide: [ARCHITECTURE.md](ARCHITECTURE.md).
+- Tests: `cd development && python -m pytest -m "not e2e" -v`.
 
 ---
 
-## What's new in v0.6.1
+## Chinese
 
-v0.6.1 修复了限流设置热更新、港股年报选片校验、非 12 月财年港股覆盖、A 股代码表脏数据诊断、韩股行业字段读取和批量导入失败行反馈等问题。
+Filings Atlas / 全球披露图谱 是一个 Windows 桌面工具，用于一键下载 7 个市场上市公司的官方披露 PDF。工具只解决“批量拿到原始披露文件”这一件事：不抓三大报表数字、不算财务指标、不生成 Excel 底稿。
 
----
+![全球披露图谱中文界面](docs/screenshots/main_window_zh.png)
 
-## 下载
+### 支持市场
 
-前往 **[Releases 页面](https://github.com/Eric-KY-Zhang/FS-Capture/releases/latest)** 下载最新版：
+| 市场 | 数据源 | 报告类型 | 是否需要 Key |
+|---|---|---|---|
+| A 股 | 巨潮资讯 + akshare | 年报、一季报、半年报、三季报、IPO 招股书 | 不需要 |
+| 港股 | 披露易 + 东方财富 | 年报、审计报告、IPO 招股书 | 不需要 |
+| 美股 | SEC EDGAR | 年报、季报、IPO 招股书 | 不需要 |
+| 韩股 | DART | 年报、一季报、半年报、三季报 | DART API Key 可选 |
+| 台股 | TWSE + MOPS | 年报、一季报、半年报、三季报、IPO 公开说明书 | 不需要 |
+| 日股 | EDINET | 年报、一季报、半年报、三季报 | 强烈推荐 EDINET Subscription-Key |
+| 英股 | FCA NSM | 年报、半年报及可用的交易更新 | 不需要 |
 
-1. 点击 `FS-Capture-vX.X-windows.zip` 下载
-2. 解压到任意文件夹
-3. 双击 `Filings Atlas.exe` 运行
+### 快速开始
 
-> 无需安装 Python，无需联网激活，解压即用。
+1. 从 [Releases](https://github.com/Eric-KY-Zhang/FS-Capture/releases/latest) 下载 `FilingsAtlas-v1.0.0-windows.zip`。
+2. 解压到任意可写文件夹。
+3. 双击 `Filings Atlas.exe`。
+4. 勾选市场，输入股票代码，点击“确认”识别公司名称。
+5. 选择年份和报告类型，点击“抓报告”。
+6. PDF 会平铺保存到 `output/`，文件名示例：`UK_ULVR_Unilever PLC_2024_年报.pdf`。
 
----
+### 股票代码示例
 
-## 支持的市场与报告类型
+| 市场 | 示例 |
+|---|---|
+| A 股 | `600519`, `000001` |
+| 港股 | `00700`, `09988` |
+| 美股 | `AAPL`, `BRK.B` |
+| 韩股 | `005930`, `000660` |
+| 台股 | `2330`, `2317` |
+| 日股 | `7203`, `6758`, `9984.T` |
+| 英股 | `ULVR`, `HSBA.L`, `AZN` |
 
-| 市场 | 报告类型 | 是否需要账号 |
-|---|---|---|
-| 🇨🇳 A 股 | 年报、一季报、半年报、三季报、IPO 招股书 | 不需要 |
-| 🇭🇰 港股 | 年报、独立审计报告、IPO 招股书 | 不需要 |
-| 🇺🇸 美股 | 年报（10-K）、季报（10-Q）、IPO 招股书（S-1） | 不需要 |
-| 🇰🇷 韩股 | 年报、季报、半年报 | 需要 DART API Key（免费） |
-| 🇹🇼 台股 | 年报、季报、半年报、IPO 公开说明书（含上柜） | 不需要 |
+### Key 配置
 
----
+韩股不填 Key 也可以使用 DART 公网披露页；如需更快、更稳，可在设置中填入免费的 DART API Key。
 
-## 使用步骤
+日股 v1.0 强烈推荐配置 EDINET Subscription-Key。EDINET API v2 的书类列表和文件下载接口都使用 `Subscription-Key`；可通过 [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API Key 注册页](https://api.edinet-fsa.go.jp/api/auth/index.aspx) 免费注册并申请 Key，然后在设置中填写。没有 Key 时，工具只会尝试 EDINET 公网页兜底，稳定性不能等同于官方 API。
 
-### 第一步：输入股票代码
+英股使用 FCA National Storage Mechanism 公网数据源，不需要 Key。
 
-- 勾选目标交易所（A 股 / 港股 / 美股 / 韩股 / 台股）
-- 点击「批量添加」可从 Excel / 网页 / 文本一次粘贴多只股票代码；也可以用「单只添加」逐行录入
-  - A 股：`600519`（贵州茅台）
-  - 港股：`00700`（腾讯控股）
-  - 美股：`AAPL`（苹果）
-  - 韩股：`005930`（三星电子）
-  - 台股：`2330`（台积电）
-- 点击「确认」，工具会自动识别公司名称
+### 隐私与范围
 
-### 第二步：选择年份和报告类型
+- 只访问公开披露接口。
+- 不绕过登录，不抓取私人数据，不访问未授权系统。
+- API Key、缓存、sidecar 元数据和下载文件都只保存在本机。
+- 不做交易、不抓实时行情、不提供投资建议。
 
-- 拖动年份滑块选择区间（如 2020–2024）
-- 勾选需要的报告类型：年报 / 季报 / 半年报 / IPO 招股书
+### 开发者文档
 
-### 第三步：开始抓取
+- 源码目录：`development/`
+- 架构与“如何加新市场”：[`ARCHITECTURE.md`](ARCHITECTURE.md)
+- 测试命令：`cd development && python -m pytest -m "not e2e" -v`
 
-- 点击「开始抓取」
-- 进度面板实时显示每个任务的状态
-- 下载完成后，PDF 保存在程序同目录下的 `output/` 文件夹
-
-**文件命名格式**：`市场_代码_公司名_年份_报告类型.pdf`
-例：`HK_00700_腾讯控股_2024_年报.pdf`
-
----
-
-## 韩股配置（DART API Key）
-
-下载韩股文件需要免费注册 DART API Key：
-
-1. 前往 [https://opendart.fss.or.kr/](https://opendart.fss.or.kr/) 注册账号
-2. 申请 API Key（审核通常当天通过）
-3. 打开 Filings Atlas → 点击右上角「设置」→ 粘贴 API Key → 保存
-
-> 暂时没有 Key？不勾选韩股即可，A / 港 / 美 / 台四个市场不受影响。
-
----
-
-## 常见问题
-
-**Q：下载速度很慢？**
-A：工具已内置限速，避免被各交易所封 IP。速度取决于报告数量和网络状况，正常情况下每份 PDF 几秒内完成。
-
-**Q：某个公司没找到？**
-A：确认股票代码格式正确（港股需补零至 5 位，如 `00700`）。部分小市值公司在数据源中可能登记信息不全。
-
-**Q：PDF 下载失败 / 文件损坏？**
-A：重新点击「开始抓取」，工具会跳过已成功的文件，只重试失败项。
-
-**Q：程序打开报"Windows 已保护你的电脑"？**
-A：点击「更多信息」→「仍要运行」。这是 Windows SmartScreen 对未签名 EXE 的默认提示，工具本身不含恶意代码（[MIT 开源](LICENSE)）。
-
----
-
-## 隐私与合规
-
-- 所有请求均为公开接口的 GET / POST，不绕过登录，不抓取私人数据
-- SEC（美股）请求自带邮箱 User-Agent，符合 SEC fair-use 政策
-- DART API Key 和所有下载文件仅保存在本地，不上传任何数据
-- 不做交易，不抓实时行情
-
----
-
-## 开发者文档
-
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) — 项目架构与模块设计
-- [`development/`](development/) — 源码（Python 3.11 + PySide6）
-
-## 许可
+## License
 
 [MIT License](LICENSE) © 2026 Eric Zhang

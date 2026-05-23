@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -95,19 +96,19 @@ class ExchangeChip(QPushButton):
 
 
 class ExchangeSelector(QWidget):
-    """Top row of 4 chip-style exchange toggles. Emits selection_changed when
+    """Grid of chip-style exchange toggles. Emits selection_changed when
     any chip is toggled."""
 
     selection_changed = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        layout = QHBoxLayout(self)
+        layout = QGridLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
 
         self.chips: dict[Exchange, ExchangeChip] = {}
-        for ex in (
+        exchanges = (
             Exchange.A_SHARE,
             Exchange.HK,
             Exchange.US,
@@ -115,11 +116,15 @@ class ExchangeSelector(QWidget):
             Exchange.TW,
             Exchange.JP,
             Exchange.UK,
-        ):
+        )
+        for index, ex in enumerate(exchanges):
             chip = ExchangeChip(ex, self)
             chip.toggled.connect(lambda *_: self.selection_changed.emit())
             self.chips[ex] = chip
-            layout.addWidget(chip, 1)
+            row, column = divmod(index, 4)
+            layout.addWidget(chip, row, column)
+        for column in range(4):
+            layout.setColumnStretch(column, 1)
 
         # Default: A-share enabled
         self.chips[Exchange.A_SHARE].setChecked(True)
