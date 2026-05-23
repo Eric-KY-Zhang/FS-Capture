@@ -39,7 +39,7 @@ class RateLimitsCfg(BaseModel):
 
 
 class SECCfg(BaseModel):
-    user_agent: str = "FS Capture (kaiyu199602@gmail.com)"
+    user_agent: str = "Filings Atlas (kaiyu199602@gmail.com)"
 
 
 class DARTCfg(BaseModel):

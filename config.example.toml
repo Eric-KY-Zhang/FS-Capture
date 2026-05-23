@@ -15,7 +15,7 @@ akshare = 4
 twse = 2
 
 [sec]
-user_agent = "FS Capture (your_email@example.com)"
+user_agent = "Filings Atlas (your_email@example.com)"
 
 [dart]
 api_key = ""

@@ -1,9 +1,9 @@
-# PyInstaller spec for FS Capture
+# PyInstaller spec for Filings Atlas
 #
 # Build with:
-#   pyinstaller --noconfirm fs_capture.spec
+#   pyinstaller --noconfirm filings_atlas.spec
 #
-# Result: dist/FS Capture/  (one-folder mode for faster cold start)
+# Result: dist/Filings Atlas/  (one-folder mode for faster cold start)
 
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all, collect_data_files
@@ -20,8 +20,8 @@ openpyxl_datas, openpyxl_binaries, openpyxl_hiddenimports = collect_all("openpyx
 
 extra_datas = [
     ("app/ui/styles/app.qss", "app/ui/styles"),
-    ("app/assets/fs_capture.ico", "app/assets"),
-    ("app/assets/fs_capture_logo.png", "app/assets"),
+    ("app/assets/filings_atlas.ico", "app/assets"),
+    ("app/assets/filings_atlas_logo.png", "app/assets"),
 ]
 
 a = Analysis(
@@ -55,7 +55,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="FS Capture",
+    name="Filings Atlas",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -66,7 +66,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="app/assets/fs_capture.ico",
+    icon="app/assets/filings_atlas.ico",
 )
 
 coll = COLLECT(
@@ -77,5 +77,5 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name="FS Capture",
+    name="Filings Atlas",
 )

@@ -1,4 +1,4 @@
-# FS Capture — 开发简报与代码审核委托书
+# Filings Atlas / 全球披露图谱 — 开发简报与代码审核委托书
 
 > 给 Codex 的审核任务说明。本文件包含项目背景、架构决策、模块清单、已验证的链路、已知风险，以及希望审核重点关注的问题。
 >
@@ -28,9 +28,9 @@
 - 数据源：新浪财经 / 东方财富 / 雪球 / SEC EDGAR / DART
 - HTTP 客户端：`WinHttp.WinHttpRequest.5.1`（Windows COM）
 - 覆盖：A/HK/US/KR 4 市场的财务数字与指标表
-- 不下载 PDF（FS Capture 弥补这一点）
+- 不下载 PDF（Filings Atlas 弥补这一点）
 
-主要痛点（FS Capture 解决）：单 EXE 易分发、统一 UI、PDF 抓取自动化。
+主要痛点（Filings Atlas 解决）：单 EXE 易分发、统一 UI、PDF 抓取自动化。
 
 ### 1.3 通过 AskUserQuestion 锁定的关键决策
 
@@ -76,7 +76,7 @@
 ## 3. 项目结构（v0.2 目标状态）
 
 ```text
-FS Capture/                    # 项目根（发布版直接 ship）
+FS Capture/                    # 仓库目录名保留；产品名 v1.0 起为 Filings Atlas
 ├── README.md                  # 用户使用说明（中文）
 ├── ARCHITECTURE.md            # 架构文档
 ├── PROJECT_RETROSPECTIVE.md   # 项目复盘
@@ -88,7 +88,7 @@ FS Capture/                    # 项目根（发布版直接 ship）
     ├── pyproject.toml
     ├── requirements.txt
     ├── config.toml            # 用户配置（API Key、路径、并发、限速）
-    ├── fs_capture.spec        # PyInstaller spec
+    ├── filings_atlas.spec     # PyInstaller spec
     ├── run.bat                # 源码启动（开发）
     ├── build.bat              # 一键打包 EXE
     │
@@ -148,7 +148,7 @@ FS Capture/                    # 项目根（发布版直接 ship）
     ├── output/                 # 抓取结果（PDF 平铺，运行时填充）
     ├── cache/                  # diskcache 持久化
     ├── logs/                   # loguru 日志
-    └── dist/FS Capture/        # PyInstaller 产物
+    └── dist/Filings Atlas/     # PyInstaller 产物
 ```
 
 ---
@@ -308,11 +308,11 @@ class ExchangePlugin(ABC):
 
 ### 6.6 PyInstaller 打包
 
-`fs_capture.spec`：
+`filings_atlas.spec`：
 - one-folder 模式（一文件模式启动慢）
 - `collect_all("akshare")` + `collect_all("OpenDartReader")` + `collect_data_files("pykrx")`
 - `excludes` 砍掉 matplotlib/scipy/torch/QtWebEngine 等大头
-- 最终 dist/FS Capture/ 目录 ~341 MB，FS Capture.exe 是 27 MB 启动器
+- 最终 dist/Filings Atlas/ 目录 ~341 MB，Filings Atlas.exe 是 27 MB 启动器
 
 ⚠️ **PyInstaller windowed 模式踩了两个坑**：
 1. `sys.stderr is None` → loguru 加 sink 时 `TypeError`（已加 None 守护）
@@ -341,7 +341,7 @@ dart = 5
 akshare = 4
 
 [sec]
-user_agent = "FS Capture (kaiyu199602@gmail.com)"
+user_agent = "Filings Atlas (kaiyu199602@gmail.com)"
 
 [dart]
 api_key = ""
@@ -461,7 +461,7 @@ PyInstaller 冻结后，`config.toml` 与 `output/` 等路径均相对 `sys.exec
 
 ### 9.7 PyInstaller / 部署
 
-- `fs_capture.spec` 里 `excludes` 是否过激（漏排了什么必要包？）
+- `filings_atlas.spec` 里 `excludes` 是否过激（漏排了什么必要包？）
 - 打包后冷启动一次 EXE，确认 4 个 plugin 都能完成首次 cache 加载（A 股已验证；HK 单股查询已验证；US 已验证；**KR 未验证**）
 - `config.toml` 在 frozen 模式下的写入路径（`Path(sys.executable).parent`）是否真的可写（受限的 Program Files 路径会失败）
 - crash.log 写入路径与 _show_fatal MessageBox 流程在打包后是否真能弹出
@@ -512,7 +512,7 @@ plugins/ashare/{name_resolver,reports}.py ~210
 plugins/hk/{name_resolver,reports}.py     ~190
 plugins/us/{name_resolver,reports}.py     ~200
 plugins/kr/{name_resolver,reports}.py     ~190
-fs_capture.spec                           ~70
+filings_atlas.spec                        ~70
 === v0.2 合计 ~3,000 行 Python + ~280 行 QSS ===
 ```
 

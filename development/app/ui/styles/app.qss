@@ -1,5 +1,5 @@
 /* ============================================================
-   FS Capture — global stylesheet
+   Filings Atlas — global stylesheet
    Tokens substituted at runtime (see qss_loader.py).
    Aesthetic: flat, rounded, designer-quality.
    ============================================================ */

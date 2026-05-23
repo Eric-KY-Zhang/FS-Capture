@@ -139,7 +139,7 @@ def test_save_invalidates_dart_cache_when_key_changes(monkeypatch: pytest.Monkey
         dart_key=SimpleNamespace(text=lambda: "new-key"),
         workers=SimpleNamespace(value=lambda: 4),
         theme=SimpleNamespace(currentText=lambda: "light"),
-        sec_ua=SimpleNamespace(text=lambda: "FS Capture test"),
+        sec_ua=SimpleNamespace(text=lambda: "Filings Atlas test"),
         accept=Mock(),
     )
     save_mock = Mock()

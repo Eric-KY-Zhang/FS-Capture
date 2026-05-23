@@ -1,4 +1,4 @@
-# CLAUDE.md / AGENTS.md — FS Capture 协作指南
+# CLAUDE.md / AGENTS.md — Filings Atlas 协作指南
 
 > 本文件是 Claude Code（作为 Planner / Reviewer）与 Codex（作为 Worker）协作时的常驻上下文。`CLAUDE.md` 与 `AGENTS.md` 是同一份协作指南的双入口。每次进入这个项目，先读这里。
 >
@@ -8,11 +8,11 @@
 
 ## 1. 项目一句话
 
-跨市场上市公司**官方披露 PDF**一键下载工具，覆盖 A股 / 港股 / 美股 / 韩股 / 台股（v0.6 起 5 市场，v1.0 计划 +日本/英国）。**不抓数据、不算指标、不导 Excel**——这是 v0.2 重定位后的硬约束，任何"顺手做一下"的提议都要先质疑。
+Filings Atlas / 全球披露图谱（原 FS Capture）是跨市场上市公司**官方披露 PDF**一键下载工具，覆盖 A股 / 港股 / 美股 / 韩股 / 台股（v0.6 起 5 市场，v1.0 计划 +日本/英国）。**不抓数据、不算指标、不导 Excel**——这是 v0.2 重定位后的硬约束，任何"顺手做一下"的提议都要先质疑。
 
 仓库根：`E:\Claude+CODEX Project\FS Capture`
 源码：`development/`
-打包产物：根目录 `FS Capture.exe` + `_internal/`（PyInstaller one-folder）
+打包产物：根目录 `Filings Atlas.exe` + `_internal/`（PyInstaller one-folder）
 
 ---
 
@@ -71,9 +71,9 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 - `development/tests/` — pytest 测试（含 integration / e2e）
 
 ### 打包
-- 配置：`development/fs_capture.spec`
+- 配置：`development/filings_atlas.spec`
 - 脚本：`development/build.bat`
-- 产物：根目录 `FS Capture.exe` + `_internal/` (~340MB)
+- 产物：根目录 `Filings Atlas.exe` + `_internal/` (~340MB)
 
 ---
 
@@ -184,8 +184,8 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 | v0.6 | ✅ 已发布 2026-05-17 | `roadmap/archive/` |
 | v0.6.1 | ✅ **已完成 2026-05-23**（6 commit `dfa461d → 3fa6c12`，72/72 tests，5 票 smoke 实跑） | `roadmap/SPRINT_v0.6.1_patch.md` |
 | v0.7 | ✅ **已完成 2026-05-23**（11 commit `2dc5fd2 → d07d133`，85/85 tests，KR 无 Key 4 家实跑） | `roadmap/SPRINT_v0.7_kr_public_crawler.md` |
-| **v0.8** | ✅ **已完成 2026-05-23**（6 批次，100/100 tests，Playwright 池化 + 断点续传 + UI strings + lint 锁定） | `roadmap/SPRINT_v0.8_perf_and_ui_strings.md` |
-| v1.0 | ⏳ 待起草（+ 日本 EDINET + 英国 LSE/NSM + 增量更新） | TBD |
+| v0.8 | ✅ **已完成 2026-05-23**（6 批次，100/100 tests，Playwright 池化 + 断点续传 + UI strings + lint 锁定） | `roadmap/SPRINT_v0.8_perf_and_ui_strings.md` |
+| **v1.0** | 🟡 **实施中：批次 1 品牌重命名已完成**（11 批次 + 3 Reviewer Checkpoint，首发 GitHub release）— Filings Atlas / 全球披露图谱 + 双语 UI + sidecar 迁移 + JP/UK + 增量 | `roadmap/SPRINT_v1.0_filings_atlas.md` |
 
 **发布策略**：v0.6.x / v0.7 / v0.8 内部迭代不发 release；**GitHub Release 只发 v1.0**。意味着 v0.7/v0.8 期间：
 - 不更新 README 顶部版本号或 "What's new" 段
@@ -201,7 +201,7 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 - **v0.6.1**（已完成）：7 个 bug 修复（ratelimit 热更新 / HK PDF drop / HK 财年表扩 / KR `induty_code` 兼容 / A 股 strict zip / batch import 反馈 / settings 返回值）
 - **v0.7**（已完成）：KR 公网爬虫去 Key（双模式）+ US 分页 fallback 单元测试 + Playwright audit 渲染兜底实跑验证。**架构清债项已澄清**：httpx verify 已在 v0.6 后期修过；plugin 重试统一是误判；HK 真实场景测试 v0.6.1 已覆盖；UI 字符串挪到 v0.8
 - **v0.8**（已完成）：Playwright **池化**（不删）+ 大 PDF 断点续传 + name_resolver 单飞缓存 + UI 字符串集中（11 文件）+ Lint pre-commit/CI 锁定。**已校准**：ruff 已 0 warning 改为锁定；Playwright 不可删（KR/US 必要依赖）；bundle 体积挪到 v0.9/v1.0
-- **v1.0**（4-6 周）：日本（EDINET）+ 英国（LSE/NSM）+ 增量更新检测 + IPO 路径统一 + 模块边界文档化
+- **v1.0**（4-6 周，11 批次 + 3 Reviewer Checkpoint）：**首发 GitHub release**。①品牌重命名 "FS Capture" → "Filings Atlas / 全球披露图谱"（仓库目录名不变）②中英双语 UI（Pattern B Python dict + Signal，运行时切换）+ README 双语 ③Sidecar 从 `output/` 迁移到 `data/cache/sidecars/`（启动一次性迁移）④日本 EDINET plugin（双模式）⑤英国 NSM plugin（公网为主）⑥增量更新（独立按钮，基于 sidecar diff）⑦IPO 路径统一（删 ashare/hk helper）⑧"如何加新市场" 文档
 
 **明确不做**：印度市场、数字财务底稿、跨市场对标、桌面 web 化。
 
@@ -225,4 +225,4 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 
 ---
 
-**最后更新**：2026-05-23（v0.8 internal 完成，100/100 tests，v1.0 待起草）
+**最后更新**：2026-05-23（v1.0 批次 1 品牌重命名完成，下一批次为 i18n 脚手架）

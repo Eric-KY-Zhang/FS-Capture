@@ -44,7 +44,7 @@ def _setup_logging(settings: Settings) -> None:
         except (TypeError, ValueError):
             pass
     logger.add(
-        log_dir / "fs_capture.log",
+        log_dir / "filings_atlas.log",
         rotation="5 MB",
         retention=5,
         encoding="utf-8",
@@ -59,10 +59,10 @@ def main() -> int:
     )
 
     app = QApplication(sys.argv)
-    app.setApplicationName("FS Capture")
-    app.setApplicationDisplayName("FS Capture")
+    app.setApplicationName("Filings Atlas")
+    app.setApplicationDisplayName("Filings Atlas / 全球披露图谱")
     app.setOrganizationName("Eric Nutshell")
-    app.setWindowIcon(QIcon(resource_path("app/assets/fs_capture.ico")))
+    app.setWindowIcon(QIcon(resource_path("app/assets/filings_atlas.ico")))
 
     # Default font tuned for Win11 + Chinese rendering.
     font = QFont("Microsoft YaHei", 10)
@@ -72,7 +72,7 @@ def main() -> int:
     first_launch = not config_path().exists()
     settings = load_settings()
     _setup_logging(settings)
-    logger.info("FS Capture starting up")
+    logger.info("Filings Atlas starting up")
 
     palette = light_palette if settings.ui.theme == "light" else dark_palette
     app.setStyleSheet(load_qss(palette))
@@ -101,13 +101,18 @@ def _show_fatal(message: str) -> None:
         from PySide6.QtWidgets import QApplication, QMessageBox
 
         _ = QApplication.instance() or QApplication(sys.argv)
-        QMessageBox.critical(None, "FS Capture 启动失败", message)
+        QMessageBox.critical(None, "Filings Atlas / 全球披露图谱 启动失败", message)
     except Exception:
         # Fall back to native Windows MessageBox via ctypes
         try:
             import ctypes
 
-            ctypes.windll.user32.MessageBoxW(0, message, "FS Capture 启动失败", 0x10)
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                message,
+                "Filings Atlas / 全球披露图谱 启动失败",
+                0x10,
+            )
         except Exception:
             pass
 

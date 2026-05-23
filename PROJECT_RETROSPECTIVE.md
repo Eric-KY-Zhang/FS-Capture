@@ -1,4 +1,4 @@
-# 项目复盘：FS Capture (Python EXE 版) v0.2
+# 项目复盘：Filings Atlas / 全球披露图谱（原 FS Capture）v0.2+
 
 > **作者**：Eric Zhang（kaiyu199602@gmail.com）
 > **日期**：2026 年 4 月底~5 月初（与 VBA Captor v1.0 release 并行收尾）

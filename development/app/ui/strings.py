@@ -46,7 +46,7 @@ ES_META_HK = "香港交易所"
 ES_META_TW = "台交所 · 櫃買中心"
 
 # main_view
-MV_SECTION = "FS CAPTURE · 一键抓取"
+MV_SECTION = "FILINGS ATLAS · 一键抓取"
 MV_TITLE = "上市公司官方披露 PDF 下载"
 MV_SUBTITLE = "勾选交易所 → 录入股票代码 → 选择期间 → 下载披露文件 PDF"
 MV_SETTINGS_BUTTON = "⚙  设置"
@@ -72,11 +72,12 @@ MV_DONE_BODY_FORMAT = (
 )
 
 # main_window
+MW_WINDOW_TITLE = "Filings Atlas / 全球披露图谱"
 MW_SUBTITLE = "· 上市公司披露报告一键下载"
 
 # onboarding_dialog
-OB_WINDOW_TITLE = "欢迎使用 FS Capture"
-OB_TITLE = "FS Capture 帮你一键下载 5 市场上市公司官方披露 PDF"
+OB_WINDOW_TITLE = "欢迎使用 Filings Atlas / 全球披露图谱"
+OB_TITLE = "Filings Atlas / 全球披露图谱帮你一键下载 5 市场上市公司官方披露 PDF"
 OB_HINT = "输入第一个股票代码试试。确认公司名称后，选择年份和报告类型即可开始下载。"
 OB_DART_BODY = (
     "韩股默认通过 DART 公网披露页抓取，无需配置。如需更快更稳的体验，"

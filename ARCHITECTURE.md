@@ -1,8 +1,8 @@
-# FS Capture — 架构
+# Filings Atlas / 全球披露图谱 — 架构
 
 > Last updated: 2026-05-23 (v0.8 — Playwright 池化 + 断点续传 + UI strings + lint 锁定)
 
-本文档描述 FS Capture 的 Python/PySide6 桌面工具架构，与同仓 `VBA Captor/` 子项目（旧 Excel/VBA 工具，已 v1.0 release）并存。本文档面向后续维护者和 Codex/Reviewer 交接使用，不替代 `development/DEVELOPMENT_BRIEF.md` 的开发委托书细节。
+本文档描述 Filings Atlas / 全球披露图谱（原 FS Capture）的 Python/PySide6 桌面工具架构，与同仓 `VBA Captor/` 子项目（旧 Excel/VBA 工具，已 v1.0 release）并存。本文档面向后续维护者和 Codex/Reviewer 交接使用，不替代 `development/DEVELOPMENT_BRIEF.md` 的开发委托书细节。
 
 ## 1. 项目目标
 
@@ -35,7 +35,7 @@
 跟 `VBA Captor/` 的关系：
 
 - VBA Captor 仍是 Excel-only 用户的快速路径（4 市场 + 跨市场指标表 + 实时 B6 toggle）。
-- FS Capture 提供「报告 PDF 下载」+「不依赖 Excel COM」+「现代 GUI」。
+- Filings Atlas 提供「报告 PDF 下载」+「不依赖 Excel COM」+「现代 GUI」。
 - 两者数据源有大量重叠（A 股新浪/akshare、美股 SEC、港股雪球/HKEXnews），但定位互补：VBA Captor = 数据，FS Capture = 文件。
 
 ## 2. 顶层结构
@@ -52,7 +52,7 @@
     ├── DEVELOPMENT_BRIEF.md # Codex 代码审核委托书
     ├── pyproject.toml
     ├── requirements.txt
-    ├── fs_capture.spec      # PyInstaller spec（one-folder 模式）
+    ├── filings_atlas.spec   # PyInstaller spec（one-folder 模式）
     ├── run.bat              # 源码启动（开发）
     ├── build.bat            # 一键打包 EXE
     ├── app/                 # GUI + 核心逻辑
@@ -60,7 +60,7 @@
     └── tests/               # unittest 用例
 ```
 
-发布版（项目根直接 ship）会把 `development/` 折叠成隐藏目录，根上只留 `FS Capture.exe` + `_internal/` + `output/` + `cache/` + `config.toml`。
+发布版（项目根直接 ship）会把 `development/` 折叠成隐藏目录，根上只留 `Filings Atlas.exe` + `_internal/` + `output/` + `cache/` + `config.toml`。
 
 ## 3. 模块依赖图（Python）
 
@@ -247,7 +247,7 @@ class ExchangePlugin(ABC):
 ### 6.7 PyInstaller 兼容
 
 - `app/main.py:8-25` 必须保留 `sys.stdout` / `sys.stderr` None 守护（windowed 模式两次踩坑教训）。
-- `fs_capture.spec` 的 `collect_all("akshare")` / `collect_all("OpenDartReader")` / `collect_data_files("pykrx")` 不能去掉。
+- `filings_atlas.spec` 的 `collect_all("akshare")` / `collect_all("OpenDartReader")` / `collect_data_files("pykrx")` 不能去掉。
 - `excludes` 列表只能加不能减（已剔除 matplotlib/scipy/torch/QtWebEngine）。
 - 冻结模式所有路径走 `Path(sys.executable).parent`（`settings.py::project_root`），不能用 `__file__`。
 - `app/core/pdf_renderer.py` 持有进程级 Playwright browser pool：首次渲染 lazy init，每次渲染只创建/关闭独立 context；`shutdown_renderer()` 随 `QApplication.aboutToQuit` 关闭 Chromium 与 runtime。
@@ -259,7 +259,7 @@ development/
 ├── DEVELOPMENT_BRIEF.md     给 Codex 的代码审核委托书
 ├── pyproject.toml           依赖与打包元数据
 ├── requirements.txt         pip 安装列表
-├── fs_capture.spec          PyInstaller spec（one-folder）
+├── filings_atlas.spec       PyInstaller spec（one-folder）
 ├── run.bat                  源码启动（开发）
 ├── build.bat                一键打包 EXE
 │
@@ -276,7 +276,7 @@ development/
 │   │   ├── job.py
 │   │   └── orchestrator.py
 │   ├── ui/                  全部 PySide6 部件（10 文件 + styles/）
-│   └── assets/              fs_capture.ico / fs_capture_logo.png
+│   └── assets/              filings_atlas.ico / filings_atlas_logo.png
 │
 ├── plugins/
 │   ├── base.py              ExchangePlugin ABC（3 方法）
@@ -333,7 +333,7 @@ HTTP 请求原则：
 - PyInstaller **one-folder 模式**（一文件模式启动慢 5-10×）。
 - 大头依赖：PySide6 ~140 MB / akshare 全家桶 ~120 MB / OpenDartReader+pykrx ~50 MB。
 - `excludes`：matplotlib / scipy / torch / QtWebEngine / tkinter / IPython（节省 ~200 MB）。
-- 产物：`dist/FS Capture/` ~340 MB；入口 `FS Capture.exe` ~27 MB（启动器）+ `_internal/` ~314 MB。
+- 产物：`dist/Filings Atlas/` ~340 MB；入口 `Filings Atlas.exe` ~27 MB（启动器）+ `_internal/` ~314 MB。
 - 冻结模式路径：`config.toml` / `output/` / `cache/` / `logs/` 均相对 `Path(sys.executable).parent`。
 - 已修复 windowed 模式两个坑：
   - `sys.stderr is None` → loguru `logger.add(...)` `TypeError`（`app/main.py:16-25` 守护）
@@ -342,7 +342,7 @@ HTTP 请求原则：
 发布版目录布局（项目根直接 ship）：
 
 ```text
-FS Capture.exe                 启动器，27 MB，双击即用
+Filings Atlas.exe              启动器，27 MB，双击即用
 _internal/                     PyInstaller bundled，~314 MB，请勿删除
 config.toml                    本机配置（隐藏）
 config.example.toml            模板（隐藏）

@@ -1,5 +1,5 @@
 [project]
-name = "fs-capture"
+name = "filings-atlas"
 version = "0.1.0"
 description = "One-click multi-market disclosure report download tool"
 requires-python = ">=3.11,<3.15"
@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.scripts]
-fs-capture = "app.main:main"
+filings-atlas = "app.main:main"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

@@ -1,7 +1,7 @@
 # FS Capture 总路线图 v0.6.1 → v1.0
 
 **起草日期**：2026-05-23
-**最后更新**：2026-05-23（v0.8 internal 完成，v1.0 待起草）
+**最后更新**：2026-05-23（v1.0 批次 1 品牌重命名完成）
 **Planner**：Claude Code (Opus 4.7)
 **Worker**：Codex
 **Reviewer**：Claude Code
@@ -35,7 +35,7 @@
 | **v0.6.1** | Patch — bug 修复 + 体验微调 | 1-2 天 | ✅ **已完成 2026-05-23** | 7 个 bug 修完，72/72 tests pass，5 市场 smoke 实跑通过 |
 | **v0.7** | KR 公网爬虫去 Key + 测试补强 | 1 周 | ✅ **已完成 2026-05-23**（11 commit，85/85 tests，KR 无 Key 4 家实跑通过） | KR 无 Key 跑通 + US 分页测试 + Playwright audit 渲染验证 |
 | **v0.8** | 性能 + UI 字符串集中化 + lint 锁定 | 2 周 | ✅ **已完成 2026-05-23**（6 批次，100/100 tests，KR audit e2e + ruff 通过） | Playwright pool / 大 PDF 续传 / name_resolver 单飞缓存 / UI strings.py 集中 / lint pre-commit + CI |
-| **v1.0** | 新市场（日本 + 伦敦）+ 增量更新检测 + IPO 路径统一 | 4-6 周 | ⏳ 待起草 | 7 市场全部 e2e 通过；月度增量任务跑通 |
+| **v1.0** | **品牌重命名 Filings Atlas + 中英双语 UI + sidecar 迁移 + JP/UK + 增量 + IPO 统一**（首个 GitHub release） | 4-6 周 | 🟡 **实施中：批次 1 已完成**（11 批次 + 3 Checkpoint） | 7 市场 e2e 全绿 + 双语 UI + `output/` 100% PDF + GitHub release artifact |
 
 ---
 
@@ -138,7 +138,24 @@
 
 ---
 
-## v1.0 — 新市场（日本 + 伦敦）+ 增量更新 + IPO 统一
+## v1.0 — Filings Atlas 重塑（详细 SPRINT 见 `SPRINT_v1.0_filings_atlas.md`）
+
+经用户 2026-05-23 提出 3 项新需求，v1.0 在原 ROADMAP 5 项基础上扩展为 **8 项 / 11 批次 mega sprint**，并作为首个 GitHub release 版本发布。
+
+### 10.0 v1.0 完整范围
+
+| # | 范围 | 来源 |
+|---|---|---|
+| 1 | **品牌重命名** "FS Capture" → "Filings Atlas / 全球披露图谱" | 用户 |
+| 2 | **中英双语 UI**（运行时切换，Pattern B Python dict）+ README 双语 | 用户 |
+| 3 | **Sidecar JSON 迁移**：`output/` → `data/cache/sidecars/`，用户可见目录只剩 PDF | 用户 |
+| 4 | **日本 EDINET plugin**（双模式：API key 可选 + 公网兜底） | ROADMAP |
+| 5 | **英国 NSM plugin**（公网为主） | ROADMAP |
+| 6 | **增量更新**（基于 sidecar diff + UI 独立按钮） | ROADMAP |
+| 7 | **IPO 路径统一**（删 ashare/hk IPO helper，收敛 `report_output_path_for_filing`） | ROADMAP |
+| 8 | **"如何加新市场" 文档**（追加 ARCHITECTURE.md） | ROADMAP |
+
+**3 个 Reviewer Checkpoint**：批次 4 后（双语完整性）→ 批次 7 后（sidecar/增量/IPO 收敛）→ 批次 9 后（JP/UK 双模式落地）
 
 ### 10.1 日本市场（J 股）
 
@@ -208,7 +225,10 @@
 - **数字财务底稿 / Excel 导出**：v0.2 已砍，永远不做
 - **跨市场对标 / 估值计算**：超出工具定位
 - **桌面 web 化**：当前 PySide6 桌面应用形态稳定
-- **i18n 完整国际化**：v0.7 只做物理集中，v1.0 后再评估是否上 `tr()`
+- **日语 / 韩语 UI**：v1.0 仅 zh + en 双语，dict 结构支持但日语/韩语翻译留 v1.1+
+- **其他新市场**（SGX / ASX / SEDAR / Bundesanzeiger / AMF 等）：每个独立 1 周 mini-sprint，v1.1+
+- **跨平台打包**（macOS / Linux）：v1.0 仅 Windows，跨平台留 v1.1+
+- **本地化文件名**：`_年报.pdf` 中文后缀保留，不随 UI 语言切换
 
 ---
 

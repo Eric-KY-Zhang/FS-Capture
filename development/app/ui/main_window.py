@@ -33,7 +33,7 @@ class _TitleBar(QWidget):
         layout.setContentsMargins(0, 0, 8, 0)
         layout.setSpacing(0)
 
-        self.logo = QLabel("FS Capture")
+        self.logo = QLabel("Filings Atlas")
         self.logo.setObjectName("TitleBarLogo")
 
         self.subtitle = QLabel(ui_strings.MW_SUBTITLE)
@@ -86,7 +86,7 @@ class MainWindow(QMainWindow):
         self.setMouseTracking(True)
         self.resize(settings.ui.window_width, settings.ui.window_height)
         self.setMinimumSize(self.MIN_SIZE)
-        self.setWindowTitle("FS Capture")
+        self.setWindowTitle(ui_strings.MW_WINDOW_TITLE)
 
         # Full-window root. Avoid translucent outer margins; they look like a
         # strange transparent border on Windows.
