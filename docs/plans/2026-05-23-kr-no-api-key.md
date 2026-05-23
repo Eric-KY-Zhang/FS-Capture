@@ -2,9 +2,9 @@
 
 **日期**：2026-05-23
 **Planner**：Claude Code (Opus 4.7)
-**Worker**：Codex（待委派）
+**Worker**：Codex
 **Reviewer**：Claude Code
-**状态**：待 Codex 实施
+**状态**：已实施于 v0.7（2026-05-23，内部迭代，不发 release）
 
 ---
 

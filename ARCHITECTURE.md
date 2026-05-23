@@ -1,6 +1,6 @@
 # FS Capture — 架构
 
-> Last updated: 2026-05-17 (v0.6 — 新增台股 TW 插件，5 市场)
+> Last updated: 2026-05-23 (v0.7 — 韩股 KR 无 Key 公网 fallback + 测试补强)
 
 本文档描述 FS Capture 的 Python/PySide6 桌面工具架构，与同仓 `VBA Captor/` 子项目（旧 Excel/VBA 工具，已 v1.0 release）并存。本文档面向后续维护者和 Codex/Reviewer 交接使用，不替代 `development/DEVELOPMENT_BRIEF.md` 的开发委托书细节。
 
@@ -28,7 +28,7 @@
 - GUI 用 PySide6 + 自定义 QSS（无边框圆角窗口，扁平化设计），不用 Tkinter / Electron。
 - 每市场一个 plugin 模块，新增市场只需要新建目录。
 - HTTP 走 `httpx` + `tenacity`，不再用 VBA 的 WinHttp + 正则。
-- 韩股必须用户自行注册 DART API Key；A 股 / 港股 / 美股 / 台股四市场免 Key。
+- 韩股 DART API Key 变为可选加速器；未配置时走 DART 公网披露页 fallback。A 股 / 港股 / 美股 / 台股四市场仍免 Key。
 - 台股 MOPS 服务端证书缺失 Subject Key Identifier 扩展，`app/core/http.default_client` 仅对 `source=twse` 关闭证书校验（用户授权），其他四市场保留 certifi 严格校验。
 - 抓数据 / Excel 装填的需求请用 `VBA Captor/`（已 v1.0 release，4 市场已稳定）；FS Capture 只解决「批量拿到原始 PDF」一个问题。
 
@@ -102,7 +102,7 @@ UI 层
    ├─ ashare/               akshare + cninfo
    ├─ hk/                   东方财富 + HKEXnews
    ├─ us/                   SEC submissions
-   ├─ kr/                   OpenDartReader (DART)
+   ├─ kr/                   OpenDartReader (DART) + DART public web fallback
    └─ tw/                   TWSE ISIN + MOPS（v0.6 新增）
 ```
 
@@ -143,7 +143,7 @@ class ExchangePlugin(ABC):
 | A 股 | akshare `stock_info_a_code_name` + cninfo orgId（30d 缓存） | cninfo `hisAnnouncement/query` POST → 静态 PDF | ✓ 600519 贵州茅台 |
 | 港股 | 东方财富 `stock/get` 单股查询 | HKEXnews `titlesearch.xhtml` HTML 解析 | ✓ 00700 腾讯 |
 | 美股 | SEC `company_tickers.json`（24h 缓存） | SEC `submissions API` + 分页 `files` 兜底 | ✓ AAPL 10-K FY2023/2024 |
-| 韩股 | OpenDartReader `corp_codes`（7d 缓存） | DART `list` + `document` | ✓ 005930 三星电子 |
+| 韩股 | OpenDartReader `corp_codes` 或 DART 公网按需搜索（无 TTL 缓存） | DART OpenAPI `list` 或公网 HTML 搜索 + 公告 PDF/渲染下载 | ✓ 005930 三星电子（有 Key / 无 Key） |
 | 台股 | TWSE ISIN 服务（30d 缓存，覆盖上市 + 上柜） | MOPS `doc.twse.com.tw/server-java/t57sb01`（POST step=9 → 解析临时 `/pdf/` 链接 → GET） | ✓ 2330 台积电 年报 / 半年报 / IPO |
 
 ## 5. 数据流
@@ -298,8 +298,8 @@ development/
 | 港股报告 | HKEXnews `www1.hkexnews.hk/search/titlesearch.xhtml` HTML | `plugins/hk/reports.py` | 不需要 |
 | 美股名称 | SEC `www.sec.gov/files/company_tickers.json` | `plugins/us/name_resolver.py` | 不需要 |
 | 美股报告 | SEC `data.sec.gov/submissions/CIK{cik}.json` + 分页 files | `plugins/us/reports.py` | 不需要 |
-| 韩股名称 | OpenDartReader `corp_codes` | `plugins/kr/name_resolver.py` | DART API Key |
-| 韩股报告 | DART `list` + `document` | `plugins/kr/reports.py` | DART API Key |
+| 韩股名称 | OpenDartReader `corp_codes`；无 Key 时 DART 公网 `detailSearch.ax` | `plugins/kr/name_resolver.py` / `plugins/kr/dart_web.py` | Key 可选 |
+| 韩股报告 | DART `list`；无 Key 时 DART 公网 HTML 搜索 + 公告 PDF/渲染下载 | `plugins/kr/reports.py` / `plugins/kr/dart_web.py` | Key 可选 |
 | 台股名称 | TWSE ISIN `isin.twse.com.tw/isin/C_public.jsp?strMode=2/4` 解析 HTML | `plugins/tw/name_resolver.py` | 不需要 |
 | 台股报告 | MOPS `doc.twse.com.tw/server-java/t57sb01` 两步下载（POST step=9 → GET 临时 PDF URL） | `plugins/tw/reports.py` | 不需要 |
 
@@ -309,14 +309,14 @@ HTTP 请求原则：
 - 不绕过登录或权限控制。
 - 不抓取私人数据。
 - SEC 请求带最低限速（TokenBucket sec=8 rps）+ 邮箱 UA。
-- DART Key 缺失时 KR 整条链路被禁用，不影响其他三个市场。
+- DART Key 缺失时 KR 自动走公网 fallback；填 Key 时优先走 OpenAPI。
 - 用户输入的 ticker code 全程 normalize（strip+upper），不直接拼 URL（防 SSRF）。
 - **TWSE 例外**：MOPS 服务端证书缺失 Subject Key Identifier 扩展（Python 3.12+ 严格 OpenSSL 拒绝），`default_client` 仅对 `source=twse` 设 `verify=False`，其他四市场保持 certifi 严格校验。这是 TWSE 服务端的证书 hygiene 问题，非我们可控。
 
 | 层 | 实现 | TTL / 策略 |
 |---|---|---|
 | name_resolver 全表 | diskcache | 24 小时（A 股代码表 / SEC ticker 表）/ 30 天（TWSE ISIN 上市+上柜） |
-| name_resolver 单股 | diskcache | 30 天（cninfo orgId）/ 7 天（DART corp_code） |
+| name_resolver 单股 | diskcache | 30 天（cninfo orgId）/ 永久（KR `kr:corp:{code}` corp_code） |
 | HTTP 层 | tenacity 指数退避 | 重试 3 次，base 1s，cap 30s |
 | 限速 | TokenBucket（同步+异步） | 每数据源独立桶，参数从 config.toml 读 |
 | 4xx 响应 | — | 不缓存，直接抛 |
@@ -373,12 +373,12 @@ python -m unittest tests.test_selection_logic
 | A 股 | 600519 | ✓ 贵州茅台 | ✓ annual_report.pdf 3.5 MB |
 | 港股 | 00700 | ✓ 腾讯控股 | ✓ annual_report.pdf 7.3 MB |
 | 美股 | AAPL | ✓ Apple Inc. | ✓ 10-K FY2023 + FY2024 (1.5 MB each) |
-| 韩股 | 005930 | ✓ 三星电子 | ✓ annual_report.pdf 9.7 MB |
+| 韩股 | 005930 | ✓ 三星电子 | ✓ annual_report.pdf（OpenAPI + 无 Key 公网 fallback） |
 | 台股 | 2330 | ✓ 台積電 | ✓ annual_report 9.99 MB / 半年报 7.2 MB / 60+ IPO 公开说明书 |
 
 未覆盖的回归路径（v0.1→v0.5 规划已归档于 `roadmap/archive/`），重点：
 
-- KR 整条链路（DART Key 注册后必须实跑一遍）。
+- KR 公网 fallback 已跑通；后续重点是 DART HTML 改版时维护 `plugins/kr/dart_web.py::_SELECTORS`。
 - US `submissions.files[]` 分页兜底（老 ticker，AAPL FY2018 之前会落到这条路径）。
 - HK 选片只匹配年份字符串，同年份多份补充公告 / ESG 报告可能误选（Sprint 03 解决）。
 - KR `_download_filing` 用 `os.chdir`，QThreadPool 4 worker 并发不安全（Sprint 02 解决）。

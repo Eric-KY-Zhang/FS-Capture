@@ -96,9 +96,9 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 |---|---|---|---|
 | **A 股** | akshare + cninfo POST API | 北交所代码是 `bj` 不是 `bse`（已修）；akshare 偶发脏数据需 `zip strict=True` | v0.6.1 修 strict |
 | **港股** | 东方财富 + HKEXnews HTML | 无官方 API；选片仅按标题年份字符串，需 PDF 内容验证补充；非 12 月财年表覆盖不足 | v0.6.1 修 |
-| **美股** | SEC submissions API | 字段名陷阱：`reportDate` 不是 `periodOfReport`（已修）；老 ticker 走 `submissions.files[]` 分页未实测 | v0.7 测 |
-| **韩股** | OpenDartReader（DART OpenAPI） | 当前必须 Key；OpenDartReader CWD 副作用已绕开 | **v0.7 改公网爬虫去 Key** |
-| **台股** | TWSE ISIN + MOPS | TWSE 证书 hygiene 缺陷必须 `verify=False`；MOPS Big5 编码（不能用 `resp.text`）；ROC 年份 = AD - 1911；mtype=F 是股东会年份 | v0.7 补 e2e |
+| **美股** | SEC submissions API | 字段名陷阱：`reportDate` 不是 `periodOfReport`（已修）；老 ticker 走 `submissions.files[]` 分页 fallback 已补单测 | v0.7 已测 |
+| **韩股** | OpenDartReader（DART OpenAPI）+ DART 公网披露页 | Key 可选；无 Key 走 `dart_web.py` 公网 fallback；选择器集中在 `_SELECTORS` | v0.7 已完成 |
+| **台股** | TWSE ISIN + MOPS | TWSE 证书 hygiene 缺陷必须 `verify=False`；MOPS Big5 编码（不能用 `resp.text`）；ROC 年份 = AD - 1911；mtype=F 是股东会年份 | e2e 已覆盖 |
 
 ---
 
@@ -183,7 +183,7 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 |---|---|---|
 | v0.6 | ✅ 已发布 2026-05-17 | `roadmap/archive/` |
 | v0.6.1 | ✅ **已完成 2026-05-23**（6 commit `dfa461d → 3fa6c12`，72/72 tests，5 票 smoke 实跑） | `roadmap/SPRINT_v0.6.1_patch.md` |
-| **v0.7** | 🟡 **SPRINT 已出，待 Codex 实施** | `roadmap/SPRINT_v0.7_kr_public_crawler.md` |
+| **v0.7** | ✅ **已完成 2026-05-23**（KR 无 Key + US 分页测试 + TW e2e） | `roadmap/SPRINT_v0.7_kr_public_crawler.md` |
 | v0.8 | ⏳ 待起草（性能 + UI 字符串集中化 + lint 清债） | TBD |
 | v1.0 | ⏳ 待起草（+ 日本 EDINET + 英国 LSE/NSM + 增量更新） | TBD |
 
@@ -199,7 +199,7 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 详细见 `roadmap/ROADMAP_v0.6.1_to_v1.0.md`。
 
 - **v0.6.1**（已完成）：7 个 bug 修复（ratelimit 热更新 / HK PDF drop / HK 财年表扩 / KR `induty_code` 兼容 / A 股 strict zip / batch import 反馈 / settings 返回值）
-- **v0.7**（1 周）：KR 公网爬虫去 Key（主体）+ US 分页 fallback 单元测试 + TW e2e smoke。**架构清债项已澄清**：httpx verify 已在 v0.6 后期修过；plugin 重试统一是误判（TW 重试是合理业务重试）；HK 真实场景测试 v0.6.1 已覆盖；UI 字符串集中化挪到 v0.8
+- **v0.7**（已完成）：KR 公网爬虫去 Key（双模式）+ US 分页 fallback 单元测试 + TW e2e smoke。**架构清债项已澄清**：httpx verify 已在 v0.6 后期修过；plugin 重试统一是误判（TW 重试是合理业务重试）；HK 真实场景测试 v0.6.1 已覆盖；UI 字符串集中化挪到 v0.8
 - **v0.8**（2 周）：Playwright 池化 + 大 PDF 续传 + UI 字符串集中化（110 处 / 12 文件） + ruff 0 warning + Playwright 移除决断 + 体积优化
 - **v1.0**（4-6 周）：日本（EDINET）+ 英国（LSE/NSM）+ 增量更新检测 + IPO 路径统一 + 模块边界文档化
 
@@ -225,4 +225,4 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 
 ---
 
-**最后更新**：2026-05-23（v0.6.1 验收完成，v0.7 SPRINT 已出）
+**最后更新**：2026-05-23（v0.7 内部迭代完成，v0.8 待起草）
