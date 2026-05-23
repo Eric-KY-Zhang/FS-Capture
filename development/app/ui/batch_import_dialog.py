@@ -25,6 +25,7 @@ _US_RE = re.compile(r"^[A-Z]{1,5}(?:[.-][A-Z]{1,2})?$", re.IGNORECASE)
 _KR_RE = re.compile(r"^\d{1,6}(?:\.(?:KS|KQ))?$", re.IGNORECASE)
 _TW_RE = re.compile(r"^(?:TW)?\d{4}(?:\.(?:TW|TWO))?$", re.IGNORECASE)
 _JP_RE = re.compile(r"^(?:JP)?\d{4}(?:\.(?:T|JP))?$", re.IGNORECASE)
+_UK_RE = re.compile(r"^[A-Z]{1,5}(?:\.L)?$", re.IGNORECASE)
 
 _PATTERNS = {
     Exchange.A_SHARE: _A_SHARE_RE,
@@ -33,6 +34,7 @@ _PATTERNS = {
     Exchange.KR: _KR_RE,
     Exchange.TW: _TW_RE,
     Exchange.JP: _JP_RE,
+    Exchange.UK: _UK_RE,
 }
 
 _US_STOPWORDS = {
@@ -48,6 +50,17 @@ _US_STOPWORDS = {
     "NYSE",
     "PLC",
     "THE",
+}
+
+_UK_STOPWORDS = {
+    "GROUP",
+    "HOLDINGS",
+    "LONDON",
+    "LSE",
+    "LTD",
+    "PLC",
+    "THE",
+    "UK",
 }
 
 
@@ -98,13 +111,19 @@ def _is_ignored_token(token: str, exchange: Exchange) -> bool:
         return True
     if exchange == Exchange.US and code in _US_STOPWORDS:
         return True
+    if exchange == Exchange.UK and code in _UK_STOPWORDS:
+        return True
     return any(0x4E00 <= ord(char) <= 0x9FFF for char in token)
 
 
 def _normalize_token(token: str, exchange: Exchange) -> str:
     code = token.strip().strip("'\"`“”‘’()[]{}").upper()
     code = code.rstrip(".")
-    if not code or code in _US_STOPWORDS:
+    if not code:
+        return ""
+    if exchange == Exchange.US and code in _US_STOPWORDS:
+        return ""
+    if exchange == Exchange.UK and code in _UK_STOPWORDS:
         return ""
     if not _PATTERNS[exchange].match(code):
         return ""
@@ -127,6 +146,8 @@ def _normalize_token(token: str, exchange: Exchange) -> str:
         code = code.removeprefix("JP")
         code = re.sub(r"\.(T|JP)$", "", code)
         return code.zfill(4)
+    if exchange == Exchange.UK:
+        return re.sub(r"\.L$", "", code)
     return code
 
 
@@ -197,6 +218,7 @@ class BatchImportDialog(QDialog):
             Exchange.KR: ui_strings.ES_NAME_KR,
             Exchange.TW: ui_strings.ES_NAME_TW,
             Exchange.JP: ui_strings.ES_NAME_JP,
+            Exchange.UK: ui_strings.ES_NAME_UK,
         }[exchange]
 
     @staticmethod
@@ -208,4 +230,5 @@ class BatchImportDialog(QDialog):
             Exchange.KR: "005930\n000660\n035420",
             Exchange.TW: "2330\n2317\n2454",
             Exchange.JP: "7203\n6758\n9984",
+            Exchange.UK: "ULVR\nHSBA\nAZN",
         }[exchange]

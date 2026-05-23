@@ -58,6 +58,15 @@ def test_parse_jp_codes_normalizes_to_four_digits() -> None:
     assert rejected == []
 
 
+def test_parse_uk_codes_normalizes_l_suffix() -> None:
+    text = "ULVR Unilever PLC\nHSBA.L\nAZN\nULVR"
+
+    codes, rejected = parse_ticker_codes(text, Exchange.UK)
+
+    assert codes == ["ULVR", "HSBA", "AZN"]
+    assert rejected == []
+
+
 def test_parse_returns_rejected_tokens() -> None:
     codes, rejected = parse_ticker_codes("600519\nINVALID\n000001", Exchange.A_SHARE)
 

@@ -192,6 +192,7 @@ class ExchangePanel(QFrame):
             Exchange.KR: ui_strings.EP_TITLE_KR,
             Exchange.TW: ui_strings.EP_TITLE_TW,
             Exchange.JP: ui_strings.EP_TITLE_JP,
+            Exchange.UK: ui_strings.EP_TITLE_UK,
         }[exchange]
 
     @staticmethod
@@ -203,4 +204,5 @@ class ExchangePanel(QFrame):
             Exchange.KR: ui_strings.EP_SUBTITLE_KR,
             Exchange.TW: ui_strings.EP_SUBTITLE_TW,
             Exchange.JP: ui_strings.EP_SUBTITLE_JP,
+            Exchange.UK: ui_strings.EP_SUBTITLE_UK,
         }[exchange]

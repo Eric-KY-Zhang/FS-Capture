@@ -78,6 +78,7 @@ class ExchangeChip(QPushButton):
             Exchange.KR: ui_strings.ES_NAME_KR,
             Exchange.TW: ui_strings.ES_NAME_TW,
             Exchange.JP: ui_strings.ES_NAME_JP,
+            Exchange.UK: ui_strings.ES_NAME_UK,
         }[exchange]
 
     @staticmethod
@@ -89,6 +90,7 @@ class ExchangeChip(QPushButton):
             Exchange.KR: ui_strings.ES_META_KR,
             Exchange.TW: ui_strings.ES_META_TW,
             Exchange.JP: ui_strings.ES_META_JP,
+            Exchange.UK: ui_strings.ES_META_UK,
         }[exchange]
 
 
@@ -112,6 +114,7 @@ class ExchangeSelector(QWidget):
             Exchange.KR,
             Exchange.TW,
             Exchange.JP,
+            Exchange.UK,
         ):
             chip = ExchangeChip(ex, self)
             chip.toggled.connect(lambda *_: self.selection_changed.emit())

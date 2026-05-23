@@ -37,6 +37,7 @@ class RateLimitsCfg(BaseModel):
     akshare: float = 4.0
     twse: float = 2.0
     edinet: float = 2.0
+    nsm: float = 2.0
 
 
 class SECCfg(BaseModel):

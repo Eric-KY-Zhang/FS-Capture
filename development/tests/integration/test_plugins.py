@@ -9,6 +9,7 @@ from plugins.ashare import AShare
 from plugins.hk import HKShare
 from plugins.jp import JPShare
 from plugins.kr import KRShare
+from plugins.uk import UKShare
 from plugins.us import USShare
 
 
@@ -256,3 +257,9 @@ def test_jp_plugin_is_registered() -> None:
     from plugins import get_plugin
 
     assert isinstance(get_plugin(Exchange.JP), JPShare)
+
+
+def test_uk_plugin_is_registered() -> None:
+    from plugins import get_plugin
+
+    assert isinstance(get_plugin(Exchange.UK), UKShare)
