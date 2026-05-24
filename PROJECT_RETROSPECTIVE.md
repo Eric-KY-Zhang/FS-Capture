@@ -506,6 +506,19 @@ v0.9 批次 8 实施 JP 时只做了 API key 路径，`edinet_web.py` 是占位 
 - 验证：无 Key 状态实跑 7203 丰田、6758 索尼、9984 软银集团 2024 年报，3 份 PDF 真实落地且保持扁平文件命名。
 - 教训：新增市场必须先做真实 spike 报告，不能只抄已有市场的双模式 shape；否则会留下“看起来有 fallback，实际仍依赖 key”的假双模式。
 
-验证基线：非 e2e `180 passed / 25 deselected`，benchmark opt-in `11 passed`，ruff 全绿；SG smoke 已覆盖 DBS/UOB/Singtel 年报、UOB 半年报与 `3407` IPO 招股书，JP no-key smoke 已覆盖 7203/6758/9984 年报。
+### 14.6 UI Refresh + Icon Redesign（v1.0 addendum 2）
+
+v0.9 已有的 UI polish 在 v1.0 release 前再做一轮系统重构：
+
+- Claude Design 源稿前置，覆盖 current audit / design system / workbench / icon system 四块审查内容。
+- 图标重做：GPT Image 2 生成概念参考，本地重绘生产图标，`filings_atlas.ico` 锁定 16/32/48/64/128/256 六个尺寸。
+- PySide 主界面重构为 5 块结构：品牌区 / MarketPin 市场图谱 / 当前市场录入 / 报告与输出配置 / 固定底部操作栏。
+- `ExchangeChip` 命名与 QSS selector 退役，替换为横向 8 个 `MarketPin`，顺序为 UK / US / A 股 / HK / TW / KR / JP / SG。
+- palette / QSS 升级为云端 Atlas 浅色系统，并同步保留深色主题 token 对应。
+- 现有测试不退化，`test_language_switch` / `test_ui_strings` / `test_packaging_spec` 均在全量非 e2e 测试中通过。
+- 业务层 0 改动，`app/core`、`plugins`、orchestrator、http、sidecar 均未参与 UI refresh。
+- 截图重拍：`docs/screenshots/main_window_zh.png`、`main_window_en.png` 和 compact 960x680 验证图已更新。
+
+验证基线：非 e2e `183 passed / 25 deselected`，benchmark opt-in `11 passed`，ruff 全绿；SG smoke 已覆盖 DBS/UOB/Singtel 年报、UOB 半年报与 `3407` IPO 招股书，JP no-key smoke 已覆盖 7203/6758/9984 年报。
 
 — Codex，2026-05-24（v1.0 release candidate）

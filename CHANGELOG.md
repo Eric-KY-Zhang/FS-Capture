@@ -28,6 +28,12 @@ First GitHub release for Filings Atlas / 全球披露图谱. This release adds S
 - PyInstaller spec includes the SG plugin and extra excludes for unused test/dev stacks.
 - Build script trims non-Chinese/non-English Qt translation files after packaging.
 
+### UI
+
+- Workbench refresh with Atlas map identity, including a cloud-light palette, route accents, and MarketPin market selectors.
+- New application icon redesigned with the cloud-pin concept; the `.ico` now ships 16/32/48/64/128/256 sizes.
+- Multilingual screenshots refreshed for both Chinese and English UI.
+
 ### Performance
 
 - Batch benchmark improved from 211.76s to 94.22s on the same 21-task A/HK/US/KR/TW/UK/SG set, a 55.5% reduction versus v0.9 baseline.
