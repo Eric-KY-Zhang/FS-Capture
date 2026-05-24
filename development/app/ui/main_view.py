@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from loguru import logger
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QRunnable, Qt, QThreadPool, Slot
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -27,6 +29,51 @@ from app.ui.output_card import OutputCard
 from app.ui.period_selector import PeriodSelector
 from app.ui.progress_dock import ProgressDock
 from app.ui.settings_dialog import SettingsDialog
+
+
+def _load_ashare_name_map() -> object:
+    from plugins.ashare import name_resolver
+
+    return name_resolver._load_name_map()  # noqa: SLF001
+
+
+def _load_tw_name_map() -> object:
+    from plugins.tw import name_resolver
+
+    return name_resolver._load_map()  # noqa: SLF001
+
+
+def _load_us_name_map() -> object:
+    from plugins.us import name_resolver
+
+    return name_resolver._load_map()  # noqa: SLF001
+
+
+_PREWARM_LOADERS: dict[Exchange, Callable[[], object]] = {
+    Exchange.A_SHARE: _load_ashare_name_map,
+    Exchange.TW: _load_tw_name_map,
+    Exchange.US: _load_us_name_map,
+}
+
+
+def _prewarm_name_resolver(exchange: Exchange) -> None:
+    loader = _PREWARM_LOADERS.get(exchange)
+    if loader is None:
+        return
+    try:
+        loader()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+class _NameResolverPrewarmTask(QRunnable):
+    def __init__(self, exchange: Exchange) -> None:
+        super().__init__()
+        self.exchange = exchange
+
+    @Slot()
+    def run(self) -> None:
+        _prewarm_name_resolver(self.exchange)
 
 
 class MainView(QWidget):
@@ -85,6 +132,7 @@ class MainView(QWidget):
 
         # ---- Per-exchange panels ---------------------------------------------
         self._panels: dict[Exchange, ExchangePanel] = {}
+        self._prewarm_started: set[Exchange] = set()
         for ex in (
             Exchange.A_SHARE,
             Exchange.HK,
@@ -164,6 +212,9 @@ class MainView(QWidget):
             # Auto-add a first row when panel becomes visible and is empty
             if visible and not panel.resolved_tickers() and not panel._rows:  # type: ignore[attr-defined]
                 panel.add_row()
+            if visible and ex not in self._prewarm_started:
+                self._prewarm_started.add(ex)
+                QThreadPool.globalInstance().start(_NameResolverPrewarmTask(ex))
 
     # ---- job actions -------------------------------------------------------
 
