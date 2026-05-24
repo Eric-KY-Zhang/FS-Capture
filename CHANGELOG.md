@@ -1,8 +1,12 @@
 # Changelog
 
-## v1.0.0 - 2026-05-23
+## v1.0.0 - Unreleased (`roadmap/SPRINT_v1.0_sg_and_perf.md`)
 
-Filings Atlas / 全球披露图谱 v1.0.0 is the first GitHub release for the renamed product. It keeps the project PDF-only and ships the 7-market Windows desktop app.
+Planned first GitHub release for SG market support, fetch performance work, and zero-experience-cost bundle size reduction.
+
+## v0.9.0 - 2026-05-23
+
+Filings Atlas / 全球披露图谱 v0.9.0 is the internal iteration for the renamed product. It keeps the project PDF-only and ships the 7-market Windows desktop app.
 
 ### Added
 
@@ -10,7 +14,7 @@ Filings Atlas / 全球披露图谱 v1.0.0 is the first GitHub release for the re
 - Runtime Chinese / English UI switching with persistent language setting.
 - Taiwan market support through TWSE + MOPS.
 - Japan market support through EDINET.
-  - EDINET Subscription-Key is strongly recommended for v1.0.
+  - EDINET Subscription-Key is strongly recommended for the current build.
   - Public fallback is retained, but the official EDINET API requires `Subscription-Key`.
 - United Kingdom market support through FCA National Storage Mechanism.
   - UK does not require an API key.
@@ -18,7 +22,7 @@ Filings Atlas / 全球披露图谱 v1.0.0 is the first GitHub release for the re
 - Incremental update mode based on sidecar metadata.
 - Sidecar metadata storage under `data/cache/sidecars/`.
 - "How to add a new market" extension guide in `ARCHITECTURE.md`.
-- GitHub Actions release workflow for `FilingsAtlas-v1.0.0-windows.zip`.
+- GitHub Actions release workflow preparation.
 
 ### Changed
 
@@ -43,7 +47,7 @@ Filings Atlas / 全球披露图谱 v1.0.0 is the first GitHub release for the re
 ### Breaking Changes
 
 - The visible product name and executable are now `Filings Atlas.exe`.
-- GitHub release assets use `FilingsAtlas-v1.0.0-windows.zip`.
+- Public release assets are deferred to the next release.
 - The repository directory may still be named `FS Capture`; this is intentionally not renamed.
 - Sidecar JSON files are migrated away from `output/` to `data/cache/sidecars/`.
 

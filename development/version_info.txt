@@ -1,8 +1,8 @@
 # UTF-8
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(1, 0, 0, 0),
-    prodvers=(1, 0, 0, 0),
+    filevers=(0, 9, 0, 0),
+    prodvers=(0, 9, 0, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -17,11 +17,11 @@ VSVersionInfo(
         [
           StringStruct("CompanyName", "Eric Zhang"),
           StringStruct("FileDescription", "Filings Atlas"),
-          StringStruct("FileVersion", "1.0.0"),
+          StringStruct("FileVersion", "0.9.0"),
           StringStruct("InternalName", "Filings Atlas"),
           StringStruct("OriginalFilename", "Filings Atlas.exe"),
           StringStruct("ProductName", "Filings Atlas / 全球披露图谱"),
-          StringStruct("ProductVersion", "1.0.0"),
+          StringStruct("ProductVersion", "0.9.0"),
         ],
       )
     ]),

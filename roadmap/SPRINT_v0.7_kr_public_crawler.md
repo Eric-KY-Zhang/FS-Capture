@@ -6,7 +6,7 @@
 **Reviewer**：Claude Code
 **状态**：待 Codex 实施
 **预计工作量**：1 周
-**发布策略**：内部迭代，**不发 GitHub release**（按用户指示，GitHub 只发 v1.0）
+**发布策略**：内部迭代，**不发 GitHub release**（按用户指示，GitHub release 延后到 `SPRINT_v1.0_sg_and_perf.md`）
 
 ---
 

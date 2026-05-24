@@ -435,18 +435,18 @@ v0.8 是性能与清债 sprint，仍保持 PDF-only 定位，不发 GitHub relea
 
 ---
 
-## 13. v1.0 postscript（2026-05-23）
+## 13. v0.9 postscript（2026-05-23）
 
-v1.0 是 Filings Atlas / 全球披露图谱的首个 GitHub release。该版本完成可见品牌重命名、双语 UI、sidecar 迁移、增量更新、JP/UK 新市场和发布工程收口；仍严格保持 PDF-only 定位。
+v0.9 是 Filings Atlas / 全球披露图谱的内部迭代版。该版本完成可见品牌重命名、双语 UI、sidecar 迁移、增量更新、JP/UK 新市场和发布工程收口；仍严格保持 PDF-only 定位。
 
 - 品牌：用户可见名称从 FS Capture 切换为 Filings Atlas / 全球披露图谱，仓库目录名保留不动。
 - 双语：UI 支持中文 / English 运行时切换，设置持久化，TickerRow 输入在切语言后保留。
 - 元数据：sidecar 从 `output/` 迁移到 `data/cache/sidecars/`，`output/` 回到只放 PDF。
 - 增量：新增独立“增量更新 / Incremental Update”按钮，按 sidecar 判断已完成任务。
-- 日股：新增 EDINET 插件。v1.0 强烈推荐用户配置 EDINET Subscription-Key；无 Key 时官方 API 会返回 invalid subscription key，仅能尝试公网 fallback。
+- 日股：新增 EDINET 插件。当前构建强烈推荐用户配置 EDINET Subscription-Key；无 Key 时官方 API 会返回 invalid subscription key，仅能尝试公网 fallback。
 - 英股：新增 FCA NSM 插件。UK 不需要 Key；年报通常在次年披露，选择逻辑用 `document_date/headline` 回筛报告年度。
-- 发布：README 改为双语，新增 CHANGELOG 和 GitHub Actions release workflow，版本号升至 `1.0.0`，计划产物为 `FilingsAtlas-v1.0.0-windows.zip`。
+- 发布工程：README 改为双语，新增 CHANGELOG 和 GitHub Actions release workflow 准备，版本号调整为 `0.9.0`，公开 release 产物留到下一轮。
 
 验证基线：`pytest -m "not e2e" -v` 为 145 passed / 7 deselected；`ruff check . --no-cache` 全绿；UK `ULVR` / `HSBA` / `AZN` 真实 smoke 均落地 `%PDF`。
 
-— Codex，2026-05-23（v1.0 release candidate）
+— Codex，2026-05-23（v0.9 internal）

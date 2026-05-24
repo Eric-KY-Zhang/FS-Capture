@@ -1,18 +1,18 @@
-# SPRINT v1.0 — Filings Atlas / 全球披露图谱（首发 release）
+# SPRINT v0.9 — Filings Atlas / 全球披露图谱（内部迭代）
 
 **日期**：2026-05-23
 **Planner**：Claude Code (Opus 4.7)
 **Worker**：Codex
 **Reviewer**：Claude Code
-**状态**：实施中（批次 7 IPO 统一 + sidecar 迁移 + 增量更新已完成，等待 Reviewer Checkpoint B；暂停批次 8）
+**状态**：已完成（2026-05-23；原首发范围下调为 v0.9 内部迭代）
 **预计工作量**：4-6 周
-**发布策略**：**首个 GitHub release**（v1.0.0），含 PyInstaller bundle artifact + 双语 README + CHANGELOG
+**发布策略**：**内部迭代**（v0.9.0），不发 GitHub release；保留双语 README + CHANGELOG + release workflow 准备
 
 ---
 
 ## Context
 
-v0.8 验收通过（6 批次，100/100 tests，Playwright pool + 断点续传 + UI strings 集中 + lint 锁定）。v1.0 是首个 GitHub release 版本，合并 **3 项用户新增需求** + **5 项 ROADMAP 原计划**：
+v0.8 验收通过（6 批次，100/100 tests，Playwright pool + 断点续传 + UI strings 集中 + lint 锁定）。v0.9 是内部迭代版本，合并 **3 项用户新增需求** + **5 项 ROADMAP 原计划**：
 
 | # | 范围 | 来源 |
 |---|---|---|
@@ -37,7 +37,7 @@ v0.8 验收通过（6 批次，100/100 tests，Playwright pool + 断点续传 + 
 |---|---|
 | 产品名 | **Filings Atlas / 全球披露图谱** |
 | 双语实现 | **Pattern B**：`STRINGS = {"zh": {...}, "en": {...}}` + `LanguageManager(QObject)` 单例 + `language_changed = Signal(str)` |
-| Sprint 划分 | 单个 v1.0 mega sprint（11 批次） |
+| Sprint 划分 | 单个 v0.9 mega sprint（11 批次） |
 | Sidecar 落位 | `data/cache/sidecars/{exchange}/{stem}.meta.json` （`stem = accession_number or pdf_basename`） |
 | 增量更新 UI | 独立按钮"增量更新 / Incremental" 与"抓报告"并列；不用 checkbox / 不放设置 |
 | 加新市场文档 | 追加章节到 `ARCHITECTURE.md`（不新建独立 docs） |
@@ -74,8 +74,8 @@ v0.8 验收通过（6 批次，100/100 tests，Playwright pool + 断点续传 + 
 
 **文档（仅 header pass）**：
 - `README.md`、`ARCHITECTURE.md`、`PROJECT_RETROSPECTIVE.md`、`CLAUDE.md`、`AGENTS.md`、`development/DEVELOPMENT_BRIEF.md`
-- `roadmap/archive/` 中历史 sprint 文档**不重写**，只在 ROADMAP 主文件加一行"v1.0 起重命名为 Filings Atlas"
-- `roadmap/ROADMAP_v0.6.1_to_v1.0.md`、`roadmap/SPRINT_v1.0_filings_atlas.md`（本文件）
+- `roadmap/archive/` 中历史 sprint 文档**不重写**，只在 ROADMAP 主文件加一行"v0.9 起重命名为 Filings Atlas"
+- `roadmap/ROADMAP_v0.6.1_to_v0.9.md`、`roadmap/SPRINT_v0.9_filings_atlas.md`（本文件）
 
 **保留不动**：
 - `VBA Captor/` 子项目（另一独立产品的所有 "Captor" 引用）
@@ -778,7 +778,7 @@ Claude 通过 Checkpoint C 后，Codex 进入批次 10。
 
 #### 追加章节到 [ARCHITECTURE.md](ARCHITECTURE.md)
 
-新章节 "## 11. 如何加新市场（v1.0 起 7 市场，扩展模板）" 含 6 节：
+新章节 "## 11. 如何加新市场（v0.9 起 7 市场，扩展模板）" 含 6 节：
 
 1. **Exchange 枚举**：`app/core/models.py::Exchange` 加新成员 + `display_name` dict
 2. **Plugin 三件套**：
@@ -792,11 +792,11 @@ Claude 通过 Checkpoint C 后，Codex 进入批次 10。
 
 Claude 人工审可读性（不写测试）。
 
-### 6.2 批次 11 — 发布打磨 + v1.0 tag
+### 6.2 批次 11 — 发布打磨 + v0.9 tag
 
 #### 版本号 + Spec
 
-- [pyproject.toml](development/pyproject.toml)：`version = "1.0.0"`
+- [pyproject.toml](development/pyproject.toml)：`version = "0.9.0"`
 - `filings_atlas.spec` version 元数据同步
 
 #### README 双语版
@@ -834,11 +834,11 @@ One-click multi-market disclosure PDF downloader. Covers 7 markets:
 
 #### CHANGELOG.md
 
-新建，含 v0.6 → v1.0 累积变更（按用户视角分组：新增功能 / Bug 修复 / 性能 / 重大变更 "Breaking changes — 重命名"）。
+新建，含 v0.6 → v0.9 累积变更（按用户视角分组：新增功能 / Bug 修复 / 性能 / 重大变更 "Breaking changes — 重命名"）。
 
 #### LICENSE
 
-复核（应该是 MIT 或其他），新增 v1.0 年份。
+复核（应该是 MIT 或其他），新增 v0.9 年份。
 
 #### `.github/workflows/release.yml`
 
@@ -892,8 +892,8 @@ cd ..
 #### Git tag
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0  # 触发 release workflow
+git tag v0.9.0
+git push origin v0.9.0  # 触发 release workflow
 ```
 
 ---
@@ -912,9 +912,9 @@ git push origin v1.0.0  # 触发 release workflow
 | **8** | JP plugin (EDINET 双模式) | API spike + 3 票 smoke + tests | — |
 | **9** | UK plugin (NSM) | API spike + 3 票 smoke + tests | 🔴 **C** |
 | **10** | "如何加新市场" 文档章节 | Claude 人工审 | — |
-| **11** | 版本号 + README 双语 + CHANGELOG + workflow + smoke build + tag | clean build + 双语 EXE 实跑 + GitHub release artifact | — |
+| **11** | 版本号 + README 双语 + CHANGELOG + workflow + smoke build + tag | clean build + 双语 EXE 实跑 + 本地 bundle 验证 | — |
 
-commit message 格式：`v1.0: <一句话变更>（批次 N）`
+commit message 格式：`v0.9: <一句话变更>（批次 N）`
 
 3 个 Reviewer Checkpoint 必须按顺序通过，任一失败回到上一个 commit fix。
 
@@ -930,7 +930,7 @@ pytest -m "not e2e" -v
 ruff check .
 ```
 
-v0.8 基线 **100 passed**，v1.0 预计 **~120 passed**：
+v0.8 基线 **100 passed**，v0.9 预计 **~120 passed**：
 - batch 2：+2（test_i18n）
 - batch 3：+3（key parity / en no CJK / zh has CJK）
 - batch 4：+3（test_language_switch）
@@ -947,7 +947,7 @@ cd development
 pytest tests/e2e -v
 ```
 
-7 市场全绿：A / HK / US / KR / TW（v0.8 基线 5）+ JP + UK（v1.0 新增 2）。
+7 市场全绿：A / HK / US / KR / TW（v0.8 基线 5）+ JP + UK（v0.9 新增 2）。
 
 ### 双语手动验证
 
@@ -1036,17 +1036,17 @@ cd ..
 
 ### 文档
 - [ ] `ARCHITECTURE.md` 含"如何加新市场"章节 + JP plugin 工作示例
-- [ ] `PROJECT_RETROSPECTIVE.md §13 v1.0 postscript`
+- [ ] `PROJECT_RETROSPECTIVE.md §13 v0.9 postscript`
 - [ ] `README.md` 双语版（EN + 中文段落 + 7 市场表 + 双语截图）
-- [ ] `CHANGELOG.md` 累积 v0.6 → v1.0
-- [ ] `CLAUDE.md` ≡ `AGENTS.md` v1.0 进度同步
+- [ ] `CHANGELOG.md` 累积 v0.6 → v0.9
+- [ ] `CLAUDE.md` ≡ `AGENTS.md` v0.9 进度同步
 
 ### 发布
-- [ ] `pyproject.toml` version = "1.0.0"
+- [ ] `pyproject.toml` version = "0.9.0"
 - [ ] `.github/workflows/release.yml` 配 production environment
 - [ ] PyInstaller clean build 通过 + EXE 实跑 7 市场各 1 票
-- [ ] `git tag v1.0.0` push 触发 release workflow
-- [ ] GitHub release artifact = `FilingsAtlas-v1.0.0-windows.zip` 含 exe + `_internal/`
+- [ ] `git tag v0.9.0` push 触发 release workflow
+- [ ] 本地 bundle 验证通过，公开 GitHub release artifact 延后到 `SPRINT_v1.0_sg_and_perf.md`
 - [ ] release body = CHANGELOG.md
 
 ### 质量门禁
@@ -1071,7 +1071,7 @@ cd ..
 
 ---
 
-## 不在 v1.0 范围（明确排除）
+## 不在 v0.9 范围（明确排除）
 
 - 日语 / 韩语 UI 字符串 — 仅 zh + en，dict 结构支持但翻译留 v1.1+
 - 其他新市场（SGX / ASX / 印度 / SEDAR / Bundesanzeiger / AMF）— 每个独立 1 周 mini-sprint，v1.1+
@@ -1080,7 +1080,7 @@ cd ..
 - Sidecar schema v2 / 破坏性字段改动
 - 已下载 PDF 浏览 GUI
 - `config.toml` 通用迁移框架（language `zh_CN→zh` 仅一行 if）
-- 跨平台打包（macOS / Linux）— Windows-only PyInstaller for v1.0
+- 跨平台打包（macOS / Linux）— Windows-only PyInstaller for v0.9
 - 本地化文件名（`_年报.pdf` 在 en UI 下也保留）
 - Plugin 自动发现 — `plugins/__init__.py` 维持显式 if-chain
 
@@ -1116,9 +1116,9 @@ cd ..
 - `plugins/ashare/reports.py`:24-31, 315（删 IPO helper）
 - `plugins/hk/reports.py`:24-27, 466（删 filing helper）
 - 11 UI 文件各加 `_retranslate`
-- `ARCHITECTURE.md`（v1.0 章节 + §11 "如何加新市场"）
-- `PROJECT_RETROSPECTIVE.md`（§13 v1.0 postscript）
-- `CLAUDE.md` + `AGENTS.md` 同步（§10 v1.0 进度 + §3 文档地图）
+- `ARCHITECTURE.md`（v0.9 章节 + §11 "如何加新市场"）
+- `PROJECT_RETROSPECTIVE.md`（§13 v0.9 postscript）
+- `CLAUDE.md` + `AGENTS.md` 同步（§10 v0.9 进度 + §3 文档地图）
 
 ### 不动
 - `app/core/http.py`、`ratelimit.py`、`cache.py`、`pdf_renderer.py`、`output_paths.py::report_output_path`（其他函数）
@@ -1136,7 +1136,7 @@ cd ..
 4. **批次 6 sidecar migration 的孤儿场景**：必须容错 — 旧 sidecar payload 不含 `exchange` 字段时跳过 + log warning（不抛）。
 5. **批次 8/9 第 1 天 API spike**：spike 代码放 `development/tmp_pytest_ok/`（gitignored），结论写到 commit message 或 `docs/plans/2026-05-23-{jp,uk}-api-spike-notes.md`。**spike 不要进 commit**。
 6. **批次 11 git tag**：tag push 前先在本地完成 PyInstaller smoke + 7 市场各 1 票实跑。tag 推上去就触发 release workflow，**别一边修代码一边 tag**。
-7. **commit message**：`v1.0: <一句话变更>（批次 N）`。每批一个 commit，不合并。
+7. **commit message**：`v0.9: <一句话变更>（批次 N）`。每批一个 commit，不合并。
 
 ---
 

@@ -76,7 +76,7 @@
 ## 3. 项目结构（v0.2 目标状态）
 
 ```text
-FS Capture/                    # 仓库目录名保留；产品名 v1.0 起为 Filings Atlas
+FS Capture/                    # 仓库目录名保留；产品名 v0.9 起为 Filings Atlas
 ├── README.md                  # 用户使用说明（中文）
 ├── ARCHITECTURE.md            # 架构文档
 ├── PROJECT_RETROSPECTIVE.md   # 项目复盘

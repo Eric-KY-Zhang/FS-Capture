@@ -28,8 +28,8 @@ Filings Atlas is a Windows desktop tool for one-click downloading of official di
 
 ### Quick Start
 
-1. Download `FilingsAtlas-v1.0.0-windows.zip` from [Releases](https://github.com/Eric-KY-Zhang/FS-Capture/releases/latest).
-2. Extract the zip to any writable folder.
+1. Use the local `Filings Atlas.exe` folder supplied with the project until the first public release is published.
+2. Put the folder in any writable location.
 3. Double-click `Filings Atlas.exe`.
 4. Select one or more markets, enter ticker codes, and click **Confirm** to resolve company names.
 5. Choose years and report types, then click **Download Reports**.
@@ -51,7 +51,7 @@ Filings Atlas is a Windows desktop tool for one-click downloading of official di
 
 Korea works without a key by using the public DART disclosure pages. Adding a free DART API key in **Settings** can make Korea faster and more stable.
 
-Japan supports a public fallback, but v1.0 strongly recommends an EDINET Subscription-Key. The official EDINET API v2 uses `Subscription-Key` for document list and document download requests. Register for a free key through [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API key registration](https://api.edinet-fsa.go.jp/api/auth/index.aspx), then paste it in **Settings**. Without a key, Japanese downloads may fail when the API endpoint rejects unauthenticated requests.
+Japan supports a public fallback, but the current build strongly recommends an EDINET Subscription-Key. The official EDINET API v2 uses `Subscription-Key` for document list and document download requests. Register for a free key through [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API key registration](https://api.edinet-fsa.go.jp/api/auth/index.aspx), then paste it in **Settings**. Without a key, Japanese downloads may fail when the API endpoint rejects unauthenticated requests.
 
 United Kingdom uses the FCA National Storage Mechanism and does not require a key.
 
@@ -90,8 +90,8 @@ Filings Atlas / 全球披露图谱 是一个 Windows 桌面工具，用于一键
 
 ### 快速开始
 
-1. 从 [Releases](https://github.com/Eric-KY-Zhang/FS-Capture/releases/latest) 下载 `FilingsAtlas-v1.0.0-windows.zip`。
-2. 解压到任意可写文件夹。
+1. 在首个公开发布版推出前，使用项目随附的本地 `Filings Atlas.exe` 文件夹。
+2. 将该文件夹放到任意可写位置。
 3. 双击 `Filings Atlas.exe`。
 4. 勾选市场，输入股票代码，点击“确认”识别公司名称。
 5. 选择年份和报告类型，点击“抓报告”。
@@ -113,7 +113,7 @@ Filings Atlas / 全球披露图谱 是一个 Windows 桌面工具，用于一键
 
 韩股不填 Key 也可以使用 DART 公网披露页；如需更快、更稳，可在设置中填入免费的 DART API Key。
 
-日股 v1.0 强烈推荐配置 EDINET Subscription-Key。EDINET API v2 的书类列表和文件下载接口都使用 `Subscription-Key`；可通过 [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API Key 注册页](https://api.edinet-fsa.go.jp/api/auth/index.aspx) 免费注册并申请 Key，然后在设置中填写。没有 Key 时，工具只会尝试 EDINET 公网页兜底，稳定性不能等同于官方 API。
+日股在当前构建中强烈推荐配置 EDINET Subscription-Key。EDINET API v2 的书类列表和文件下载接口都使用 `Subscription-Key`；可通过 [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API Key 注册页](https://api.edinet-fsa.go.jp/api/auth/index.aspx) 免费注册并申请 Key，然后在设置中填写。没有 Key 时，工具只会尝试 EDINET 公网页兜底，稳定性不能等同于官方 API。
 
 英股使用 FCA National Storage Mechanism 公网数据源，不需要 Key。
 

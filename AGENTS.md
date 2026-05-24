@@ -8,7 +8,7 @@
 
 ## 1. 项目一句话
 
-Filings Atlas / 全球披露图谱（原 FS Capture）是跨市场上市公司**官方披露 PDF**一键下载工具，覆盖 A股 / 港股 / 美股 / 韩股 / 台股 / 日股 / 英股（v1.0 批次 9 起 7 市场）。**不抓数据、不算指标、不导 Excel**——这是 v0.2 重定位后的硬约束，任何"顺手做一下"的提议都要先质疑。
+Filings Atlas / 全球披露图谱（原 FS Capture）是跨市场上市公司**官方披露 PDF**一键下载工具，覆盖 A股 / 港股 / 美股 / 韩股 / 台股 / 日股 / 英股（v0.9 起 7 市场；下一 sprint 计划新增新加坡 SG）。**不抓数据、不算指标、不导 Excel**——这是 v0.2 重定位后的硬约束，任何"顺手做一下"的提议都要先质疑。
 
 仓库根：`E:\Claude+CODEX Project\FS Capture`
 源码：`development/`
@@ -55,7 +55,7 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 ## 3. 文档与代码地图
 
 ### 文档（按 Planner 起草新 Sprint 时的阅读优先级）
-- `roadmap/ROADMAP_v0.6.1_to_v1.0.md` — **总路线图**（v0.6.1 → v1.0 全景）
+- `roadmap/ROADMAP_v0.6.1_to_v0.9.md` — **总路线图**（v0.6.1 → v0.9 全景）
 - `roadmap/SPRINT_v{X.Y.Z}_*.md` — 当前 sprint 详细计划（Codex 必读）
 - `docs/plans/*.md` — Planner 写的预研方案（未升级为 SPRINT 前的草稿）
 - `ARCHITECTURE.md` — 架构决策与契约（plugin 接口、HTTP、限流、PyInstaller）
@@ -99,8 +99,8 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 | **美股** | SEC submissions API | 字段名陷阱：`reportDate` 不是 `periodOfReport`（已修）；老 ticker 走 `submissions.files[]` 分页 fallback 已补单测 | v0.7 已测 |
 | **韩股** | OpenDartReader（DART OpenAPI）+ DART 公网披露页 | Key 可选；无 Key 走 `dart_web.py` 公网 fallback；选择器集中在 `_SELECTORS` | v0.7 已完成 |
 | **台股** | TWSE ISIN + MOPS | TWSE 证书 hygiene 缺陷必须 `verify=False`；MOPS Big5 编码（不能用 `resp.text`）；ROC 年份 = AD - 1911；mtype=F 是股东会年份 | e2e 已覆盖 |
-| **日股** | EDINET API v2 + EDINET 公网页 | API Key 可选但真实无 Key API 返回 401；`edinet_web.py` 保留公网 fallback 入口；选择器集中在 `_SELECTORS` | v1.0 批次 8 已完成 |
-| **英股** | FCA NSM 公网搜索 + artifact 下载 | NSM annual report 常在下一年发布，需用 `document_date/headline` 回筛报告年度；zip/html 分支走 Playwright 渲染 | v1.0 批次 9 已完成 |
+| **日股** | EDINET API v2 + EDINET 公网页 | API Key 可选但真实无 Key API 返回 401；`edinet_web.py` 保留公网 fallback 入口；选择器集中在 `_SELECTORS` | v0.9 批次 8 已完成 |
+| **英股** | FCA NSM 公网搜索 + artifact 下载 | NSM annual report 常在下一年发布，需用 `document_date/headline` 回筛报告年度；zip/html 分支走 Playwright 渲染 | v0.9 批次 9 已完成 |
 
 ---
 
@@ -187,9 +187,10 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 | v0.6.1 | ✅ **已完成 2026-05-23**（6 commit `dfa461d → 3fa6c12`，72/72 tests，5 票 smoke 实跑） | `roadmap/SPRINT_v0.6.1_patch.md` |
 | v0.7 | ✅ **已完成 2026-05-23**（11 commit `2dc5fd2 → d07d133`，85/85 tests，KR 无 Key 4 家实跑） | `roadmap/SPRINT_v0.7_kr_public_crawler.md` |
 | v0.8 | ✅ **已完成 2026-05-23**（6 批次，100/100 tests，Playwright 池化 + 断点续传 + UI strings + lint 锁定） | `roadmap/SPRINT_v0.8_perf_and_ui_strings.md` |
-| **v1.0** | 🟡 **Release Candidate：批次 11 发布打磨完成，下一步推送 v1.0.0 release tag 并验收**（11 批次 + 3 Reviewer Checkpoint，首发 GitHub release）— Filings Atlas / 全球披露图谱 + 双语 UI + sidecar 迁移 + JP/UK + 增量 | `roadmap/SPRINT_v1.0_filings_atlas.md` |
+| v0.9 | ✅ **已完成 2026-05-23**（11 批次 + 3 Reviewer Checkpoint，7 市场 + 双语 UI + sidecar 迁移 + JP/UK + 增量 + 品牌升级） | `roadmap/SPRINT_v0.9_filings_atlas.md` |
+| **v1.0** | 🟡 **待启动**：SG 新加坡市场 + 抓取性能优化 + 视情况压缩体积（首发 GitHub release） | `roadmap/SPRINT_v1.0_sg_and_perf.md` |
 
-**发布策略**：v0.6.x / v0.7 / v0.8 内部迭代不发 release；**GitHub Release 只发 v1.0**。意味着 v0.7/v0.8 期间：
+**发布策略**：v0.6.x / v0.7 / v0.8 / v0.9 内部迭代不发 release；**GitHub Release 只发当前 `roadmap/SPRINT_v1.0_sg_and_perf.md` 对应版本**。意味着 v0.7/v0.8/v0.9 期间：
 - 不更新 README 顶部版本号或 "What's new" 段
 - 但仍写 `PROJECT_RETROSPECTIVE.md` postscript 章节，保留迭代历史
 - 不打 git tag
@@ -198,12 +199,13 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 
 ## 11. 路线图速览
 
-详细见 `roadmap/ROADMAP_v0.6.1_to_v1.0.md`。
+详细见 `roadmap/ROADMAP_v0.6.1_to_v0.9.md` 与当前 `roadmap/SPRINT_v1.0_sg_and_perf.md`。
 
 - **v0.6.1**（已完成）：7 个 bug 修复（ratelimit 热更新 / HK PDF drop / HK 财年表扩 / KR `induty_code` 兼容 / A 股 strict zip / batch import 反馈 / settings 返回值）
 - **v0.7**（已完成）：KR 公网爬虫去 Key（双模式）+ US 分页 fallback 单元测试 + Playwright audit 渲染兜底实跑验证。**架构清债项已澄清**：httpx verify 已在 v0.6 后期修过；plugin 重试统一是误判；HK 真实场景测试 v0.6.1 已覆盖；UI 字符串挪到 v0.8
-- **v0.8**（已完成）：Playwright **池化**（不删）+ 大 PDF 断点续传 + name_resolver 单飞缓存 + UI 字符串集中（11 文件）+ Lint pre-commit/CI 锁定。**已校准**：ruff 已 0 warning 改为锁定；Playwright 不可删（KR/US 必要依赖）；bundle 体积挪到 v0.9/v1.0
-- **v1.0**（4-6 周，11 批次 + 3 Reviewer Checkpoint）：**首发 GitHub release**。①品牌重命名 "FS Capture" → "Filings Atlas / 全球披露图谱"（仓库目录名不变）②中英双语 UI（Pattern B Python dict + Signal，运行时切换）+ README 双语 ③Sidecar 从 `output/` 迁移到 `data/cache/sidecars/`（启动一次性迁移）④日本 EDINET plugin（双模式）⑤英国 NSM plugin（公网为主）⑥增量更新（独立按钮，基于 sidecar diff）⑦IPO 路径统一（删 ashare/hk helper）⑧"如何加新市场" 文档
+- **v0.8**（已完成）：Playwright **池化**（不删）+ 大 PDF 断点续传 + name_resolver 单飞缓存 + UI 字符串集中（11 文件）+ Lint pre-commit/CI 锁定。**已校准**：ruff 已 0 warning 改为锁定；Playwright 不可删（KR/US 必要依赖）；bundle 体积挪到后续版本。
+- **v0.9**（已完成）：原首发 release 的 11 批次内容下调为内部迭代。①品牌重命名 "FS Capture" → "Filings Atlas / 全球披露图谱"（仓库目录名不变）②中英双语 UI（Pattern B Python dict + Signal，运行时切换）+ README 双语 ③Sidecar 从 `output/` 迁移到 `data/cache/sidecars/`（启动一次性迁移）④日本 EDINET plugin（双模式）⑤英国 NSM plugin（公网为主）⑥增量更新（独立按钮，基于 sidecar diff）⑦IPO 路径统一（删 ashare/hk helper）⑧"如何加新市场" 文档
+- **v1.0**（3-4 周，7 批次 + 3 Reviewer Checkpoint；`roadmap/SPRINT_v1.0_sg_and_perf.md`）：**首发 GitHub release**。新增新加坡 SGX（年报 + H1 + IPO）、抓取性能优化、零体验代价的体积压缩。
 
 **明确不做**：印度市场、数字财务底稿、跨市场对标、桌面 web 化。
 
@@ -227,4 +229,4 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 
 ---
 
-**最后更新**：2026-05-23（v1.0 批次 11 发布打磨完成，下一步推送 v1.0.0 release tag 并验收）
+**最后更新**：2026-05-24（SG + 性能 sprint 启动）

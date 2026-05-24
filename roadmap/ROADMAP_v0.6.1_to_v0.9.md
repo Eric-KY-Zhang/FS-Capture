@@ -1,12 +1,12 @@
-# FS Capture 总路线图 v0.6.1 → v1.0
+# FS Capture 总路线图 v0.6.1 → v0.9
 
 **起草日期**：2026-05-23
-**最后更新**：2026-05-23（v1.0 批次 7 IPO 统一 + sidecar 迁移 + 增量更新完成，等待 Checkpoint B）
+**最后更新**：2026-05-24（v0.9 已完成；首个 GitHub Release 延后到 `SPRINT_v1.0_sg_and_perf.md`）
 **Planner**：Claude Code (Opus 4.7)
 **Worker**：Codex
 **Reviewer**：Claude Code
-**当前版本**：v0.8 internal（2026-05-23 完成，5 市场 A/HK/US/KR/TW）
-**发布策略**：v0.6.x / v0.7 / v0.8 内部迭代不发 release；**GitHub Release 只发 v1.0**
+**当前版本**：v0.9 internal（2026-05-23 完成，7 市场 A/HK/US/KR/TW/JP/UK）
+**发布策略**：v0.6.x / v0.7 / v0.8 / v0.9 内部迭代不发 release；**GitHub Release 延后到 `SPRINT_v1.0_sg_and_perf.md`**
 
 ---
 
@@ -35,7 +35,7 @@
 | **v0.6.1** | Patch — bug 修复 + 体验微调 | 1-2 天 | ✅ **已完成 2026-05-23** | 7 个 bug 修完，72/72 tests pass，5 市场 smoke 实跑通过 |
 | **v0.7** | KR 公网爬虫去 Key + 测试补强 | 1 周 | ✅ **已完成 2026-05-23**（11 commit，85/85 tests，KR 无 Key 4 家实跑通过） | KR 无 Key 跑通 + US 分页测试 + Playwright audit 渲染验证 |
 | **v0.8** | 性能 + UI 字符串集中化 + lint 锁定 | 2 周 | ✅ **已完成 2026-05-23**（6 批次，100/100 tests，KR audit e2e + ruff 通过） | Playwright pool / 大 PDF 续传 / name_resolver 单飞缓存 / UI strings.py 集中 / lint pre-commit + CI |
-| **v1.0** | **品牌重命名 Filings Atlas + 中英双语 UI + sidecar 迁移 + JP/UK + 增量 + IPO 统一**（首个 GitHub release） | 4-6 周 | 🟡 **实施中：批次 7 已完成，等待 Checkpoint B**（11 批次 + 3 Checkpoint） | 7 市场 e2e 全绿 + 双语 UI + `output/` 100% PDF + GitHub release artifact |
+| **v0.9** | **品牌重命名 Filings Atlas + 中英双语 UI + sidecar 迁移 + JP/UK + 增量 + IPO 统一**（内部迭代） | 4-6 周 | ✅ **已完成 2026-05-23**（11 批次 + 3 Checkpoint） | 7 市场 e2e 全绿 + 双语 UI + `output/` 100% PDF |
 
 ---
 
@@ -107,8 +107,8 @@
 |---|---|---|
 | ~~ruff 0 warning（清 114 个 warnings）~~ | **已完成，改为锁定** | `ruff check development/` 输出 `All checks passed!`；pyproject.toml 已严格 select；本期只在 pre-commit + CI 锁定 |
 | ~~Playwright 移除决断~~ | **不可行，改池化** | v0.7 KR 4 家 smoke 实跑显示 audit 报告 100% 依赖 `render_url_to_pdf`；US HTML filings 同样依赖。Playwright 是必要基础设施 |
-| ~~diskcache 批写~~ | **挪到 v1.0** | 当前 `cache.set` 都不在热循环里，ROI 低 |
-| ~~Bundle 体积优化（425MB → 250MB）~~ | **挪到 v0.9/v1.0**（用户 2026-05-23 决断） | 本期不动；llvmlite 剥离 / Chromium 按需下载留作后续选项 |
+| ~~diskcache 批写~~ | **挪到 v0.9** | 当前 `cache.set` 都不在热循环里，ROI 低 |
+| ~~Bundle 体积优化（425MB → 250MB）~~ | **挪到 `SPRINT_v1.0_sg_and_perf.md`**（用户 2026-05-24 决断） | 本期不动；零体验代价压缩留给 SG + 性能 sprint |
 
 ### 8.1 v0.8 实际范围（5 项，已完成）
 
@@ -132,17 +132,17 @@
 ### 8.2 不在 v0.8 范围
 
 - ~~Playwright 移除~~（必要基础设施，保留并池化）
-- ~~diskcache 批写~~（挪 v1.0）
-- ~~Bundle 体积优化~~（挪 v0.9/v1.0）
-- ~~i18n tr() 包装~~（v0.8 只做物理集中，i18n 留 v1.0+ 评估）
+- ~~diskcache 批写~~（挪 v0.9）
+- ~~Bundle 体积优化~~（挪 `SPRINT_v1.0_sg_and_perf.md`）
+- ~~i18n tr() 包装~~（v0.8 只做物理集中，i18n 留 v0.9+ 评估）
 
 ---
 
-## v1.0 — Filings Atlas 重塑（详细 SPRINT 见 `SPRINT_v1.0_filings_atlas.md`）
+## v0.9 — Filings Atlas 重塑（详细 SPRINT 见 `SPRINT_v0.9_filings_atlas.md`）
 
-经用户 2026-05-23 提出 3 项新需求，v1.0 在原 ROADMAP 5 项基础上扩展为 **8 项 / 11 批次 mega sprint**，并作为首个 GitHub release 版本发布。
+经用户 2026-05-23 提出 3 项新需求，v0.9 在原 ROADMAP 5 项基础上扩展为 **8 项 / 11 批次 mega sprint**，并作为内部迭代版本完成。
 
-### 10.0 v1.0 完整范围
+### 10.0 v0.9 完整范围
 
 | # | 范围 | 来源 |
 |---|---|---|
@@ -159,7 +159,7 @@
 
 ### 10.1 日本市场（J 股）
 
-**数据源调研结论**（待 v1.0 Sprint 起草时再做深度调研，此处先列方向）：
+**数据源调研结论**（待 v0.9 Sprint 起草时再做深度调研，此处先列方向）：
 
 - **EDINET**（金融厅）— `https://disclosure.edinet-fsa.go.jp/` 有官方 API（v2，免 Key 部分功能，需注册 Key 拿全量）
   - 优势：政府背书、覆盖全部上市公司
@@ -215,7 +215,7 @@
 
 ### 10.5 模块边界文档化
 
-`ARCHITECTURE.md` 新增章节"如何加新市场"：把 v1.0 加 JP/UK 的实际经验固化成 step-by-step 模板，便于未来扩到东南亚（新加坡 SGX、印尼 IDX 等）。
+`ARCHITECTURE.md` 新增章节"如何加新市场"：把 v0.9 加 JP/UK 的实际经验固化成 step-by-step 模板，便于未来扩到东南亚（新加坡 SGX、印尼 IDX 等）。
 
 ---
 
@@ -225,9 +225,9 @@
 - **数字财务底稿 / Excel 导出**：v0.2 已砍，永远不做
 - **跨市场对标 / 估值计算**：超出工具定位
 - **桌面 web 化**：当前 PySide6 桌面应用形态稳定
-- **日语 / 韩语 UI**：v1.0 仅 zh + en 双语，dict 结构支持但日语/韩语翻译留 v1.1+
+- **日语 / 韩语 UI**：v0.9 仅 zh + en 双语，dict 结构支持但日语/韩语翻译留 v1.1+
 - **其他新市场**（SGX / ASX / SEDAR / Bundesanzeiger / AMF 等）：每个独立 1 周 mini-sprint，v1.1+
-- **跨平台打包**（macOS / Linux）：v1.0 仅 Windows，跨平台留 v1.1+
+- **跨平台打包**（macOS / Linux）：v0.9 仅 Windows，跨平台留 v1.1+
 - **本地化文件名**：`_年报.pdf` 中文后缀保留，不随 UI 语言切换
 
 ---
@@ -236,8 +236,8 @@
 
 - **v0.7 KR 公网爬虫被 DART 改版**：选择器集中 + Key 兜底，风险可控
 - **v0.8 Playwright 移除决断**：需用户参与决策
-- **v1.0 EDINET API Key 注册流程**：可能涉及日文身份验证，需提前打通
-- **v1.0 LSE 数据源未做实测**：现阶段只是方向，Sprint 起草时需先做一轮独立调研
+- **v0.9 EDINET API Key 注册流程**：可能涉及日文身份验证，需提前打通
+- **v0.9 LSE 数据源未做实测**：现阶段只是方向，Sprint 起草时需先做一轮独立调研
 
 ---
 
