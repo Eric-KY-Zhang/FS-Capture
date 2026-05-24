@@ -13,6 +13,7 @@ class Exchange(str, Enum):
     TW = "TW"
     JP = "JP"
     UK = "UK"
+    SG = "SG"
 
     @property
     def display_name(self) -> str:
@@ -24,6 +25,7 @@ class Exchange(str, Enum):
             "TW": "台股",
             "JP": "日股",
             "UK": "英股",
+            "SG": "新股",
         }[self.value]
 
 

@@ -38,4 +38,8 @@ def get_plugin(exchange: Exchange) -> ExchangePlugin:
         from .uk import UKShare
 
         return UKShare()
+    if exchange is Exchange.SG:
+        from .sg import SGShare
+
+        return SGShare()
     raise ValueError(f"No plugin registered for exchange={exchange}")

@@ -38,6 +38,7 @@ class RateLimitsCfg(BaseModel):
     twse: float = 2.0
     edinet: float = 2.0
     nsm: float = 2.0
+    sgxnet: float = 1.5
 
 
 class SECCfg(BaseModel):

@@ -15,6 +15,7 @@ akshare = 4
 twse = 2
 edinet = 2
 nsm = 2
+sgxnet = 1.5
 
 [sec]
 user_agent = "Filings Atlas (your_email@example.com)"
