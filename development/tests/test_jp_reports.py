@@ -39,12 +39,49 @@ def test_jp_list_filings_matches_ticker_and_annual_doc_type(monkeypatch) -> None
             "sec_code": "9999",
         },
     ]
+    monkeypatch.setattr(reports, "_edinet_api_key", lambda: "secret")
     monkeypatch.setattr(reports, "_scan_dates", lambda _period: ["2024-06-25"])
-    monkeypatch.setattr(reports, "_list_documents", lambda _date: rows)
+    monkeypatch.setattr("plugins.jp.edinet_api.list_documents", lambda _date, api_key: rows)
 
     df = reports._list_filings(_ticker(), Period(year=2024, type=PeriodType.ANNUAL))
 
     assert list(df["doc_id"]) == ["S100A"]
+
+
+def test_jp_list_filings_uses_single_public_search_without_key(monkeypatch) -> None:
+    rows = [
+        {
+            "doc_id": "S100A",
+            "doc_type_code": "120",
+            "submit_date_time": "2024-06-25 15:00",
+            "edinet_code": "E02144",
+            "sec_code": "7203",
+        },
+        {
+            "doc_id": "S100B",
+            "doc_type_code": "140",
+            "submit_date_time": "2024-08-01 15:00",
+            "edinet_code": "E02144",
+            "sec_code": "7203",
+        },
+    ]
+    calls = []
+
+    monkeypatch.setattr(reports, "_edinet_api_key", lambda: "")
+    monkeypatch.setattr(
+        "plugins.jp.edinet_web.search_filings",
+        lambda code, year: calls.append((code, year)) or rows,
+    )
+    monkeypatch.setattr(
+        reports,
+        "_scan_dates",
+        lambda _period: (_ for _ in ()).throw(AssertionError("public mode must not scan dates")),
+    )
+
+    df = reports._list_filings(_ticker(), Period(year=2024, type=PeriodType.ANNUAL))
+
+    assert list(df["doc_id"]) == ["S100A"]
+    assert calls == [("7203", 2024)]
 
 
 def test_jp_select_filing_prefers_doc_type_120() -> None:
@@ -85,6 +122,20 @@ def test_jp_download_reports_materializes_report_file(monkeypatch, tmp_path: Pat
     assert result[0].kind == "annual_report"
     assert result[0].accession_number == "S100TEST"
     assert Path(result[0].local_path).read_bytes().startswith(b"%PDF")
+
+
+def test_jp_download_doc_as_pdf_uses_public_direct_url_without_key(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(reports, "_edinet_api_key", lambda: "")
+    monkeypatch.setattr(
+        "plugins.jp.edinet_web.download_document_pdf",
+        lambda _doc_id, dest: dest.write_bytes(b"%PDF\nbody"),
+    )
+
+    source_url, source_format, n_bytes = reports._download_doc_as_pdf("S100TEST", tmp_path / "r.pdf")
+
+    assert source_url == "https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/S100TEST.pdf"
+    assert source_format == "pdf"
+    assert n_bytes == 9
 
 
 def test_jp_list_documents_uses_api_branch_when_key_configured(monkeypatch) -> None:

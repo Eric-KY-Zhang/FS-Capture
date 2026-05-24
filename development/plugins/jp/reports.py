@@ -62,29 +62,66 @@ def _list_documents(submit_date: str) -> list[dict[str, Any]]:
     return list_documents(submit_date)
 
 
-def _list_filings(ticker: Ticker, period: Period) -> pd.DataFrame:
-    doc_types = _DOC_TYPE_CODES.get(period.type)
-    if not doc_types:
-        return pd.DataFrame()
+def _matching_rows(
+    documents: list[dict[str, Any]],
+    ticker: Ticker,
+    doc_types: set[str],
+    seen: set[str],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in documents:
+        doc_id = str(row.get("doc_id") or "")
+        if not doc_id or doc_id in seen:
+            continue
+        if str(row.get("doc_type_code") or "") not in doc_types:
+            continue
+        if not _matches_ticker(row, ticker):
+            continue
+        seen.add(doc_id)
+        rows.append(row)
+    return rows
+
+
+def _list_filings_via_api(
+    ticker: Ticker, period: Period, doc_types: set[str], api_key: str
+) -> list[dict[str, Any]]:
+    from .edinet_api import list_documents
 
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
     for submit_date in _scan_dates(period):
         try:
-            documents = _list_documents(submit_date)
+            documents = list_documents(submit_date, api_key=api_key)
         except Exception as exc:
             logger.warning(f"EDINET list failed for {submit_date}: {exc}")
             continue
-        for row in documents:
-            doc_id = str(row.get("doc_id") or "")
-            if not doc_id or doc_id in seen:
-                continue
-            if str(row.get("doc_type_code") or "") not in doc_types:
-                continue
-            if not _matches_ticker(row, ticker):
-                continue
-            seen.add(doc_id)
-            rows.append(row)
+        rows.extend(_matching_rows(documents, ticker, doc_types, seen))
+    return rows
+
+
+def _list_filings_via_public(
+    ticker: Ticker, period: Period, doc_types: set[str]
+) -> list[dict[str, Any]]:
+    from .edinet_web import search_filings
+
+    try:
+        documents = search_filings(ticker.code, period.year)
+    except Exception as exc:
+        logger.warning(f"EDINET public search failed for {ticker.code} {period.year}: {exc}")
+        return []
+    return _matching_rows(documents, ticker, doc_types, set())
+
+
+def _list_filings(ticker: Ticker, period: Period) -> pd.DataFrame:
+    doc_types = _DOC_TYPE_CODES.get(period.type)
+    if not doc_types:
+        return pd.DataFrame()
+
+    api_key = _edinet_api_key()
+    if api_key:
+        rows = _list_filings_via_api(ticker, period, doc_types, api_key)
+    else:
+        rows = _list_filings_via_public(ticker, period, doc_types)
 
     return pd.DataFrame(rows)
 
@@ -107,11 +144,12 @@ def _download_doc_as_pdf(doc_id: str, dest: Path) -> tuple[str, str, int]:
         from .edinet_api import download_document_pdf
 
         n_bytes = download_document_pdf(doc_id, dest, api_key=api_key)
+        source_url = f"https://api.edinet-fsa.go.jp/api/v2/documents/{doc_id}?type=2"
     else:
         from .edinet_web import download_document_pdf
 
         n_bytes = download_document_pdf(doc_id, dest)
-    source_url = f"https://api.edinet-fsa.go.jp/api/v2/documents/{doc_id}?type=2"
+        source_url = f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/{doc_id}.pdf"
     return source_url, "pdf", n_bytes
 
 
