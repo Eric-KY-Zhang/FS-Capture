@@ -58,10 +58,14 @@ v1.0 release readiness 状态：
 | Figma 连接器 | **执行前必须验证 `create_new_file` / `use_figma` 可用**；若不可用立刻 STOP 回 Planner，**不允许 Canva / 本地 PNG 冒充 Figma 源稿** |
 | 图标 | **重做**（GPT Image 2 生成 3 个云端地图针概念 → 本地重绘 → 多尺寸 ico）|
 | 资源文件命名 | **保持** `filings_atlas.ico` / `filings_atlas_logo.png`（不动 spec extra_datas 拷贝路径）|
-| 设计风格 | 云端 Atlas：浅色清爽 + 地图等高线/航线感 + 低噪声密度 |
+| 设计风格 | **混合风**（grill 锁定）：主体仍是工作台 + 信息密度，Atlas 识别仅作为点缀（3 处：logo / TitleBar 等高线 / MarketPin route dot）。明确**不做**全屏地图背景 / 航线连接 / 旅游 / 航空风 |
 | 颜色基调 | 保留 `#6366F1` indigo-500 主色或微调；新增云灰/浅蓝中性色构建 Atlas 识别 |
 | 设计基准 | 当前 1120x806 + 最小 960x680 双基准 |
-| Reviewer Checkpoint | 1 个（批次 3 后，UI 落地完成）|
+| **MarketPin 形态** | **完全替换** v0.9 `ExchangeChip` 矩形为 map pin 形态。`palette.py::_EXCHANGE_ACCENT` 8 色全部重新设计；下游 `ExchangePanel` / `ProgressDock` 同步更新；代码中 `ExchangeChip` 命名统一改 `MarketPin` |
+| **MarketPin 布局** | 横向 8 pin（**不**做真二维地图），TitleBar 区可用淡等高线纹饰暗示地图感 |
+| **MarketPin 顺序** | UK / US ‖ A 股 / HK / TW / KR / JP / SG（地理西→东 + 文化中心调整：欧美在左、亚洲在右、A 股领亚洲块） |
+| **MarketPin 色系** | 欧美 2 个走冷蓝系（UK / US 彼此可区分）+ 亚洲 6 个走暖色系（彼此色相差足够）+ **A 股保留 rose-600 `#E11D48`**（中国股市文化语义不可改）；其余 7 个具体 hex 由 Codex 在 Figma 提，Reviewer Checkpoint A 审 |
+| Reviewer Checkpoint | **2 个**：A（批次 1 Figma 后）+ B（批次 3 PySide 落地后）|
 
 ---
 
@@ -70,12 +74,13 @@ v1.0 release readiness 状态：
 | 批次 | 名称 | 工作量 | 输出 |
 |---|---|---|---|
 | 1 | Figma 设计稿 + Current Audit | 1-1.5 天 | Figma 文件 4 页（含当前 UI 审计截图 + design system token + workbench + icon system）|
+| **🔴 A** | **Reviewer Checkpoint A — Figma 设计稿审查** | 0.5 天 | Claude 验收（拦截方向偏差，避免批次 2-3 重做）|
 | 2 | 图标重做 | 0.5-1 天 | GPT Image 2 概念 + 本地重绘 + `filings_atlas.ico` (16/32/48/64/128/256) + `filings_atlas_logo.png` |
-| 3 | PySide UI 重构 + QSS/palette | 1.5-2 天 | `main_view.py` / `main_window.py` 等结构调整 + `app.qss` 更新 + `palette.py` 扩展 |
-| **🔴** | **Reviewer Checkpoint** | 0.5 天 | Claude 验收 |
+| 3 | PySide UI 重构 + QSS/palette + MarketPin 落地 | 1.5-2 天 | `main_view.py` / `main_window.py` 等结构调整 + `app.qss` 更新 + `palette.py` 重新设计 + 代码 `ExchangeChip` → `MarketPin` 改名 |
+| **🔴 B** | **Reviewer Checkpoint B — PySide 落地验收** | 0.5 天 | Claude 验收 |
 | 4 | 截图更新 + 资产测试 + 文档 | 0.5 天 | `docs/screenshots/*.png` 重拍 + `test_assets.py` + CHANGELOG/README 微调 |
 
-总计 **4-5 天**。
+总计 **5-5.5 天**（含 2 个 Checkpoint）。
 
 ---
 
@@ -111,9 +116,17 @@ v1.0 release readiness 状态：
 
 **Page 3 — Main Workbench**
 - 桌面主稿按 1120x806（默认）+ 960x680（最小）双基准设计
-- 顶部 Atlas 品牌区（titlebar + brand icon + 中/EN toggle）
-- 市场图谱选择区（重新设计 ExchangeChip，体现 Atlas/地图感）
-- 当前市场录入区（TickerRow + 状态徽标）
+- 顶部 Atlas 品牌区（titlebar + brand icon + 中/EN toggle + **可选**淡等高线背景纹饰）
+- **MarketPin 选择区**（grill 锁定，**完全替换** v0.9 ExchangeChip）：
+  - 形态：map pin（不是矩形 chip）
+  - 布局：横向 8 pin（**不**画真二维地图）
+  - 顺序（强制）：`UK / US ‖ A 股 / HK / TW / KR / JP / SG`（地理西→东 + 文化中心调整）
+  - 色系约束：
+    - 欧美 2 个走冷蓝系（UK / US 彼此可区分，如 navy vs cyan）
+    - 亚洲 6 个走暖色系（彼此色相差足够）
+    - **A 股 = rose-600 `#E11D48` 保留**（中国股市文化语义不可改）
+    - 其余 5 暖色 + UK/US 2 冷色具体 hex 在本批次 Figma 中提出
+- 当前市场录入区（TickerRow + 状态徽标，沿用 v0.9 `#StatusPill` 三态）
 - 报告/输出配置区（PeriodSelector + OutputCard）
 - 固定底部操作栏（设置 + 增量更新 + 抓报告）
 - 不能丢失现有任何业务入口
@@ -149,6 +162,42 @@ v1.0: UI Refresh Figma 设计稿 + Current Audit（addendum 2 批次 1）
 - [ ] Main Workbench 双基准设计（1120x806 + 960x680）
 - [ ] Icon System 含 3 个概念 + 最终方向
 - [ ] 没有用 Canva / Mermaid / 本地 PNG 拼接冒充
+
+---
+
+## 🔴 Reviewer Checkpoint A（批次 1 后，Figma 设计稿审查）
+
+**目的**：拦截 Figma 设计阶段的方向偏差，避免批次 2-3 大规模返工。grill 锁定的 4 条核心设计约束在此验证。
+
+Reviewer Claude Code 启动新会话，打开 Codex 提交的 Figma 文件 + `docs/plans/2026-05-25-ui-refresh-figma.md`。
+
+**逐项审**：
+
+### 整体风格（grill 决议 E：混合风）
+1. ☐ Main Workbench 主稿走 **混合风**：信息密度优先 + Atlas 识别仅作为点缀（logo / TitleBar 等高线 / MarketPin route dot 3 处）
+2. ☐ **没有**全屏地图等高线作为背景
+3. ☐ **没有**航线连接市场之间
+4. ☐ Main Workbench 在 960x680 最小窗口下信息密度不退化（即 Atlas 元素是点缀而非吃占空间）
+
+### MarketPin（grill 决议 A3 + 2.1.B + 2.2.B + 2.3.A）
+5. ☐ MarketPin 是 **map pin 形态**，**不**是矩形 chip
+6. ☐ MarketPin 布局是**横向 8 pin**，**不**画真二维地图
+7. ☐ MarketPin 顺序严格为 `UK / US ‖ A 股 / HK / TW / KR / JP / SG`（左到右）
+8. ☐ 色系约束：欧美 2 冷蓝 + 亚洲 6 暖色 + A 股 = `#E11D48` rose-600 保留
+9. ☐ 8 色彼此区分度够（在小 pin 尺寸下仍能区分；欧美 2 蓝彼此不混淆；亚洲 6 暖不全橙）
+
+### Current Audit + Design System
+10. ☐ Current Audit 含 v0.9 现状中英文截图 + 5 个 design token (`#HeroTitle` / `#HeroSubtitle` / `#SectionLabel` / `#TitleBarLogo` / `#LangSegment`) 标注
+11. ☐ Design System 含完整 token（颜色 / 字体 / 形状 / 状态徽标三态 ok/error/pending / 阴影）
+12. ☐ palette 新方案保留 / 调整 / 替换 v0.9 token 的方式清晰（替换 8 accent；其余 token 至少保留功能等价）
+
+### Icon System
+13. ☐ 3 个云端地图针概念图 + 最终方向（**单一图形**，不是 3 元素堆叠）
+14. ☐ 16px 缩略图可识别度评估（Figma 内有缩小预览）
+
+**通过条件**：14 项全过。任一失败 → 回 Codex 改 Figma，**不进批次 2**。
+
+⚠️ Reviewer 必须实际打开 Figma 文件查看，**不**只看 Codex 文字描述。
 
 ---
 
@@ -259,15 +308,26 @@ v1.0: UI Refresh 图标重做（addendum 2 批次 2）
 - `development/plugins/jp/edinet_web.py` 等公网爬虫
 - `development/filings_atlas.spec` 打包配置（资源文件名保持，hidden imports 不动）
 
-### 3.2 结构要求（从 Figma Main Workbench 落地）
+### 3.2 结构要求（从 Figma Main Workbench 落地，必须与 Checkpoint A 通过的 Figma 一致）
 
-按用户诉求"顶部 Atlas 品牌区、市场图谱选择区、当前市场录入区、报告/输出配置区、固定底部操作栏"5 块结构：
+按用户诉求"顶部 Atlas 品牌区、市场选择区、当前市场录入区、报告/输出配置区、固定底部操作栏"5 块结构：
 
-1. **顶部 Atlas 品牌区**：保留现有 `_TitleBar`，但 brand icon 用新 logo；保留中/EN 切换 `#LangSegment`
-2. **市场图谱选择区**：ExchangeChip 重新设计（保留 8 chip + accent 颜色映射逻辑），但视觉走 Atlas/地图风
-3. **当前市场录入区**：TickerRow 视觉调整，加状态徽标（OK/失败/Pending 三态）
+1. **顶部 Atlas 品牌区**：保留现有 `_TitleBar`，但 brand icon 用新 logo；保留中/EN 切换 `#LangSegment`；可选低存在感等高线背景纹饰
+2. **MarketPin 选择区**（grill 决议 A3 + 2.1.B + 2.2.B + 2.3.A，**完全替换** v0.9 ExchangeChip）：
+   - 代码层面：把现有 `ExchangeChip` widget 改造或新建 `MarketPin` 类（推荐**重命名**而非新建并存）
+   - 形态：map pin（用 SVG / QPainter / 圆角带尖底等 PySide 渲染），**不**是矩形 chip
+   - 布局：横向 8 个，地理顺序 `UK / US ‖ A 股 / HK / TW / KR / JP / SG`
+   - 色彩：`palette.py::_EXCHANGE_ACCENT` 8 个 hex 全部更新为 Figma 定稿色（A 股保留 `#E11D48`）
+   - QSS 选择器：`#ExchangeChip` 系列 → `#MarketPin` 系列（同步删除旧 selector）
+   - 业务行为**不变**：点击切换 panel 可见 / active state 视觉强化
+3. **当前市场录入区**：TickerRow 视觉调整；状态徽标沿用 v0.9 `#StatusPill` 三态 QSS（ok / error / pending），不重新设计
 4. **报告/输出配置区**：PeriodSelector + OutputCard 视觉对齐
 5. **固定底部操作栏**：保留"设置 / 增量更新 / 抓报告"3 按钮 + 现有 cursor + variant 属性
+
+**下游同步更新**（accent color 重做的连锁）：
+- `app/ui/exchange_panel.py` panel 左侧色带（如有）改用新 accent
+- `app/ui/progress_dock.py` 任务行的市场色区分改用新 accent
+- `app/ui/styles/palette.py::_EXCHANGE_ACCENT` 整 dict 替换
 
 ### 3.3 i18n + 现有测试不能破
 
@@ -326,7 +386,7 @@ v1.0: UI Refresh PySide 落地 + QSS（addendum 2 批次 3）
 
 ---
 
-## 🔴 Reviewer Checkpoint（批次 3 后）
+## 🔴 Reviewer Checkpoint B（批次 3 后，PySide 落地验收）
 
 Reviewer Claude Code 启动新会话，执行：
 
@@ -338,18 +398,24 @@ ruff check .
 
 **逐项审**：
 1. ☐ 全量 ~183 passed + ruff 干净
-2. ☐ Figma 4 页齐全（含 audit 不只 workbench）
-3. ☐ 图标 `filings_atlas.ico` 6 个尺寸（test_assets 通过）
-4. ☐ logo + ico 视觉一致（同一 brand）
-5. ☐ main_view 5 块结构正确（品牌/市场图谱/录入/输出/操作栏）
-6. ☐ 8 ExchangeChip 业务行为不变（点击选中、accent 色保留）
-7. ☐ 中/EN 切换无 CJK 残留（test_language_switch 通过）
-8. ☐ 960x680 无重叠（手动验证截图）
-9. ☐ 设置 / 增量更新 / 抓报告 3 按钮可用
-10. ☐ `git diff --stat 6fb8c3d..HEAD development/app/core/ development/plugins/` 0 行（核心 0 改动）
-11. ☐ palette 扩展不破现有 token（HeroTitle / SectionLabel / LangSegment 选择器仍有效）
+2. ☐ 图标 `filings_atlas.ico` 6 个尺寸（test_assets 通过）
+3. ☐ logo + ico 视觉一致（同一 brand）
+4. ☐ main_view 5 块结构正确（品牌 / MarketPin / 录入 / 输出 / 操作栏）
+5. ☐ **MarketPin 落地与 Checkpoint A 通过的 Figma 一致**：
+   - map pin 形态（不是矩形 chip）
+   - 顺序 `UK / US ‖ A 股 / HK / TW / KR / JP / SG`
+   - 8 色与 Figma 定稿一致（A 股 = `#E11D48` 保留）
+   - 横向 8 pin，无真二维地图
+6. ☐ 代码命名 `ExchangeChip` → `MarketPin` 已完成（grep `ExchangeChip` 不应出现在 production 代码）
+7. ☐ 8 MarketPin 业务行为不变（点击选中、ExchangePanel 渲染、增量更新等入口可用）
+8. ☐ `palette.py::_EXCHANGE_ACCENT` 8 hex 全部更新且 `ExchangePanel` / `ProgressDock` 同步使用新色
+9. ☐ 中/EN 切换无 CJK 残留（test_language_switch 通过）
+10. ☐ 960x680 无重叠（手动验证截图）
+11. ☐ 设置 / 增量更新 / 抓报告 3 按钮可用
+12. ☐ `git diff --stat 6fb8c3d..HEAD development/app/core/ development/plugins/` **0 行**（核心 0 改动）
+13. ☐ v0.9 5 个 design token (`#HeroTitle` / `#HeroSubtitle` / `#SectionLabel` / `#TitleBarLogo` / `#LangSegment`) 选择器仍有效
 
-**通过条件**：11 项全过。
+**通过条件**：13 项全过。
 
 ---
 
@@ -464,21 +530,24 @@ v1.0: UI Refresh 截图更新 + 文档同步（addendum 2 批次 4）
 
 ---
 
-## 风险与缓解（Top 5）
+## 风险与缓解（Top 6）
 
-1. **Figma 连接器不可用 / 工具暴露不全**
+1. **Figma 设计稿方向跑偏**（grill 锁定的 4 条约束被 Codex 误解或忽视）
+   - **缓解**：**Reviewer Checkpoint A** 在批次 1 后强制验证 14 项；不通过不进批次 2。避免批次 2-3 大规模返工。
+
+2. **Figma 连接器不可用 / 工具暴露不全**
    - **缓解**：批次 1 启动前**强制验证**，不可用立刻 STOP；不允许 fallback 到其他工具
 
-2. **图标 16px 小尺寸糊成团**
+3. **图标 16px 小尺寸糊成团**
    - **缓解**：批次 2 自检 checklist 明确要求 16px 可识别；本地重绘必须人眼验证
 
-3. **UI 重构破坏现有 i18n 测试**
+4. **UI 重构破坏现有 i18n 测试**
    - **缓解**：硬性约束 — 任何新 QLabel 接 `_retranslate`，任何字符串走 STRINGS dict；批次 3 自检跑 test_language_switch
 
-4. **palette 扩展破坏现有 5 个 objectName 设计 token**
-   - **缓解**：palette 用**扩展**模式（加新 token），不删旧 token；Reviewer Checkpoint 单独验
+5. **accent color 重做的连锁影响**（v0.9 `_EXCHANGE_ACCENT` 8 hex 全废，`ExchangePanel` / `ProgressDock` 等下游不同步更新就视觉断裂）
+   - **缓解**：批次 3 自检 grep `_EXCHANGE_ACCENT` 所有引用点验证同步；palette 旧 5 个 design token 不删保留；Reviewer Checkpoint B 第 8 / 13 项专门验
 
-5. **意外动到业务层（core / 插件）**
+6. **意外动到业务层（core / 插件）**
    - **缓解**：批次 3 自检 `git diff --stat 6fb8c3d..HEAD app/core/ plugins/` 必须 0 行；Reviewer 再 verify
 
 ---
