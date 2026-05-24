@@ -105,7 +105,7 @@ def stream_to_file(
     *,
     source: str,
     rate: float,
-    chunk_size: int = 65536,
+    chunk_size: int = 256 * 1024,
     read_timeout: float | None = None,
 ) -> int:
     """Stream a GET response to disk. Returns bytes written."""

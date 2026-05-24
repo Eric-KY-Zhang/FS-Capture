@@ -22,6 +22,7 @@ class _StreamResponse:
         self._chunks = chunks
         self._request = httpx.Request("GET", url)
         self._response = httpx.Response(status_code, request=self._request)
+        self.chunk_sizes: list[int] = []
 
     def __enter__(self):
         return self
@@ -37,7 +38,8 @@ class _StreamResponse:
                 response=self._response,
             )
 
-    def iter_bytes(self, _chunk_size: int):
+    def iter_bytes(self, chunk_size: int):
+        self.chunk_sizes.append(chunk_size)
         for chunk in self._chunks:
             if isinstance(chunk, Exception):
                 raise chunk
@@ -144,3 +146,16 @@ def test_cleanup_stale_parts_drops_old_orphans(tmp_path: Path) -> None:
     assert removed == 1
     assert fresh.exists()
     assert not old.exists()
+
+
+def test_stream_to_file_default_chunk_size_is_256kb(tmp_path, monkeypatch) -> None:
+    _disable_rate_limit(monkeypatch)
+    dest = tmp_path / "report.pdf"
+    response = _StreamResponse(200, [b"FULL"], "https://example.com/report.pdf")
+    client = _Client([response])
+
+    http_module.stream_to_file.__wrapped__(
+        client, "https://example.com/report.pdf", dest, source="test", rate=999.0
+    )
+
+    assert response.chunk_sizes == [256 * 1024]
