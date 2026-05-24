@@ -10,7 +10,7 @@
 
 ## English
 
-Filings Atlas is a Windows desktop tool for one-click downloading of official disclosure PDFs across 7 markets. It focuses on the original filing files only: no financial statement extraction, no ratio calculation, and no Excel workbook generation.
+Filings Atlas is a Windows desktop tool for one-click downloading of official disclosure PDFs across 8 markets. It focuses on the original filing files only: no financial statement extraction, no ratio calculation, and no Excel workbook generation.
 
 ![Filings Atlas English UI](docs/screenshots/main_window_en.png)
 
@@ -25,11 +25,12 @@ Filings Atlas is a Windows desktop tool for one-click downloading of official di
 | Taiwan | TWSE + MOPS | Annual, Q1, Interim, Q3, IPO prospectus | No |
 | Japan | EDINET | Annual, Q1, Interim, Q3 | Strongly recommended EDINET Subscription-Key |
 | United Kingdom | FCA NSM | Annual, interim and trading updates where available | No |
+| Singapore | SGXNet | Annual, interim, IPO prospectus | No |
 
 ### Quick Start
 
-1. Use the local `Filings Atlas.exe` folder supplied with the project until the first public release is published.
-2. Put the folder in any writable location.
+1. Download the Windows release package and extract it to any writable location.
+2. Keep `Filings Atlas.exe` and the `_internal/` folder together.
 3. Double-click `Filings Atlas.exe`.
 4. Select one or more markets, enter ticker codes, and click **Confirm** to resolve company names.
 5. Choose years and report types, then click **Download Reports**.
@@ -46,6 +47,7 @@ Filings Atlas is a Windows desktop tool for one-click downloading of official di
 | Taiwan | `2330`, `2317` |
 | Japan | `7203`, `6758`, `9984.T` |
 | United Kingdom | `ULVR`, `HSBA.L`, `AZN` |
+| Singapore | `D05`, `U11`, `Z74`, `D05.SI` |
 
 ### Optional Keys
 
@@ -54,6 +56,8 @@ Korea works without a key by using the public DART disclosure pages. Adding a fr
 Japan supports a public fallback, but the current build strongly recommends an EDINET Subscription-Key. The official EDINET API v2 uses `Subscription-Key` for document list and document download requests. Register for a free key through [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API key registration](https://api.edinet-fsa.go.jp/api/auth/index.aspx), then paste it in **Settings**. Without a key, Japanese downloads may fail when the API endpoint rejects unauthenticated requests.
 
 United Kingdom uses the FCA National Storage Mechanism and does not require a key.
+
+Singapore uses SGXNet public disclosure APIs plus SGX attachment pages and does not require a key.
 
 ### Privacy And Scope
 
@@ -72,7 +76,7 @@ United Kingdom uses the FCA National Storage Mechanism and does not require a ke
 
 ## Chinese
 
-Filings Atlas / 全球披露图谱 是一个 Windows 桌面工具，用于一键下载 7 个市场上市公司的官方披露 PDF。工具只解决“批量拿到原始披露文件”这一件事：不抓三大报表数字、不算财务指标、不生成 Excel 底稿。
+Filings Atlas / 全球披露图谱 是一个 Windows 桌面工具，用于一键下载 8 个市场上市公司的官方披露 PDF。工具只解决“批量拿到原始披露文件”这一件事：不抓三大报表数字、不算财务指标、不生成 Excel 底稿。
 
 ![全球披露图谱中文界面](docs/screenshots/main_window_zh.png)
 
@@ -87,11 +91,12 @@ Filings Atlas / 全球披露图谱 是一个 Windows 桌面工具，用于一键
 | 台股 | TWSE + MOPS | 年报、一季报、半年报、三季报、IPO 公开说明书 | 不需要 |
 | 日股 | EDINET | 年报、一季报、半年报、三季报 | 强烈推荐 EDINET Subscription-Key |
 | 英股 | FCA NSM | 年报、半年报及可用的交易更新 | 不需要 |
+| 新加坡 | SGXNet | 年报、半年报、IPO 招股书 | 不需要 |
 
 ### 快速开始
 
-1. 在首个公开发布版推出前，使用项目随附的本地 `Filings Atlas.exe` 文件夹。
-2. 将该文件夹放到任意可写位置。
+1. 下载 Windows 发布包，并解压到任意可写位置。
+2. 保持 `Filings Atlas.exe` 与 `_internal/` 文件夹在同一目录。
 3. 双击 `Filings Atlas.exe`。
 4. 勾选市场，输入股票代码，点击“确认”识别公司名称。
 5. 选择年份和报告类型，点击“抓报告”。
@@ -108,6 +113,7 @@ Filings Atlas / 全球披露图谱 是一个 Windows 桌面工具，用于一键
 | 台股 | `2330`, `2317` |
 | 日股 | `7203`, `6758`, `9984.T` |
 | 英股 | `ULVR`, `HSBA.L`, `AZN` |
+| 新加坡 | `D05`, `U11`, `Z74`, `D05.SI` |
 
 ### Key 配置
 
@@ -116,6 +122,8 @@ Filings Atlas / 全球披露图谱 是一个 Windows 桌面工具，用于一键
 日股在当前构建中强烈推荐配置 EDINET Subscription-Key。EDINET API v2 的书类列表和文件下载接口都使用 `Subscription-Key`；可通过 [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API Key 注册页](https://api.edinet-fsa.go.jp/api/auth/index.aspx) 免费注册并申请 Key，然后在设置中填写。没有 Key 时，工具只会尝试 EDINET 公网页兜底，稳定性不能等同于官方 API。
 
 英股使用 FCA National Storage Mechanism 公网数据源，不需要 Key。
+
+新加坡市场使用 SGXNet 公网披露 API 与 SGX 附件页面，不需要 Key。
 
 ### 隐私与范围
 

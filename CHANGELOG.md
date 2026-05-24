@@ -1,8 +1,40 @@
 # Changelog
 
-## v1.0.0 - Unreleased (`roadmap/SPRINT_v1.0_sg_and_perf.md`)
+## v1.0.0 - 2026-05-24
 
-Planned first GitHub release for SG market support, fetch performance work, and zero-experience-cost bundle size reduction.
+First GitHub release for Filings Atlas / 全球披露图谱. This release adds Singapore SGX support, improves batch fetch performance, and keeps the PDF-only scope unchanged.
+
+### Added
+
+- Singapore market support through SGXNet public disclosures.
+  - Annual reports verified with DBS (`D05`), UOB (`U11`) and Singtel (`Z74`).
+  - Interim report support verified with UOB H1.
+  - IPO prospectus support verified with `3407` / LION-CM EM ASIA INDEX ETF.
+- Benchmark harness under `development/tests/benchmarks/` with explicit `FS_CAPTURE_RUN_BENCHMARK=1` opt-in.
+- Performance reports under `docs/perf/` for v0.9 baseline, v1.0 batch-5 A/B results and bundle size.
+
+### Changed
+
+- Default worker concurrency increased from 4 to 6.
+- Name resolver warm-up now starts in the background for full-map markets.
+- Large PDF streaming chunk size increased from 64 KB to 256 KB.
+- Playwright rendering now keeps thread-local browser/context state and clears cookies/permissions after each render.
+- HTTP clients now use tuned connection limits.
+- Sidecar writes are atomic temp-file replacements.
+- PyInstaller spec includes the SG plugin and extra excludes for unused test/dev stacks.
+- Build script trims non-Chinese/non-English Qt translation files after packaging.
+
+### Performance
+
+- Batch benchmark improved from 211.76s to 94.22s on the same 21-task A/HK/US/KR/TW/UK/SG set, a 55.5% reduction versus v0.9 baseline.
+- The prior UK `AZN` zero-report failure in concurrent Playwright rendering is resolved.
+- Bundle size changed from 449.0 MB to 441.4 MB (-7.6 MB). Higher-risk Playwright selective collection and UPX compression were intentionally skipped.
+
+### Compatibility
+
+- v0.9 sidecars under `data/cache/sidecars/` remain readable.
+- The flat output naming contract remains unchanged: `{exchange}_{code}_{company}_{year}_{kind_zh}.pdf`.
+- Existing `config.toml` fields remain compatible.
 
 ## v0.9.0 - 2026-05-23
 
