@@ -236,23 +236,17 @@ def _search_filings_once(ticker_code: str) -> list[dict[str, Any]]:
             logger.debug("EDINET Playwright context state was not fully cleared")
 
 
-def search_filings(ticker_code: str, year: int) -> list[dict[str, Any]]:
-    """Search EDINET public page once and return normalized rows for a filing year."""
+def search_filings_all(ticker_code: str) -> list[dict[str, Any]]:
+    """Search EDINET public page once and return all normalized rows for a ticker."""
     normalized_ticker = str(ticker_code).strip()
-    target_year = str(year)
 
     for attempt in range(2):
         try:
             raw_rows = _search_filings_once(normalized_ticker)
-            rows = [
+            return [
                 _normalize_row(row, ticker_code=normalized_ticker)
                 for row in raw_rows
                 if isinstance(row, dict)
-            ]
-            return [
-                row
-                for row in rows
-                if row["doc_id"] and row["submit_date_time"][:4] == target_year
             ]
         except Exception as exc:
             logger.warning(f"EDINET public search failed for {normalized_ticker}: {exc}")
@@ -263,6 +257,16 @@ def search_filings(ticker_code: str, year: int) -> list[dict[str, Any]]:
                 continue
             raise
     return []
+
+
+def search_filings(ticker_code: str, year: int) -> list[dict[str, Any]]:
+    """Search EDINET public page once and return normalized rows for a filing year."""
+    target_year = str(year)
+    return [
+        row
+        for row in search_filings_all(ticker_code)
+        if row["doc_id"] and row["submit_date_time"][:4] == target_year
+    ]
 
 
 def list_documents(

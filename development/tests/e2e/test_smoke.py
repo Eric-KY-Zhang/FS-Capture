@@ -159,6 +159,40 @@ def test_sg_3407_2024_ipo_prospectus() -> None:
     _assert_sg_sidecars(reports)
 
 
+def _jp_public_annual_smoke(code: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    from plugins.jp import name_resolver
+    from plugins.jp import reports as jp_reports
+
+    monkeypatch.delenv("EDINET_API_KEY", raising=False)
+    monkeypatch.delenv("EDINET_SUBSCRIPTION_KEY", raising=False)
+    name_resolver.reset_edinet_client()
+    monkeypatch.setattr(name_resolver, "_edinet_api_key", lambda: "")
+    monkeypatch.setattr(jp_reports, "_edinet_api_key", lambda: "")
+    monkeypatch.setattr(name_resolver, "cached_or_load", lambda _key, loader, *, expire: loader())
+
+    plugin = get_plugin(Exchange.JP)
+    ticker = plugin.resolve_name(code)
+    assert ticker.name
+    company = plugin.fetch_company(ticker)
+    assert company.currency == "JPY"
+    out = Path.cwd() / "e2e_output"
+    reports = plugin.download_reports(ticker, Period(year=2024, type=PeriodType.ANNUAL), out)
+    assert any(report.kind == "annual_report" for report in reports)
+    _assert_downloaded_reports(reports)
+
+
+def test_jp_7203_2024_public_no_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    _jp_public_annual_smoke("7203", monkeypatch)
+
+
+def test_jp_6758_2024_public_no_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    _jp_public_annual_smoke("6758", monkeypatch)
+
+
+def test_jp_9984_2024_public_no_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    _jp_public_annual_smoke("9984", monkeypatch)
+
+
 @pytest.mark.skipif(
     os.environ.get("FS_CAPTURE_RUN_SLOW_E2E") != "1",
     reason="set FS_CAPTURE_RUN_SLOW_E2E=1 to run the long TW IPO sweep",

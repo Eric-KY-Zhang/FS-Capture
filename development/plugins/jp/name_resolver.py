@@ -45,6 +45,12 @@ def _candidate_dates(today: dt.date | None = None) -> list[str]:
     return dates
 
 
+def _candidate_years(today: dt.date | None = None) -> list[int]:
+    ref = today or dt.date.today()
+    latest_filing_year = ref.year if ref >= dt.date(ref.year, 6, 1) else ref.year - 1
+    return list(range(latest_filing_year, latest_filing_year - 4, -1))
+
+
 def _list_documents(submit_date: str) -> list[dict[str, Any]]:
     api_key = _edinet_api_key()
     if api_key:
@@ -57,20 +63,48 @@ def _list_documents(submit_date: str) -> list[dict[str, Any]]:
     return list_documents(submit_date)
 
 
+def _resolve_one_via_api(sec_code: str) -> dict[str, Any] | None:
+    fallback: dict[str, Any] | None = None
+    for submit_date in _candidate_dates():
+        for row in _list_documents(submit_date):
+            if row.get("sec_code") != sec_code:
+                continue
+            if fallback is None:
+                fallback = row
+            if str(row.get("doc_type_code")) == "120":
+                return row
+    return fallback
+
+
+def _resolve_one_via_public(sec_code: str) -> dict[str, Any] | None:
+    from .edinet_web import search_filings_all
+
+    fallback: dict[str, Any] | None = None
+    rows = search_filings_all(sec_code)
+    for year in _candidate_years():
+        year_rows = [
+            row
+            for row in rows
+            if row.get("sec_code") == sec_code
+            and str(row.get("submit_date_time") or "").startswith(str(year))
+        ]
+        for row in year_rows:
+            if fallback is None:
+                fallback = row
+            if str(row.get("doc_type_code")) == "120":
+                return row
+    return fallback
+
+
 def resolve_one(sec_code: str) -> dict[str, Any] | None:
-    cache_key = f"jp:sec-code:{sec_code}:v1"
+    api_key = _edinet_api_key()
+    mode = "api" if api_key else "web"
+    cache_key = f"jp:sec-code:{sec_code}:{mode}:v2"
 
     def _fetch() -> dict[str, Any] | None:
-        fallback: dict[str, Any] | None = None
-        for submit_date in _candidate_dates():
-            for row in _list_documents(submit_date):
-                if row.get("sec_code") != sec_code:
-                    continue
-                if fallback is None:
-                    fallback = row
-                if str(row.get("doc_type_code")) == "120":
-                    return row
-        return fallback
+        if api_key:
+            return _resolve_one_via_api(sec_code)
+        return _resolve_one_via_public(sec_code)
 
     return cached_or_load(cache_key, _fetch, expire=_TTL)
 
@@ -80,7 +114,7 @@ def resolve(code: str) -> Ticker:
     info = resolve_one(norm)
     if not info:
         raise ValueError(
-            f"未找到日股代码 {code}（请确认代码格式，或在设置中配置 EDINET API Key）"
+            f"未找到日股代码 {code}（请确认代码格式，或稍后重试 EDINET 公网页）"
         )
     return Ticker(
         exchange=Exchange.JP,

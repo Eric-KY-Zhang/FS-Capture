@@ -38,6 +38,38 @@ def test_jp_fetch_company_returns_jpy_and_edinet_extra(monkeypatch) -> None:
     assert company.extra["jcn"] == "5010701001000"
 
 
+def test_jp_no_key_resolve_uses_public_search_once(monkeypatch) -> None:
+    calls = []
+
+    monkeypatch.setattr(name_resolver, "_edinet_api_key", lambda: "")
+    monkeypatch.setattr(name_resolver, "_candidate_years", lambda: [2025, 2024, 2023, 2022])
+    monkeypatch.setattr(
+        name_resolver,
+        "cached_or_load",
+        lambda _key, loader, *, expire: loader(),
+    )
+    monkeypatch.setattr(
+        "plugins.jp.edinet_web.search_filings_all",
+        lambda code: calls.append(code)
+        or [
+            {
+                "doc_id": "S100TR7I",
+                "doc_type_code": "120",
+                "submit_date_time": "2024-06-25 15:00",
+                "edinet_code": "E02144",
+                "sec_code": "7203",
+                "filer_name": "トヨタ自動車株式会社",
+            }
+        ],
+    )
+
+    ticker = name_resolver.resolve("7203")
+
+    assert ticker.name == "トヨタ自動車株式会社"
+    assert ticker.external_id == "E02144"
+    assert calls == ["7203"]
+
+
 def test_edinet_api_sends_subscription_key_and_normalizes_rows(monkeypatch) -> None:
     calls = {}
 
