@@ -25,7 +25,7 @@ class PathsCfg(BaseModel):
 
 
 class ConcurrencyCfg(BaseModel):
-    max_workers: int = 4
+    max_workers: int = 6
 
 
 class RateLimitsCfg(BaseModel):

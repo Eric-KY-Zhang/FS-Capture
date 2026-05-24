@@ -4,7 +4,7 @@ cache_dir = "data/cache"
 log_dir = "data/logs"
 
 [concurrency]
-max_workers = 4
+max_workers = 6
 
 [rate_limits]
 cninfo = 5
