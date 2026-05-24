@@ -32,7 +32,7 @@ a = Analysis(
     hiddenimports=ak_hiddenimports + odr_hiddenimports + [
         "plugins.ashare", "plugins.hk", "plugins.us", "plugins.kr",
         "plugins.tw", "plugins.jp", "plugins.uk", "plugins.sg",
-        "tomli_w", "certifi",
+        "tomli_w", "certifi", "pandas.plotting",
     ] + playwright_hiddenimports + openpyxl_hiddenimports,
     hookspath=[],
     hooksconfig={},
@@ -43,7 +43,7 @@ a = Analysis(
         "PySide6.QtQuick", "PySide6.QtMultimedia", "PySide6.QtWebEngineCore",
         "PySide6.Qt3D", "PySide6.QtCharts",
         "numpy.tests", "numpy.testing",
-        "pandas.tests", "pandas.plotting",
+        "pandas.tests",
         "notebook", "jupyter", "IPython",
         "pytest", "pytest_httpx", "ruff",
         "tkinter",

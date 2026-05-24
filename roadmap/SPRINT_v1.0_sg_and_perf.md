@@ -1049,14 +1049,14 @@ excludes=[
     "PySide6.Qt3D", "PySide6.QtCharts",
     # 新增
     "numpy.tests", "numpy.testing",
-    "pandas.tests", "pandas.plotting",
+    "pandas.tests",
     "notebook", "jupyter", "IPython",
     "pytest", "pytest_httpx", "ruff",
     "tkinter",
 ],
 ```
 
-**注意**：`pandas` 主体不能 exclude（akshare/OpenDartReader 强依赖），只剪 tests/plotting。
+**注意**：`pandas` 主体不能 exclude（akshare/OpenDartReader 强依赖）；`pandas.plotting` 也不能剪，冻结包下 A 股 akshare 解析链路会触发该模块。
 
 ### 6.2 子项 6.2 — PySide6 翻译精简（预期 -15~20 MB）
 
