@@ -41,24 +41,49 @@ def list_documents(submit_date):
 | Sprint 归属 | **v1.0 addendum**（非 v1.0.1 patch；撤回 tag 重打）|
 | 数据源 | **EDINET 公网搜索页** `https://disclosure2.edinet-fsa.go.jp/WEEE0030.aspx`（ASP.NET WebForms）|
 | 反爬层级 | 无 captcha / 无 Cloudflare / 无登录 / 无 API key 强制 |
-| 实现技术 | **纯 httpx + BeautifulSoup**（无需 Playwright；类比 TW MOPS v0.6 实现）|
+| 实现技术 | **Playwright 搜索 + httpx PDF 下载混合**（批次 1 spike 后修订；GeneXus 加密协议反向成本过高）|
 | 限流 | **新增独立 source** `edinet_web`，默认 1.0 QPS（独立于带 key 的 `edinet = 2.0`）|
 | 模板参考 | `plugins/kr/dart_web.py`（KR 真双模式的成熟模板） |
 | Reviewer Checkpoint | 1 个（批次 3 后） |
 
-### Spike 已确认事实
+### Spike 已确认事实（批次 1 实测，2026-05-25）
 
-- 搜索字段 `D_Keyword` 接受"提出者/発行者/ファンド/**証券コード**"——可直接用 ticker（如 `7203`）搜，无需 ticker → EDINET code 预映射
-- 期间过滤字段 `D_KIKAN`
-- 书类种别过滤字段 `Syorui1` `Syorui2` `Syorui3` `Syorui4`
-- 隐藏字段 `__VIEWSTATE` / `__EVENTVALIDATION` / `D_Hidden_Param` —— 必须 GET 拿 viewstate 再 POST
-- **v0.9 时 edinet_web.py 里的 selector（`W0018vD_KEYWORD` 等）是错的**，必须按真实字段重写
+**搜索机制**：
+- 搜索页 `WEEE0030.aspx` 是 **GeneXus 框架**（**不是** ASP.NET WebForms）
+- 搜索触发 3 段加密 `GXAjaxRequest` JSON POST，URL 含 `GX_AJAX_KEY` / `GX_AJAX_IV` 派生 token
+- 真实表单字段（注意 `W0018v` 前缀）：
+  - `W0018vD_KEYWORD` — 关键词（接受证券代码，如 `7203`）
+  - `W0018vD_KIKAN` — 提出期间（`7` = 全期間）
+  - `W0018vCHKSYORUI1` — 有価証券報告書 / 半期 / 四半期（**默认勾选**）
+  - `W0018vCHKSYORUI2-4` — 大量保有 / 其他 / 临时报告
+- 搜索按钮：`W0018BTNBTN_SEARCH`
+- 结果在 `gxValues[0].AV125W_RESULT_LIST_JSON`，含字段：
+  - `SHORUI_KANRI_NO`（**关键 — PDF 直链 ID**）
+  - `TEISHUTSU_NICHIJI`（提交日期）
+  - `SHORUI_NAME`（书类名）
+  - `SYORUI_SB_CD_ID`（doc_type 编码，对应 edinet_api 的 `doc_type_code`）
+  - `EDINET_CD`（EDINET 内部 ID）
+  - `TEISYUTUSYA_NAME`（提交者名）
+  - `PDFKBN`（是否有 PDF）
 
-### 未确认事实（批次 1 spike 必须验证）
+**PDF 下载机制（黄金路径）**：
+- **完全无 token / 无 cookie / 无 referrer**：
+  ```
+  https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/{SHORUI_KANRI_NO}.pdf
+  ```
+- spike 实测：7203 → `S100TR7I.pdf` (3.39 MB) / 6758 → `S100TS7P.pdf` (1.43 MB) / 9984 → `S100TP3N.pdf` (1.25 MB)
+- `curl -L -A "Mozilla/5.0" <url>` 可直接下载
 
-- PDF 下载链接的 `onclick='PdfClick(...)'` 是 URL 拼接还是 postback
-- 翻页是否也是 postback（需带 viewstate）
-- session cookie 持久化要求（ASPSESSIONID 等）
+**翻页**：
+- 精确 ticker 搜索通常 1 页（实测三票均如此）
+- 宽泛关键词（如 `トヨタ`）显示多页，但翻页**不产生新 POST**——前端基于已返回 JSON 客户端翻页
+- 意味着：单次搜索即可拿到全部结果（无需 Playwright 翻页）
+
+**限流**：spike 共 9 次 POST + 3 次 PDF 下载，无 429/403。
+
+**Plan A（纯 httpx）不可行原因**：
+- URL query base64 直接尝试 `WEEE0030.aspx?base64("mul=7203&...")` 返回 `total=0, rows=0`
+- 需要移植 GeneXus `gx.sec.rijndael` 加密 + 复现 3 段事件流，工作量 +2-3 天且服务端 GeneXus 升级会破坏
 
 ---
 
@@ -231,47 +256,66 @@ v1.0: JP EDINET 公网爬虫 spike（addendum 批次 1）
 
 ---
 
-## 批次 2 — `edinet_web.py` 真实现
+## 批次 2 — `edinet_web.py` 真实现（Plan B：Playwright 搜索 + httpx PDF 下载）
 
-### 2.1 改写文件
+### 2.1 架构（spike 后修订）
 
-`plugins/jp/edinet_web.py`（完全重写，替换当前占位 stub）：
+```
+reports.py::_list_filings (no key path)
+    └→ edinet_web.search_filings(ticker, year)
+            ├→ 复用 pdf_renderer._ensure_state() 拿 thread-local Playwright state
+            ├→ page = state.context.new_page()
+            ├→ page.goto(WEEE0030.aspx)
+            ├→ page.fill('input[name="W0018vD_KEYWORD"]', ticker_code)
+            ├→ page.select_option('select[name="W0018vD_KIKAN"]', '7')  # 全期間
+            ├→ page.check('input[name="W0018vCHKSYORUI1"]')  # 报告类
+            ├→ page.click('input[name="W0018BTNBTN_SEARCH"]')
+            ├→ 监听 GXAjaxRequest network response，捕获 AV125W_RESULT_LIST_JSON
+            ├→ page.close()
+            └→ 归一化 + 客户端按 year 过滤后返回 list[dict]
+                  ↓
+                  for each row:
+                    edinet_web.download_document_pdf(doc_id, dest)
+                        └→ default_client(source="edinet_web")
+                           └→ stream_to_file(
+                                "https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/{doc_id}.pdf"
+                              )
+```
+
+**关键洞察**：Playwright **只用于搜索**（GeneXus 加密无法 httpx 复现），**PDF 下载完全 httpx**（spike 已确认直链无 token / cookie / referrer 依赖）。
+
+### 2.2 改写 `plugins/jp/edinet_web.py`
+
+完全替换占位 stub。核心结构：
 
 ```python
-"""EDINET public-web fallback (no-key mode) for JP filings."""
+"""EDINET public-web fallback (no-key mode) for JP filings.
+
+Search via Playwright (GeneXus AJAX cannot be replayed with httpx),
+PDF download via httpx direct link (spike verified no token/cookie required).
+"""
 
 from __future__ import annotations
 
-import re
-from datetime import date
+import json
 from pathlib import Path
 from typing import Any
 
-from bs4 import BeautifulSoup
 from loguru import logger
 
-from app.core.http import default_client
+from app.core.http import default_client, stream_to_file
 from app.core.ratelimit import limiter
 from app.core.settings import load_settings
 
 _SEARCH_URL = "https://disclosure2.edinet-fsa.go.jp/WEEE0030.aspx"
+_PDF_URL_TEMPLATE = "https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/{doc_id}.pdf"
 
+# spike 已确认的真实字段名（W0018v 前缀）
 _SELECTORS = {
-    # 基于批次 1 spike 报告的真实字段，**不是 v0.9 的假名字**
-    "viewstate": "input[name='__VIEWSTATE']",
-    "eventvalidation": "input[name='__EVENTVALIDATION']",
-    "hidden_param": "input[name='D_Hidden_Param']",
-    "result_rows": "...",  # spike 确认
-    "pdf_link": "...",     # spike 确认
-}
-
-# Syorui code mapping (spike 阶段确认 EDINET 公网的 doc_type 编码)
-_SYORUI_BY_DOC_TYPE = {
-    "120": ("Syorui1", "annual"),       # 有価証券報告書
-    "130": ("Syorui1", "annual"),       # 訂正有価証券報告書
-    "140": ("Syorui2", "q1_q3"),        # 四半期報告書
-    "160": ("Syorui3", "interim"),      # 半期報告書
-    # ...
+    "keyword": 'input[name="W0018vD_KEYWORD"]',
+    "kikan": 'select[name="W0018vD_KIKAN"]',
+    "syorui1": 'input[name="W0018vCHKSYORUI1"]',
+    "search_button": 'input[name="W0018BTNBTN_SEARCH"]',
 }
 
 
@@ -279,113 +323,248 @@ def _edinet_web_rate() -> float:
     return load_settings().rate_limits.edinet_web
 
 
-def _fetch_viewstate(client) -> dict[str, str]:
-    """GET 搜索页拿 viewstate token + cookie."""
-    limiter("edinet_web", _edinet_web_rate()).acquire_blocking()
-    response = client.get(_SEARCH_URL)
-    response.raise_for_status()
-    soup = BeautifulSoup(response.text, "lxml")
+def _normalize_row(row: dict[str, Any]) -> dict[str, Any]:
+    """归一化 GeneXus JSON row 为与 edinet_api._normalize_row 相同 shape，
+    使 reports.py 双模式无感切换。
+    """
     return {
-        "__VIEWSTATE": soup.select_one(_SELECTORS["viewstate"])["value"],
-        "__EVENTVALIDATION": soup.select_one(_SELECTORS["eventvalidation"])["value"],
-        "D_Hidden_Param": (soup.select_one(_SELECTORS["hidden_param"]) or {}).get("value", ""),
+        "doc_id": str(row.get("SHORUI_KANRI_NO") or "").strip(),
+        "doc_type_code": str(row.get("SYORUI_SB_CD_ID") or "").strip(),
+        "submit_date_time": str(row.get("TEISHUTSU_NICHIJI") or "").strip(),
+        "period_end": "",  # GeneXus JSON 不直接给 periodEnd
+        "edinet_code": str(row.get("EDINET_CD") or "").strip(),
+        "sec_code": str(row.get("SHOKEN_CD") or "").strip()[:4],
+        "jcn": "",
+        "filer_name": str(row.get("TEISYUTUSYA_NAME") or "").strip(),
+        "title": str(row.get("SHORUI_NAME") or "").strip(),
+        "pdf_flag": "1" if str(row.get("PDFKBN") or "") in {"1", "Y", "true"} else "",
     }
 
 
-def _search_payload(viewstate: dict[str, str], *, keyword: str, year: int, doc_types: set[str]) -> dict[str, str]:
-    payload = dict(viewstate)
-    payload["D_Keyword"] = keyword
-    payload["D_KIKAN"] = ...  # spike 确认格式
-    for code in doc_types:
-        field_name, _ = _SYORUI_BY_DOC_TYPE.get(code, (None, None))
-        if field_name:
-            payload[field_name] = "on"
-    return payload
+def search_filings(ticker_code: str, year: int) -> list[dict[str, Any]]:
+    """Search EDINET WEEE0030 via Playwright; capture AV125W_RESULT_LIST_JSON.
 
-
-def _parse_pdf_url(soup, *, base_url: str) -> str | None:
-    """从搜索结果 row 解出 PDF 真实 URL（参考 spike 报告）."""
-    # 基于批次 1 spike 结论实现：
-    # - URL 拼接模式：解 onclick="PdfClick('XXX', 'YYY')" 拼成 https://...XXX...
-    # - postback 模式：返回特殊 sentinel，由 download_document_pdf 走 postback 路径
-    ...
-
-
-def list_documents(submit_date: str | date, *, year: int = None, ticker: str = None) -> list[dict[str, Any]]:
-    """List EDINET documents for a given date or year/ticker combo.
-    
-    与 edinet_api.list_documents 返回相同的归一化字典格式，使 reports.py 切换无感。
+    Returns list of normalized rows compatible with edinet_api.list_documents shape.
+    Filters by year client-side (GeneXus client-side pagination returns all results).
     """
-    # 公网模式不是按"提交日"枚举，而是按 ticker + 期间搜（更高效）
-    # reports.py 当前按 submit_date 枚举一年 365 天，公网模式可优化为单次按 ticker 查
-    ...
+    from app.core import pdf_renderer  # 复用 v0.8 thread-local pool
+
+    limiter("edinet_web", _edinet_web_rate()).acquire_blocking()
+    state = pdf_renderer._ensure_state()
+    if state.context is None:
+        # 公网搜索使用独立 context（user_agent 与 _context_for_source 一致）
+        state.context = state.browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...",
+            locale="ja-JP",
+        )
+    page = state.context.new_page()
+    try:
+        page.goto(_SEARCH_URL, wait_until="networkidle", timeout=60_000)
+        page.fill(_SELECTORS["keyword"], ticker_code)
+        page.select_option(_SELECTORS["kikan"], "7")  # 全期間
+        if not page.is_checked(_SELECTORS["syorui1"]):
+            page.check(_SELECTORS["syorui1"])
+
+        # 捕获 GXAjaxRequest 第 3 段（BACKSETPARAMETER）的 response
+        # 实施时参考 tmp_pytest_ok/jp_web_spike.py 中确认的捕获逻辑
+        captured_json: list[dict] = []
+
+        def _on_response(response):
+            if "GXAjaxRequest" in response.url and response.status == 200:
+                try:
+                    body = response.json()
+                except Exception:
+                    return
+                # 找含 AV125W_RESULT_LIST_JSON 的 gxValue
+                for value in (body.get("gxValues") or []):
+                    if "AV125W_RESULT_LIST_JSON" in value:
+                        captured_json.append(value)
+
+        page.on("response", _on_response)
+        page.click(_SELECTORS["search_button"])
+        page.wait_for_load_state("networkidle", timeout=30_000)
+
+        # 从 captured_json 提取最后一段（结果数组）
+        rows_raw: list[dict] = []
+        for value in captured_json:
+            raw = value.get("AV125W_RESULT_LIST_JSON")
+            if not raw:
+                continue
+            try:
+                parsed = json.loads(raw) if isinstance(raw, str) else raw
+            except Exception:
+                continue
+            if isinstance(parsed, list):
+                rows_raw = parsed  # 后到的覆盖前的
+
+    finally:
+        try:
+            page.close()
+        except Exception as exc:
+            logger.warning(f"playwright page close failed: {exc}")
+
+    rows = [_normalize_row(r) for r in rows_raw if isinstance(r, dict)]
+    # 按 year 客户端过滤（GeneXus 一次返回全期間结果）
+    return [
+        r for r in rows
+        if r["doc_id"] and r["submit_date_time"][:4] == str(year)
+    ]
 
 
-def download_document_pdf(doc_id: str, dest: Path, *, viewstate_session: dict | None = None) -> int:
-    """Download PDF for a doc_id (走 spike 确认的 URL 拼接或 postback 路径)."""
-    ...
+def list_documents(
+    submit_date: str | None = None,
+    *,
+    ticker: str | None = None,
+    year: int | None = None,
+) -> list[dict[str, Any]]:
+    """Public-mode list_documents.
+
+    Recommended call pattern: list_documents(ticker=..., year=...) — one Playwright
+    search returns all rows for that ticker (GeneXus client-side pagination).
+
+    submit_date path is kept only for shape compatibility; reports.py should call
+    search_filings(ticker, year) directly to avoid 365× browser launches.
+    """
+    if ticker and year:
+        return search_filings(ticker, year)
+    logger.warning(
+        "EDINET public mode: per-day list_documents is inefficient; "
+        "reports.py should call search_filings(ticker, year) directly"
+    )
+    return []
+
+
+def download_document_pdf(doc_id: str, dest: Path) -> int:
+    """Download EDINET PDF via direct URL (no Playwright needed).
+
+    spike confirmed: no token / cookie / referrer required.
+    """
+    url = _PDF_URL_TEMPLATE.format(doc_id=doc_id)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with default_client(source="edinet_web", timeout=120.0) as client:
+        n_bytes = stream_to_file(
+            client, url, dest,
+            source="edinet_web",
+            rate=_edinet_web_rate(),
+            read_timeout=180.0,
+        )
+    if dest.read_bytes()[:4] != b"%PDF":
+        dest.unlink(missing_ok=True)
+        raise ValueError(f"EDINET public PDF is not valid: {url}")
+    return n_bytes
 ```
 
-### 2.2 settings.py 改动
+### 2.3 reports.py 改动（双模式路径优化）
 
-`development/app/core/settings.py::RateLimitsCfg`：
+公网模式直接走 ticker+year 单次搜索，**跳过 365 天枚举**（API mode 保留枚举不变）：
+
+```python
+# plugins/jp/reports.py:_list_filings 改动
+
+def _list_filings(ticker: Ticker, period: Period) -> pd.DataFrame:
+    doc_types = _DOC_TYPE_CODES.get(period.type)
+    if not doc_types:
+        return pd.DataFrame()
+
+    api_key = _edinet_api_key()
+    if api_key:
+        # API mode: 沿用 365 天枚举（边界覆盖完整）
+        rows = _list_filings_via_api(ticker, period, doc_types, api_key)
+    else:
+        # Public mode: 单次 Playwright 搜索拿全年结果
+        from .edinet_web import search_filings
+        all_rows = search_filings(ticker.code, period.year)
+        rows = [
+            r for r in all_rows
+            if r.get("doc_type_code") in doc_types
+            and _matches_ticker(r, ticker)
+        ]
+
+    return pd.DataFrame(rows)
+
+
+def _list_filings_via_api(ticker, period, doc_types, api_key) -> list[dict]:
+    """原 365 天枚举逻辑（API mode 专用）."""
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for submit_date in _scan_dates(period):
+        try:
+            from .edinet_api import list_documents
+            documents = list_documents(submit_date, api_key=api_key)
+        except Exception as exc:
+            logger.warning(f"EDINET list failed for {submit_date}: {exc}")
+            continue
+        for row in documents:
+            doc_id = str(row.get("doc_id") or "")
+            if not doc_id or doc_id in seen:
+                continue
+            if str(row.get("doc_type_code") or "") not in doc_types:
+                continue
+            if not _matches_ticker(row, ticker):
+                continue
+            seen.add(doc_id)
+            rows.append(row)
+    return rows
+
+
+def _download_doc_as_pdf(doc_id: str, dest: Path) -> tuple[str, str, int]:
+    api_key = _edinet_api_key()
+    if api_key:
+        from .edinet_api import download_document_pdf
+        n_bytes = download_document_pdf(doc_id, dest, api_key=api_key)
+        source_url = f"https://api.edinet-fsa.go.jp/api/v2/documents/{doc_id}?type=2"
+    else:
+        from .edinet_web import download_document_pdf
+        n_bytes = download_document_pdf(doc_id, dest)
+        source_url = f"https://disclosure2dl.edinet-fsa.go.jp/searchdocument/pdf/{doc_id}.pdf"
+    return source_url, "pdf", n_bytes
+```
+
+### 2.4 settings.py 改动
 
 ```python
 class RateLimitsCfg(BaseModel):
     # ... 现有
     edinet: float = 2.0
-    edinet_web: float = 1.0  # ← 新增，公网更慢
+    edinet_web: float = 1.0  # ← 新增，公网更慢（Playwright 搜索 + httpx 下载混合）
     # ... 其他
 ```
 
-### 2.3 reports.py 改动
+### 2.5 Playwright 集成注意点
 
-`plugins/jp/reports.py` 现有结构（双模式 if/else）保持不变，但需要适配公网模式的 API shape 差异：
+- **必须复用 v0.8 thread-local 池**（`pdf_renderer._ensure_state`）—— 不要自建 `sync_playwright()`，会破坏 cookie 隔离与生命周期
+- **page lifecycle**：`page = state.context.new_page()` → 使用 → `page.close()`（**不要** close context，pool 复用）
+- **失败重启**：参考 `pdf_renderer.py` 的失败 → `_shutdown_current_thread_renderer` → 重试模式
+- **测试 mock**：参考 `tests/test_playwright_pool.py` 的 `_Page` / `_Context` / `_Browser` mock 类，新增 `on()` / `wait_for_load_state()` / `select_option()` / `is_checked()` 方法
 
-```python
-# 当前
-def _list_documents(submit_date: str) -> list[dict[str, Any]]:
-    api_key = _edinet_api_key()
-    if api_key:
-        from .edinet_api import list_documents
-        return list_documents(submit_date, api_key=api_key)
-    from .edinet_web import list_documents
-    return list_documents(submit_date)  # ← 公网模式按 submit_date 不高效
-```
-
-**关键设计决策**：是否改 `_list_filings` 的循环结构？
-
-**方案 A**（保守，最小改动）：保持按 submit_date 枚举 365 天的结构，每天单独查（**公网模式很慢，但 reports.py 改动最小**）
-**方案 B**（推荐，按 ticker 一次查）：reports.py 改 `_list_filings` 直接调 `edinet_web.list_documents(year=period.year, ticker=ticker.code)`，公网模式跳过 365 天枚举
-
-**Codex 决定**：按 spike 报告中"公网搜索是否能按期间一次返回全年结果"决定。如果可以，方案 B；如果有结果数限制（如最多 100 条/页），方案 A 但加 ticker 过滤。
-
-### 2.4 验证
+### 2.6 验证
 
 ```bash
 cd development
 pytest tests/test_jp_*.py -v
-ruff check plugins/jp/
+ruff check plugins/jp/ app/core/
 ```
 
-### 2.5 Commit
+### 2.7 Commit
 
 ```
-v1.0: EDINET 公网爬虫真实现（addendum 批次 2）
+v1.0: EDINET 公网爬虫 Playwright 实现（addendum 批次 2）
 
-- plugins/jp/edinet_web.py 完全重写（_SELECTORS 真实字段、viewstate 处理、PDF 下载）
+- plugins/jp/edinet_web.py 完全重写：Playwright 搜索 + httpx PDF 下载
+- _SELECTORS 用 spike 确认的真实字段名（W0018v 前缀）
+- 复用 pdf_renderer._ensure_state thread-local Playwright pool
+- PDF 下载走 disclosure2dl 直链（spike 实测无 token 依赖）
 - settings.py RateLimitsCfg 加 edinet_web = 1.0 QPS
-- plugins/jp/reports.py 适配公网模式 API shape（方案 A/B）
-- KR dart_web.py 模板风格保持一致
+- plugins/jp/reports.py 双模式分离：API mode 走 365 天枚举，public mode 走单次 ticker+year 搜索
 ```
 
 ### Codex 自检 checklist 批次 2
 
-- [ ] _SELECTORS 全部基于 spike 报告的真实字段
-- [ ] HTTP 100% 走 `default_client(source="edinet_web")`，无自建 httpx.Client
-- [ ] viewstate 正确处理（GET 拿，POST 带）
-- [ ] session cookie 同 client 持久化
-- [ ] reports.py 双模式分支干净（有 key 调 edinet_api，无 key 调 edinet_web）
+- [ ] `_SELECTORS` 字段名与 spike 报告 100% 一致（`W0018vD_KEYWORD` / `W0018vD_KIKAN` / `W0018vCHKSYORUI1` / `W0018BTNBTN_SEARCH`）
+- [ ] **不**自建 `sync_playwright()`，必须 `pdf_renderer._ensure_state()` 复用 pool
+- [ ] PDF 下载 100% 走 `default_client(source="edinet_web")` + `stream_to_file`，无自建 httpx.Client
+- [ ] AV125W_RESULT_LIST_JSON 捕获逻辑参考 `tmp_pytest_ok/jp_web_spike.py` 中实际工作的版本
+- [ ] reports.py 双模式分支干净：API mode 365 天枚举不变，public mode 走 search_filings
 - [ ] 限流注册 `edinet_web = 1.0 QPS`
 - [ ] ruff 干净
 
@@ -603,34 +782,42 @@ v1.0: JP 公网真双模式文档与 release 收尾（addendum 批次 4）
 
 | 设施 | 文件 | 用途 |
 |---|---|---|
-| HTTP 单 session | `app/core/http.py::default_client` | 必须走它，不自建 httpx.Client |
-| 限流 | `app/core/ratelimit.py::limiter` | 注册 `edinet_web` source |
+| HTTP 单 session | `app/core/http.py::default_client` | PDF 下载走它，不自建 httpx.Client |
+| 大文件下载 | `app/core/http.py::stream_to_file` | EDINET PDF 直链下载 |
+| **Playwright pool** | `app/core/pdf_renderer.py::_ensure_state` | **必须复用**，不自建 sync_playwright() |
+| 限流 | `app/core/ratelimit.py::limiter` | 注册 `edinet_web` source（1.0 QPS） |
 | 设置 | `app/core/settings.py::RateLimitsCfg` | 加 `edinet_web` 字段 |
-| 模板参考 | `plugins/kr/dart_web.py` | KR 真双模式的成熟实现 |
-| 模板参考 | `plugins/tw/reports.py` | TW MOPS 同样是 ASP-style，纯 httpx 实现的 |
+| Playwright test mocks | `tests/test_playwright_pool.py` | mock 类骨架（_Page / _Context / _Browser）|
+| 模板参考 | `plugins/kr/dart_web.py` | KR 真双模式的成熟实现（搜 + PDF 路径分离） |
 
 ---
 
-## 风险与缓解（Top 4）
+## 风险与缓解（Top 5，spike 后修订）
 
-1. **PdfClick 是 postback 而非 URL 拼接**
-   - **缓解**：批次 1 spike 单独验证；如确认是 postback 且 token 不可逆向，转 Playwright（工作量 +1 天）
+1. **AV125W_RESULT_LIST_JSON 捕获失败**（GeneXus 内部结构改版）
+   - **缓解**：`page.on("response", ...)` 监听所有 `GXAjaxRequest` 200 响应；多 fallback（解析 page DOM / page.evaluate window 变量）
+   - **检测**：单测 mock `_Page.on` 验证 callback 被调
 
-2. **viewstate 频繁变化导致 session 失效**
-   - **缓解**：参考 KR dart_web 的 client 持久化；每个 ticker 用独立 session 或每 N 个 ticker 重新拿 viewstate
+2. **Playwright pool 资源泄漏**（page 未 close）
+   - **缓解**：`try / finally` 强制 close；参考 `pdf_renderer._render_once` 的资源管理模式
+   - **检测**：单测验证 `page.closed == True` after search
 
-3. **公网限流被 ban**
-   - **缓解**：限流默认 1.0 QPS（保守）；批次 3 e2e 实跑确认；如 ban 立刻降到 0.5 QPS + UI 提示
+3. **GeneXus 服务端版本升级破坏 selector 名**（`W0018v` 前缀变化）
+   - **缓解**：`_SELECTORS` 字典集中管理（同 KR dart_web 模式），改版时只需改一处
+   - **监控**：e2e smoke 失败时第一时间检查 selector 是否仍存在
 
-4. **公网搜索返回结果数限制**
-   - **缓解**：批次 1 spike 验证翻页机制；如有结果数限制，按 ticker + 年份精确搜（结果数应 < 10 条）
+4. **公网限流被 ban**
+   - **缓解**：默认 1.0 QPS；批次 3 e2e 实跑确认；如 ban 立刻降到 0.5 QPS + UI 提示
+
+5. **GeneXus 客户端翻页限制**（spike 看到 1/3 页 = 全 208 件，但客户端翻页未触发新 POST → 假设一次返回全部）
+   - **缓解**：精确 ticker 搜索通常 < 10 条，远小于客户端限制；如未来发现截断，在 search_filings 增加多次按年缩窗策略
 
 ---
 
 ## 不在本 sprint 范围
 
-- ❌ 切 Playwright 兜底（除非批次 1 spike 失败必须用）
-- ❌ 修改 `edinet_api.py`（保持现状）
+- ❌ 移植 GeneXus `gx.sec.rijndael` 加密（Plan A，spike 后否决）
+- ❌ 修改 `edinet_api.py`（保持现状，API mode 不变）
 - ❌ 修改 `name_resolver.py`（_edinet_api_key 不动）
 - ❌ JP IPO 招股说明书支持（v1.1+）
 - ❌ EDINET 公网爬虫的全文搜索能力
