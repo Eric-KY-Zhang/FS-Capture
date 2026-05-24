@@ -78,8 +78,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "MP_META_SG": "SGX 新加坡",
         # main_view
         "MV_SECTION": "选择市场 · SELECT MARKETS · UK / US || A股 · HK · TW · KR · JP · SG",
-        "MV_TITLE": "一键归档官方披露 PDF",
-        "MV_SUBTITLE": "仅来自官方披露页面；不抓财务数据、不计算指标、不导出 Excel。",
+        "MV_TITLE": "八大市场披露归档工作台",
+        "MV_SUBTITLE": "官方披露来源统一接入，按市场、公司与报告期间集中归档 PDF。",
         "MV_SETTINGS_BUTTON": "⚙  设置",
         "MV_RUN_BUTTON": "▶  抓报告",
         "MV_INCREMENTAL_BUTTON": "增量更新",
@@ -253,10 +253,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "MP_META_SG": "SGX",
         # main_view
         "MV_SECTION": "SELECT MARKETS · UK / US || A-Share · HK · TW · KR · JP · SG",
-        "MV_TITLE": "Pull every official PDF. Eight markets, one queue.",
+        "MV_TITLE": "Eight-Market Disclosure Workbench",
         "MV_SUBTITLE": (
-            "Downloads from official disclosure pages only. No financial-data scraping, "
-            "no metrics, no Excel export."
+            "Official filing sources in one queue, organized by market, company, "
+            "and reporting period."
         ),
         "MV_SETTINGS_BUTTON": "⚙  Settings",
         "MV_RUN_BUTTON": "▶  Download Reports",
