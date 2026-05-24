@@ -50,6 +50,7 @@ pythonpath = ["."]
 addopts = "-v --strict-markers"
 markers = [
     "e2e: end-to-end smoke tests requiring network",
+    "benchmark: performance benchmarks (slow, manual only)",
 ]
 
 [tool.ruff]
