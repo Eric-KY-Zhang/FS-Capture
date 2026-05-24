@@ -22,6 +22,7 @@ _DEFAULT_HEADERS = {
     "Accept": "*/*",
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
 }
+_DEFAULT_LIMITS = httpx.Limits(max_connections=100, max_keepalive_connections=40)
 
 
 def default_client(
@@ -48,6 +49,7 @@ def default_client(
         verify=verify,
         follow_redirects=True,
         http2=source != "dart",
+        limits=_DEFAULT_LIMITS,
     )
 
 
