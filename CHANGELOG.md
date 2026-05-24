@@ -10,6 +10,10 @@ First GitHub release for Filings Atlas / 全球披露图谱. This release adds S
   - Annual reports verified with DBS (`D05`), UOB (`U11`) and Singtel (`Z74`).
   - Interim report support verified with UOB H1.
   - IPO prospectus support verified with `3407` / LION-CM EM ASIA INDEX ETF.
+- Japan EDINET public web fallback fully implemented (`edinet_web.py`).
+  - JP downloads now work without an EDINET API key out of the box.
+  - API key remains an optional accelerator with higher rate limit (`edinet = 2.0` vs `edinet_web = 1.0`).
+  - Public mode tested with Toyota (`7203`), Sony (`6758`) and SoftBank (`9984`) 2024 annual reports.
 - Benchmark harness under `development/tests/benchmarks/` with explicit `FS_CAPTURE_RUN_BENCHMARK=1` opt-in.
 - Performance reports under `docs/perf/` for v0.9 baseline, v1.0 batch-5 A/B results and bundle size.
 
@@ -45,9 +49,8 @@ Filings Atlas / 全球披露图谱 v0.9.0 is the internal iteration for the rena
 - Product rename from **FS Capture** to **Filings Atlas / 全球披露图谱**.
 - Runtime Chinese / English UI switching with persistent language setting.
 - Taiwan market support through TWSE + MOPS.
-- Japan market support through EDINET.
-  - EDINET Subscription-Key is strongly recommended for the current build.
-  - Public fallback is retained, but the official EDINET API requires `Subscription-Key`.
+- Japan market support through EDINET API mode.
+  - The no-key public crawler was completed later in the v1.0 addendum.
 - United Kingdom market support through FCA National Storage Mechanism.
   - UK does not require an API key.
 - Korea no-key mode through DART public disclosure pages, with DART API key kept as an optional accelerator.
@@ -88,4 +91,4 @@ Filings Atlas / 全球披露图谱 v0.9.0 is the internal iteration for the rena
 - Non-e2e test matrix: `145 passed, 7 deselected`.
 - Ruff lint: `All checks passed`.
 - UK smoke verified real `%PDF` outputs for `ULVR`, `HSBA`, and `AZN`.
-- JP official API smoke without key returns invalid subscription key; configure EDINET Subscription-Key for reliable JP downloads.
+- JP API-key path had unit coverage; public no-key crawler work was deferred to v1.0.

@@ -29,7 +29,7 @@
 - 每市场一个 plugin 模块，新增市场只需要新建目录。
 - HTTP 走 `httpx` + `tenacity`，不再用 VBA 的 WinHttp + 正则。
 - 韩股 DART API Key 变为可选加速器；未配置时走 DART 公网披露页 fallback。
-- 日股 EDINET 支持双模式，但 v1.0 **强烈推荐配置 EDINET Subscription-Key**（免费注册 `disclosure2.edinet-fsa.go.jp` / `api.edinet-fsa.go.jp`）。未配置时仅尝试 EDINET 公网页 fallback，官方 API 会返回 invalid subscription key。
+- 日股 EDINET 支持真双模式：未配置 Key 时走 WEEE0030 公网搜索页 + PDF 直链下载；配置 EDINET Subscription-Key 后走官方 API 作为加速路径。
 - 英股 UK/FCA NSM 不需要 Key。
 - 新加坡 SGXNet 不需要 Key，走公网 JSON API + SGX 附件 HTML 二跳解析，不需要 Playwright。
 - 台股 MOPS 服务端证书缺失 Subject Key Identifier 扩展，`app/core/http.default_client` 仅对 `source=twse` 关闭证书校验（用户授权），其他七市场保留 certifi 严格校验。
@@ -81,7 +81,7 @@ UI 层
       ├─ period_selector.py     起止年份 + 期间类型 checkbox（年报 / 季报 / 半年报 / IPO 招股书）
       ├─ output_card.py         输出文件夹选择
       ├─ progress_dock.py       任务进度面板（per-task pill）
-      ├─ settings_dialog.py     DART Key / 并发数 / 主题 / SEC UA
+      ├─ settings_dialog.py     DART/EDINET Key / 并发数 / 主题 / SEC UA
       └─ styles/
          ├─ palette.py          light/dark 调色板 + per-exchange accent
          ├─ qss_loader.py       Token 替换
@@ -152,7 +152,7 @@ class ExchangePlugin(ABC):
 | 美股 | SEC `company_tickers.json`（24h 缓存） | SEC `submissions API` + 分页 `files` 兜底 | ✓ AAPL 10-K FY2023/2024 |
 | 韩股 | OpenDartReader `corp_codes` 或 DART 公网按需搜索（无 TTL 缓存） | DART OpenAPI `list` 或公网 HTML 搜索 + 公告 PDF/渲染下载 | ✓ 005930 三星电子（有 Key / 无 Key） |
 | 台股 | TWSE ISIN 服务（30d 缓存，覆盖上市 + 上柜） | MOPS `doc.twse.com.tw/server-java/t57sb01`（POST step=9 → 解析临时 `/pdf/` 链接 → GET） | ✓ 2330 台积电 年报 / 半年报 / IPO |
-| 日股 | EDINET 文档列表 API 或 EDINET 公网页 fallback | EDINET document API / PDF 展示链路 | API Key 路径单测覆盖；无 Key 官方 API 阻断 |
+| 日股 | EDINET API 或 WEEE0030 公网搜索 | EDINET document API 或 disclosure2dl PDF 直链 | ✓ 7203 / 6758 / 9984 无 Key 公网年报 |
 | 英股 | 预置主流 LSE ticker + FCA NSM issuer metadata | FCA NSM search API + artifact PDF/HTML 渲染 | ✓ ULVR / HSBA / AZN |
 
 ## 5. 数据流
@@ -324,7 +324,7 @@ HTTP 请求原则：
 - SEC 请求带最低限速（TokenBucket sec=8 rps）+ 邮箱 UA。
 - DART Key 缺失时 KR 自动走公网 fallback；填 Key 时优先走 OpenAPI。
 - 用户输入的 ticker code 全程 normalize（strip+upper），不直接拼 URL（防 SSRF）。
-- **TWSE 例外**：MOPS 服务端证书缺失 Subject Key Identifier 扩展（Python 3.12+ 严格 OpenSSL 拒绝），`default_client` 仅对 `source=twse` 设 `verify=False`，其他六市场保持 certifi 严格校验。这是 TWSE 服务端的证书 hygiene 问题，非我们可控。
+- **TWSE 例外**：MOPS 服务端证书缺失 Subject Key Identifier 扩展（Python 3.12+ 严格 OpenSSL 拒绝），`default_client` 仅对 `source=twse` 设 `verify=False`，其他七市场保持 certifi 严格校验。这是 TWSE 服务端的证书 hygiene 问题，非我们可控。
 
 | 层 | 实现 | TTL / 策略 |
 |---|---|---|
@@ -417,10 +417,10 @@ class SGShare(ExchangePlugin):
         return _download(ticker, period, output_root)
 ```
 
-如果数据源有 Key 与无 Key 两条路，拆成 `{mk}_api.py` 与 `{mk}_web.py`，在 `name_resolver.py` / `reports.py` 里统一选择分支。JP 是 Key/API 双模式模板：
+如果数据源有 Key 与无 Key 两条路，拆成 `{mk}_api.py` 与 `{mk}_web.py`，在 `name_resolver.py` / `reports.py` 里统一选择分支。JP 是 Key/API + 公网 fallback 的双模式模板：
 
 - `edinet_api.py`：EDINET API v2，使用 `Subscription-Key`，走 `default_client(source="edinet")` 与 `rate_limits.edinet`。
-- `edinet_web.py`：公网 fallback 入口，选择器集中在 `_SELECTORS`。
+- `edinet_web.py`：WEEE0030 GeneXus 公网搜索用 Playwright 捕获 `AV125W_RESULT_LIST_JSON`，PDF 下载走 `disclosure2dl/.../{doc_id}.pdf` 直链与 `default_client(source="edinet_web")`。
 - `name_resolver.py`：规范化 `7203` / `7203.T` / `JP7203`，缓存 EDINET code 与 filer name。
 - `reports.py`：按 `PeriodType` 映射 EDINET `docTypeCode`，下载或转换为 PDF，返回 `ReportFile`。
 
@@ -432,7 +432,7 @@ SG 是无 Key、公网 JSON + HTML 附件二跳模板：
 
 v1.0 的 Key 口径：
 
-- **Japan / EDINET**：强烈推荐配置 EDINET Subscription-Key。官方 API v2 的 documents list 与 document download 都要求 `Subscription-Key`；用户可免费注册 `disclosure2.edinet-fsa.go.jp` / `api.edinet-fsa.go.jp` 后在设置里填写。无 Key 时只尝试公网 fallback，稳定性不等同于 API。
+- **Japan / EDINET**：不需要 Key。无 Key 时走 EDINET 公网搜索页与 PDF 直链；配置 EDINET Subscription-Key 后优先走官方 API，作为更快的可选加速器（`edinet = 2.0`，`edinet_web = 1.0`）。
 - **United Kingdom / FCA NSM**：不需要 Key。UK 插件走 FCA NSM 公网 search endpoint 与 `data.fca.org.uk/artefacts/` 文件下载/HTML 渲染。
 - **Singapore / SGXNet**：不需要 Key。SG 插件用公开 config + CMS token 访问 SGXNet API，PDF 下载仍经 `stream_to_file`；SG 页面本身不作为 Playwright 依赖。
 
@@ -541,7 +541,7 @@ v1.0 本地验收：非 e2e `170 passed / 22 deselected`，benchmark opt-in `11 
 | 美股 | AAPL | ✓ Apple Inc. | ✓ 10-K FY2023 + FY2024 (1.5 MB each) |
 | 韩股 | 005930 | ✓ 三星电子 | ✓ annual_report.pdf（OpenAPI + 无 Key 公网 fallback） |
 | 台股 | 2330 | ✓ 台積電 | ✓ annual_report 9.99 MB / 半年报 7.2 MB / 60+ IPO 公开说明书 |
-| 日股 | 7203 | ✓ Toyota | EDINET API Key 推荐；无 Key 环境不列入 release smoke |
+| 日股 | 7203 / 6758 / 9984 | ✓ Toyota / Sony / SoftBank | ✓ 无 Key 公网年报 PDF |
 | 英股 | ULVR / HSBA / AZN | ✓ | ✓ FCA NSM PDF/HTML 渲染路径 |
 | 新加坡 | D05 / U11 / Z74 / 3407 | ✓ | ✓ 年报 / 半年报 / IPO 招股书 |
 

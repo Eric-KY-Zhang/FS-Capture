@@ -23,7 +23,7 @@ Filings Atlas is a Windows desktop tool for one-click downloading of official di
 | United States | SEC EDGAR | Annual, quarterly, IPO prospectus | No |
 | Korea | DART | Annual, Q1, Interim, Q3 | Optional DART API key |
 | Taiwan | TWSE + MOPS | Annual, Q1, Interim, Q3, IPO prospectus | No |
-| Japan | EDINET | Annual, Q1, Interim, Q3 | Strongly recommended EDINET Subscription-Key |
+| Japan | EDINET | Annual, Q1, Interim, Q3 | No (key optional, accelerates) |
 | United Kingdom | FCA NSM | Annual, interim and trading updates where available | No |
 | Singapore | SGXNet | Annual, interim, IPO prospectus | No |
 
@@ -53,7 +53,7 @@ Filings Atlas is a Windows desktop tool for one-click downloading of official di
 
 Korea works without a key by using the public DART disclosure pages. Adding a free DART API key in **Settings** can make Korea faster and more stable.
 
-Japan supports a public fallback, but the current build strongly recommends an EDINET Subscription-Key. The official EDINET API v2 uses `Subscription-Key` for document list and document download requests. Register for a free key through [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API key registration](https://api.edinet-fsa.go.jp/api/auth/index.aspx), then paste it in **Settings**. Without a key, Japanese downloads may fail when the API endpoint rejects unauthenticated requests.
+Japan works without a key through the EDINET public web search. Adding a free EDINET Subscription-Key in **Settings** switches Japan to the official API path, which has a higher default rate limit (`edinet = 2.0` vs `edinet_web = 1.0`) and can be faster for larger batches. Register through [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API key registration](https://api.edinet-fsa.go.jp/api/auth/index.aspx) if you want the accelerator.
 
 United Kingdom uses the FCA National Storage Mechanism and does not require a key.
 
@@ -89,7 +89,7 @@ Filings Atlas / 全球披露图谱 是一个 Windows 桌面工具，用于一键
 | 美股 | SEC EDGAR | 年报、季报、IPO 招股书 | 不需要 |
 | 韩股 | DART | 年报、一季报、半年报、三季报 | DART API Key 可选 |
 | 台股 | TWSE + MOPS | 年报、一季报、半年报、三季报、IPO 公开说明书 | 不需要 |
-| 日股 | EDINET | 年报、一季报、半年报、三季报 | 强烈推荐 EDINET Subscription-Key |
+| 日股 | EDINET | 年报、一季报、半年报、三季报 | 不需要（Key 可选，加速） |
 | 英股 | FCA NSM | 年报、半年报及可用的交易更新 | 不需要 |
 | 新加坡 | SGXNet | 年报、半年报、IPO 招股书 | 不需要 |
 
@@ -119,7 +119,7 @@ Filings Atlas / 全球披露图谱 是一个 Windows 桌面工具，用于一键
 
 韩股不填 Key 也可以使用 DART 公网披露页；如需更快、更稳，可在设置中填入免费的 DART API Key。
 
-日股在当前构建中强烈推荐配置 EDINET Subscription-Key。EDINET API v2 的书类列表和文件下载接口都使用 `Subscription-Key`；可通过 [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API Key 注册页](https://api.edinet-fsa.go.jp/api/auth/index.aspx) 免费注册并申请 Key，然后在设置中填写。没有 Key 时，工具只会尝试 EDINET 公网页兜底，稳定性不能等同于官方 API。
+日股不填 Key 也可以使用 EDINET 公网搜索页下载报告；如需批量任务更快，可在设置中填入免费的 EDINET Subscription-Key，切换到官方 API 路径（默认限流 `edinet = 2.0`，公网路径 `edinet_web = 1.0`）。可通过 [EDINET](https://disclosure2.edinet-fsa.go.jp/) / [EDINET API Key 注册页](https://api.edinet-fsa.go.jp/api/auth/index.aspx) 免费注册并申请 Key。
 
 英股使用 FCA National Storage Mechanism 公网数据源，不需要 Key。
 
