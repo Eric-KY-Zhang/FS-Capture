@@ -70,13 +70,13 @@ class MainView(QWidget):
         layout.addWidget(self.section_label)
 
         self.title_label = QLabel(ui_strings.MV_TITLE)
-        self.title_label.setStyleSheet("font-size: 22px; font-weight: 700; color: #0F172A;")
+        self.title_label.setObjectName("HeroTitle")
         layout.addWidget(self.title_label)
 
         self.subtitle_label = QLabel(ui_strings.MV_SUBTITLE)
-        self.subtitle_label.setStyleSheet("color: #64748B; font-size: 13px;")
+        self.subtitle_label.setObjectName("HeroSubtitle")
         layout.addWidget(self.subtitle_label)
-        layout.addSpacing(4)
+        layout.addSpacing(8)
 
         # ---- Exchange selector ------------------------------------------------
         self.exchange_selector = ExchangeSelector()

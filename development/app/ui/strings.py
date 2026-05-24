@@ -57,9 +57,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "ES_META_JP": "EDINET · 东京证券交易所",
         "ES_META_UK": "伦敦证券交易所 · NSM",
         # main_view
-        "MV_SECTION": "FILINGS ATLAS · 一键抓取",
-        "MV_TITLE": "上市公司官方披露 PDF 下载",
-        "MV_SUBTITLE": "勾选交易所 → 录入股票代码 → 选择期间 → 下载披露文件 PDF",
+        "MV_SECTION": "FILINGS ATLAS · 全球披露图谱",
+        "MV_TITLE": "全球披露图谱",
+        "MV_SUBTITLE": "跨 7 大市场 · 上市公司官方披露 · 一键 PDF 归档",
         "MV_SETTINGS_BUTTON": "⚙  设置",
         "MV_RUN_BUTTON": "▶  抓报告",
         "MV_INCREMENTAL_BUTTON": "增量更新",
@@ -88,7 +88,7 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         # main_window
         "MW_WINDOW_TITLE": "Filings Atlas / 全球披露图谱",
-        "MW_SUBTITLE": "· 上市公司披露报告一键下载",
+        "MW_SUBTITLE": "全球披露图谱 · 跨市场官方披露归档",
         # onboarding_dialog
         "OB_WINDOW_TITLE": "欢迎使用 Filings Atlas / 全球披露图谱",
         "OB_TITLE": "Filings Atlas / 全球披露图谱帮你一键下载 7 市场上市公司官方披露 PDF",
@@ -211,9 +211,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "ES_META_JP": "EDINET · TSE",
         "ES_META_UK": "LSE · NSM",
         # main_view
-        "MV_SECTION": "FILINGS ATLAS · One-click download",
-        "MV_TITLE": "Official disclosure PDF downloader",
-        "MV_SUBTITLE": "Select markets → enter ticker codes → choose periods → download disclosure PDFs",
+        "MV_SECTION": "FILINGS ATLAS · GLOBAL DISCLOSURE",
+        "MV_TITLE": "Filings Atlas",
+        "MV_SUBTITLE": "Seven markets · Official disclosures · One-click PDF archive",
         "MV_SETTINGS_BUTTON": "⚙  Settings",
         "MV_RUN_BUTTON": "▶  Download Reports",
         "MV_INCREMENTAL_BUTTON": "Incremental Update",
@@ -242,7 +242,7 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         # main_window
         "MW_WINDOW_TITLE": "Filings Atlas",
-        "MW_SUBTITLE": "· Official disclosure report downloader",
+        "MW_SUBTITLE": "Global Disclosure Atlas · Cross-market archive",
         # onboarding_dialog
         "OB_WINDOW_TITLE": "Welcome to Filings Atlas",
         "OB_TITLE": "Filings Atlas downloads official disclosure PDFs across 7 markets",
@@ -320,7 +320,19 @@ def tr(key: str) -> str:
     return STRINGS[LanguageManager.instance().current_language][key]
 
 
+# Language-independent constants — shown identically regardless of UI language.
+# Used by the title-bar 中/EN segmented toggle so an English speaker can find
+# the language switch without first reading the current UI language.
+LANG_INDEPENDENT: dict[str, str] = {
+    "MW_LANG_TOGGLE_ZH": "中",
+    "MW_LANG_TOGGLE_EN": "EN",
+    "MW_LANG_TOGGLE_TOOLTIP": "中文 / English",
+}
+
+
 def __getattr__(name: str) -> str:
+    if name in LANG_INDEPENDENT:
+        return LANG_INDEPENDENT[name]
     if name in STRINGS["zh"]:
         return tr(name)
     raise AttributeError(f"module 'strings' has no attribute {name!r}")

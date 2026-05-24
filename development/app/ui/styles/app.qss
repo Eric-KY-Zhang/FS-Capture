@@ -24,11 +24,21 @@ QWidget {
     border-top-right-radius: 0;
 }
 
+#TitleBarLogoIcon {
+    background: transparent;
+    border-radius: 6px;
+}
+
 #TitleBarLogo {
-    color: $primary;
+    color: $text;
     font-size: 15px;
     font-weight: 700;
-    padding-left: 18px;
+    letter-spacing: 0;
+}
+
+#TitleBarDivider {
+    color: $border_strong;
+    font-size: 11px;
 }
 
 #TitleBarTitle {
@@ -39,9 +49,9 @@ QWidget {
 }
 
 #TitleBarSubtitle {
-    color: $text_subtle;
+    color: $text_muted;
     font-size: 12px;
-    padding-left: 6px;
+    font-weight: 500;
 }
 
 #WindowControl {
@@ -63,6 +73,43 @@ QWidget {
 
 #WindowControl[role="close"]:hover {
     background: $danger;
+    color: white;
+}
+
+/* ---- Language toggle (titlebar) --------------------------- */
+#LangSegment {
+    background: transparent;
+    color: $text_muted;
+    border: 1px solid $border;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+}
+
+#LangSegment[position="left"] {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-right-width: 0;
+}
+
+#LangSegment[position="right"] {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+#LangSegment:hover {
+    background: $surface_alt;
+    color: $text;
+}
+
+#LangSegment[active="true"] {
+    background: $primary;
+    color: white;
+    border-color: $primary;
+}
+
+#LangSegment[active="true"]:hover {
+    background: $primary_hover;
     color: white;
 }
 
@@ -92,13 +139,28 @@ QWidget {
     padding: 6px 20px 16px 20px;
 }
 
-/* ---- Section header -------------------------------------- */
+/* ---- Section header / Hero ------------------------------- */
 #SectionLabel {
-    color: $text_subtle;
+    color: $primary;
     font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1px;
+    font-weight: 700;
+    letter-spacing: 0;
     text-transform: uppercase;
+    padding-top: 4px;
+}
+
+#HeroTitle {
+    color: $text;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: 0;
+    padding: 4px 0;
+}
+
+#HeroSubtitle {
+    color: $text_muted;
+    font-size: 14px;
+    font-weight: 400;
 }
 
 /* ---- Buttons ---------------------------------------------- */
@@ -275,18 +337,22 @@ QCheckBox::indicator:checked {
 #ExchangeChip {
     background: $surface;
     border: 1px solid $border;
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 14px 18px;
     text-align: left;
 }
 
 #ExchangeChip:hover {
-    border-color: $border_strong;
+    border-color: $primary;
     background: $surface_alt;
 }
 
 #ExchangeChip[active="true"] {
     border: 1.5px solid $primary;
+    background: $surface;
+}
+
+#ExchangeChip[active="true"]:hover {
     background: $surface;
 }
 

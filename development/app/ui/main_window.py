@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QCursor, QMouseEvent
+from PySide6.QtGui import QCursor, QMouseEvent, QPixmap
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -12,9 +12,72 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.core.settings import Settings
+from app.core.settings import Settings, project_root, save_settings
 from app.ui import strings as ui_strings
 from app.ui.i18n import LanguageManager
+
+
+class _LanguageToggle(QWidget):
+    """Segmented ZH / EN toggle for main title bar.
+
+    Provides a discoverable language switch without forcing users to open
+    Settings (where the label is in the *current* language and therefore
+    invisible to a user who can't read it).
+    """
+
+    def __init__(self, settings: Settings, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("LanguageToggle")
+        self.settings = settings
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 12, 10, 12)
+        layout.setSpacing(0)
+
+        self.zh_btn = self._make_segment(ui_strings.MW_LANG_TOGGLE_ZH, "zh", "left")
+        self.en_btn = self._make_segment(ui_strings.MW_LANG_TOGGLE_EN, "en", "right")
+        self.zh_btn.clicked.connect(lambda: self._set_language("zh"))
+        self.en_btn.clicked.connect(lambda: self._set_language("en"))
+
+        layout.addWidget(self.zh_btn)
+        layout.addWidget(self.en_btn)
+
+        self._sync()
+        LanguageManager.instance().language_changed.connect(self._on_language_changed)
+
+    @staticmethod
+    def _make_segment(text: str, lang: str, position: str) -> QPushButton:
+        b = QPushButton(text)
+        b.setObjectName("LangSegment")
+        b.setProperty("lang", lang)
+        b.setProperty("position", position)
+        b.setCursor(Qt.PointingHandCursor)
+        b.setFlat(True)
+        b.setFixedHeight(24)
+        b.setMinimumWidth(34)
+        b.setToolTip(ui_strings.MW_LANG_TOGGLE_TOOLTIP)
+        return b
+
+    def _set_language(self, code: str) -> None:
+        if code == LanguageManager.instance().current_language:
+            return
+        self.settings.ui.language = code
+        try:
+            save_settings(self.settings)
+        except OSError:
+            pass
+        LanguageManager.instance().set_language(code)
+
+    def _on_language_changed(self, _lang: str = "") -> None:
+        self._sync()
+
+    def _sync(self) -> None:
+        current = LanguageManager.instance().current_language
+        for btn, code in ((self.zh_btn, "zh"), (self.en_btn, "en")):
+            is_active = current == code
+            btn.setProperty("active", "true" if is_active else "false")
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
 
 
 class _TitleBar(QWidget):
@@ -24,7 +87,7 @@ class _TitleBar(QWidget):
     maximize_requested = Signal()
     close_requested = Signal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, settings: Settings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("TitleBar")
         self.setFixedHeight(48)
@@ -34,15 +97,34 @@ class _TitleBar(QWidget):
         layout.setContentsMargins(0, 0, 8, 0)
         layout.setSpacing(0)
 
+        # Brand block: logo image + wordmark + bullet + tagline
+        self.brand_icon = QLabel()
+        self.brand_icon.setObjectName("TitleBarLogoIcon")
+        self.brand_icon.setFixedSize(28, 28)
+        self.brand_icon.setScaledContents(True)
+        self._load_brand_icon()
+
         self.logo = QLabel("Filings Atlas")
         self.logo.setObjectName("TitleBarLogo")
+
+        self.brand_divider = QLabel("•")
+        self.brand_divider.setObjectName("TitleBarDivider")
 
         self.subtitle = QLabel(ui_strings.MW_SUBTITLE)
         self.subtitle.setObjectName("TitleBarSubtitle")
 
+        layout.addSpacing(14)
+        layout.addWidget(self.brand_icon)
+        layout.addSpacing(10)
         layout.addWidget(self.logo)
+        layout.addSpacing(10)
+        layout.addWidget(self.brand_divider)
+        layout.addSpacing(10)
         layout.addWidget(self.subtitle)
         layout.addStretch(1)
+
+        self.lang_toggle = _LanguageToggle(settings)
+        layout.addWidget(self.lang_toggle)
 
         self.btn_min = self._make_btn("—", "minimize")
         self.btn_max = self._make_btn("☐", "maximize")
@@ -59,6 +141,25 @@ class _TitleBar(QWidget):
 
     def _retranslate(self, _lang: str = "") -> None:
         self.subtitle.setText(ui_strings.MW_SUBTITLE)
+
+    def _load_brand_icon(self) -> None:
+        root = project_root()
+        candidate_paths = [
+            root / "app" / "assets" / "filings_atlas_logo.png",
+            root / "_internal" / "app" / "assets" / "filings_atlas_logo.png",
+        ]
+        for candidate in candidate_paths:
+            if candidate.exists():
+                pixmap = QPixmap(str(candidate))
+                if not pixmap.isNull():
+                    self.brand_icon.setPixmap(pixmap)
+                    return
+        # Fallback: render a diamond glyph in primary color via QSS
+        self.brand_icon.setText("◆")
+        self.brand_icon.setAlignment(Qt.AlignCenter)
+        self.brand_icon.setStyleSheet(
+            "color: #6366F1; font-size: 20px; font-weight: 700;"
+        )
 
     @staticmethod
     def _make_btn(text: str, role: str) -> QPushButton:
@@ -111,7 +212,7 @@ class MainWindow(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        self._title_bar = _TitleBar(self._root)
+        self._title_bar = _TitleBar(settings, self._root)
         self._title_bar.minimize_requested.connect(self.showMinimized)
         self._title_bar.maximize_requested.connect(self._toggle_maximize)
         self._title_bar.close_requested.connect(self.close)
