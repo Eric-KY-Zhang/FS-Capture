@@ -25,6 +25,14 @@ class Palette:
     warning: str
     danger: str
 
+    map_line: str
+    route_accent: str
+    tile_bg: str
+    tile_border: str
+    pill_ok: str
+    pill_error: str
+    pill_pending: str
+
     shadow: str  # rgba string used in box shadow effects
 
 
@@ -44,6 +52,13 @@ light_palette = Palette(
     success="#10B981",
     warning="#F59E0B",
     danger="#EF4444",
+    map_line="#CBD5E1",
+    route_accent="#38BDF8",
+    tile_bg="#FFFFFF",
+    tile_border="#E2E8F0",
+    pill_ok="rgba(16, 185, 129, 0.12)",
+    pill_error="rgba(239, 68, 68, 0.12)",
+    pill_pending="rgba(99, 102, 241, 0.12)",
     shadow="rgba(15, 23, 42, 0.08)",
 )
 
@@ -64,20 +79,27 @@ dark_palette = Palette(
     success="#34D399",
     warning="#FBBF24",
     danger="#F87171",
+    map_line="#334155",
+    route_accent="#38BDF8",
+    tile_bg="#111827",
+    tile_border="#273449",
+    pill_ok="rgba(52, 211, 153, 0.16)",
+    pill_error="rgba(248, 113, 113, 0.16)",
+    pill_pending="rgba(129, 140, 248, 0.16)",
     shadow="rgba(0, 0, 0, 0.4)",
 )
 
 
-# Per-exchange accent colors. Chinese convention: red = up = A-share home market.
+# Per-market accent colors from the UI Refresh design system.
 _EXCHANGE_ACCENT = {
-    Exchange.A_SHARE: "#E11D48",  # rose-600 — A股
-    Exchange.HK: "#D97706",  # amber-600 — 港股
-    Exchange.US: "#2563EB",  # blue-600 — 美股
-    Exchange.KR: "#7C3AED",  # violet-600 — 韩股
-    Exchange.TW: "#0EA5E9",  # sky-500 — 台股
-    Exchange.JP: "#059669",  # emerald-600 — 日股
-    Exchange.UK: "#DC2626",  # red-600 — 英股
-    Exchange.SG: "#0F766E",  # teal-700 — 新股
+    Exchange.UK: "#1E3A8A",
+    Exchange.US: "#0891B2",
+    Exchange.A_SHARE: "#E11D48",
+    Exchange.HK: "#F97316",
+    Exchange.TW: "#F59E0B",
+    Exchange.KR: "#C026D3",
+    Exchange.JP: "#DC2626",
+    Exchange.SG: "#A16207",
 }
 
 

@@ -51,6 +51,7 @@ class TickerRow(QWidget):
         self.exchange = exchange
         self._ticker: Ticker | None = None
         self._pill_key = "TR_PENDING"
+        self.setObjectName("TickerRow")
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 4, 0, 4)
@@ -74,7 +75,7 @@ class TickerRow(QWidget):
         self.status_pill.setMinimumWidth(70)
 
         self.name_label = QLabel("")
-        self.name_label.setStyleSheet("color: #475569; font-size: 13px;")
+        self.name_label.setObjectName("TickerName")
         self.name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.name_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QCursor, QMouseEvent, QPixmap
+from PySide6.QtGui import QColor, QCursor, QMouseEvent, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -169,6 +169,17 @@ class _TitleBar(QWidget):
         b.setCursor(Qt.PointingHandCursor)
         b.setFlat(True)
         return b
+
+    def paintEvent(self, event) -> None:  # type: ignore[override]
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        pen = QPen(QColor(203, 213, 225, 46), 1)
+        painter.setPen(pen)
+        w = self.width()
+        for offset in (0, 42, 86):
+            painter.drawArc(w - 430 + offset, -52, 300, 126, 1940, 1090)
+            painter.drawArc(w - 380 + offset, -24, 240, 96, 1960, 1040)
 
 
 class MainWindow(QMainWindow):

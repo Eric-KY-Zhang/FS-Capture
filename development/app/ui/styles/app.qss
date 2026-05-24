@@ -117,7 +117,7 @@ QWidget {
 .Card, #Card {
     background: $surface;
     border: 1px solid $border;
-    border-radius: 12px;
+    border-radius: 8px;
 }
 
 #CardHeader {
@@ -137,6 +137,21 @@ QWidget {
 
 #CardBody {
     padding: 6px 20px 16px 20px;
+}
+
+#EmptyHint {
+    color: $text_subtle;
+    font-size: 12px;
+    padding: 12px 4px;
+}
+
+#ConfigLabel {
+    color: $text_muted;
+}
+
+#MutedArrow {
+    color: $text_subtle;
+    font-size: 16px;
 }
 
 /* ---- Section header / Hero ------------------------------- */
@@ -168,7 +183,7 @@ QPushButton {
     background: $surface;
     color: $text;
     border: 1px solid $border;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 8px 16px;
     font-size: 13px;
     min-height: 18px;
@@ -255,7 +270,7 @@ QPushButton[variant="danger-icon"]:hover {
 QLineEdit, QSpinBox, QComboBox {
     background: $surface;
     border: 1px solid $border;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 7px 12px;
     color: $text;
     selection-background-color: $primary;
@@ -295,7 +310,7 @@ QComboBox::down-arrow {
 QComboBox QAbstractItemView {
     background: $surface;
     border: 1px solid $border;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 4px;
     selection-background-color: $surface_alt;
     selection-color: $text;
@@ -333,38 +348,68 @@ QCheckBox::indicator:checked {
     image: url(none);
 }
 
-/* ---- Exchange selector chips ----------------------------- */
-#ExchangeChip {
-    background: $surface;
-    border: 1px solid $border;
-    border-radius: 14px;
-    padding: 14px 18px;
-    text-align: left;
+/* ---- MarketPin selector ---------------------------------- */
+#MarketPinSelector {
+    background: $tile_bg;
+    border: 1px solid $tile_border;
+    border-radius: 8px;
 }
 
-#ExchangeChip:hover {
-    border-color: $primary;
+#MarketPin {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0;
+    text-align: center;
+}
+
+#MarketPin:hover {
     background: $surface_alt;
+    border-color: $tile_border;
 }
 
-#ExchangeChip[active="true"] {
+#MarketPin[active="true"] {
+    background: $surface;
     border: 1.5px solid $primary;
+}
+
+#MarketPin[active="true"]:hover {
     background: $surface;
 }
 
-#ExchangeChip[active="true"]:hover {
-    background: $surface;
-}
-
-#ExchangeChipName {
-    font-size: 14px;
-    font-weight: 600;
+#MarketPinName {
+    font-size: 12px;
+    font-weight: 700;
     color: $text;
 }
 
-#ExchangeChipMeta {
-    font-size: 11px;
+#MarketPinMeta {
+    font-size: 9px;
+    font-weight: 500;
     color: $text_subtle;
+}
+
+#ConfigGrid {
+    background: transparent;
+}
+
+#ActionBar {
+    background: $surface;
+    border-top: 1px solid $border;
+}
+
+#TickerRow {
+    background: transparent;
+    border-radius: 8px;
+}
+
+#TickerRow:hover {
+    background: $surface_alt;
+}
+
+#TickerName {
+    color: $text_muted;
+    font-size: 13px;
 }
 
 /* ---- Status pill (resolved name OK / failed) ------------- */
@@ -376,17 +421,17 @@ QCheckBox::indicator:checked {
 }
 
 #StatusPill[state="ok"] {
-    background: rgba(16, 185, 129, 0.12);
+    background: $pill_ok;
     color: $success;
 }
 
 #StatusPill[state="error"] {
-    background: rgba(239, 68, 68, 0.12);
+    background: $pill_error;
     color: $danger;
 }
 
 #StatusPill[state="pending"] {
-    background: rgba(99, 102, 241, 0.12);
+    background: $pill_pending;
     color: $primary;
 }
 

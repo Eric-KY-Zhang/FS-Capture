@@ -49,15 +49,15 @@ def test_main_view_has_no_cjk_labels_after_switching_to_en() -> None:
     assert offenders == []
 
 
-def test_sg_exchange_chip_and_panel_retranslate() -> None:
+def test_sg_market_pin_and_panel_retranslate() -> None:
     view = _main_view()
 
-    assert view.exchange_selector.chips[Exchange.SG].name_label.text() == "新股"
-    assert view._panels[Exchange.SG].title_label.text() == "新股 · Singapore"  # type: ignore[attr-defined]
+    assert view.exchange_selector.pins[Exchange.SG].name_label.text() == "新加坡"
+    assert view._panels[Exchange.SG].title_label.text() == "新加坡 · Singapore"  # type: ignore[attr-defined]
 
     LanguageManager.instance().set_language("en")
 
-    assert view.exchange_selector.chips[Exchange.SG].name_label.text() == "Singapore"
+    assert view.exchange_selector.pins[Exchange.SG].name_label.text() == "SG"
     assert view._panels[Exchange.SG].title_label.text() == "Singapore"  # type: ignore[attr-defined]
 
 

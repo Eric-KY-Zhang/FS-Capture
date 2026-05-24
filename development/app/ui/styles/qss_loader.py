@@ -26,4 +26,11 @@ def load_qss(palette: Palette) -> str:
         success=palette.success,
         warning=palette.warning,
         danger=palette.danger,
+        map_line=palette.map_line,
+        route_accent=palette.route_accent,
+        tile_bg=palette.tile_bg,
+        tile_border=palette.tile_border,
+        pill_ok=palette.pill_ok,
+        pill_error=palette.pill_error,
+        pill_pending=palette.pill_pending,
     )

@@ -23,7 +23,7 @@ from app.core.orchestrator import Orchestrator
 from app.core.settings import Settings
 from app.ui import strings as ui_strings
 from app.ui.exchange_panel import ExchangePanel
-from app.ui.exchange_selector import ExchangeSelector
+from app.ui.exchange_selector import MARKET_ORDER, ExchangeSelector
 from app.ui.i18n import LanguageManager
 from app.ui.output_card import OutputCard
 from app.ui.period_selector import PeriodSelector
@@ -108,14 +108,10 @@ class MainView(QWidget):
         self._scroll.setWidget(content)
 
         layout = QVBoxLayout(content)
-        layout.setContentsMargins(36, 24, 36, 36)
-        layout.setSpacing(20)
+        layout.setContentsMargins(36, 22, 36, 24)
+        layout.setSpacing(18)
 
         # ---- Hero / heading ---------------------------------------------------
-        self.section_label = QLabel(ui_strings.MV_SECTION)
-        self.section_label.setObjectName("SectionLabel")
-        layout.addWidget(self.section_label)
-
         self.title_label = QLabel(ui_strings.MV_TITLE)
         self.title_label.setObjectName("HeroTitle")
         layout.addWidget(self.title_label)
@@ -123,9 +119,13 @@ class MainView(QWidget):
         self.subtitle_label = QLabel(ui_strings.MV_SUBTITLE)
         self.subtitle_label.setObjectName("HeroSubtitle")
         layout.addWidget(self.subtitle_label)
-        layout.addSpacing(8)
+        layout.addSpacing(4)
 
         # ---- Exchange selector ------------------------------------------------
+        self.section_label = QLabel(ui_strings.MV_SECTION)
+        self.section_label.setObjectName("SectionLabel")
+        layout.addWidget(self.section_label)
+
         self.exchange_selector = ExchangeSelector()
         self.exchange_selector.selection_changed.connect(self._sync_exchange_panels)
         layout.addWidget(self.exchange_selector)
@@ -133,37 +133,37 @@ class MainView(QWidget):
         # ---- Per-exchange panels ---------------------------------------------
         self._panels: dict[Exchange, ExchangePanel] = {}
         self._prewarm_started: set[Exchange] = set()
-        for ex in (
-            Exchange.A_SHARE,
-            Exchange.HK,
-            Exchange.US,
-            Exchange.KR,
-            Exchange.TW,
-            Exchange.JP,
-            Exchange.UK,
-            Exchange.SG,
-        ):
+        for ex in MARKET_ORDER:
             panel = ExchangePanel(ex)
             self._panels[ex] = panel
             layout.addWidget(panel)
             panel.setVisible(False)
 
-        # ---- Period selector --------------------------------------------------
-        self.period_selector = PeriodSelector()
-        layout.addWidget(self.period_selector)
+        # ---- Report and output configuration ---------------------------------
+        config_grid = QWidget()
+        config_grid.setObjectName("ConfigGrid")
+        config_layout = QHBoxLayout(config_grid)
+        config_layout.setContentsMargins(0, 0, 0, 0)
+        config_layout.setSpacing(12)
 
-        # ---- Output card ------------------------------------------------------
+        self.period_selector = PeriodSelector()
         default_out = str(settings.output_path())
         self.output_card = OutputCard(default_out)
-        layout.addWidget(self.output_card)
+        config_layout.addWidget(self.period_selector, 3)
+        config_layout.addWidget(self.output_card, 2)
+        layout.addWidget(config_grid)
 
         # ---- Progress dock (initially hidden) ---------------------------------
         self.progress_dock = ProgressDock()
         self.progress_dock.cancel_requested.connect(self.orchestrator.request_cancel)
         layout.addWidget(self.progress_dock)
+        layout.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
-        # ---- Action row -------------------------------------------------------
-        actions = QHBoxLayout()
+        # ---- Fixed action bar -------------------------------------------------
+        self._action_bar = QFrame()
+        self._action_bar.setObjectName("ActionBar")
+        actions = QHBoxLayout(self._action_bar)
+        actions.setContentsMargins(36, 12, 36, 12)
         actions.setSpacing(12)
 
         self.settings_btn = QPushButton(ui_strings.MV_SETTINGS_BUTTON)
@@ -186,9 +186,7 @@ class MainView(QWidget):
         actions.addStretch(1)
         actions.addWidget(self.incremental_btn)
         actions.addWidget(self.run_btn)
-        layout.addLayout(actions)
-
-        layout.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        outer.addWidget(self._action_bar)
 
         # Initial panel sync
         self._sync_exchange_panels()

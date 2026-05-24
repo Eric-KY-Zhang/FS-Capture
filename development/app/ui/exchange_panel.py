@@ -55,7 +55,6 @@ class ExchangePanel(QFrame):
 
         self.subtitle_label = QLabel(self._subtitle_for(exchange))
         self.subtitle_label.setObjectName("CardSubtitle")
-        self.subtitle_label.setStyleSheet("color: #94A3B8; font-size: 12px;")
         h_layout.addWidget(self.subtitle_label)
         h_layout.addStretch(1)
 
@@ -84,7 +83,7 @@ class ExchangePanel(QFrame):
 
         # Empty state hint
         self._empty_label = QLabel(ui_strings.EP_EMPTY)
-        self._empty_label.setStyleSheet("color: #94A3B8; font-size: 12px; padding: 12px 4px;")
+        self._empty_label.setObjectName("EmptyHint")
         self._rows_layout.addWidget(self._empty_label)
 
         self._rows: list[TickerRow] = []
@@ -93,8 +92,7 @@ class ExchangePanel(QFrame):
     # ---- API ---------------------------------------------------------------
 
     def add_row(self, code: str = "") -> TickerRow:
-        if self._empty_label.isVisible():
-            self._empty_label.hide()
+        self._empty_label.hide()
         row = TickerRow(self.exchange, self._rows_host)
         if code:
             row.code_input.setText(code)
