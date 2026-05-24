@@ -25,6 +25,16 @@ def _assert_downloaded_reports(reports) -> None:
         assert path.stat().st_size > 100_000
 
 
+def _assert_sg_sidecars(reports) -> None:
+    from app.core.sidecar import sidecar_path, write_sidecar
+
+    for report in reports:
+        path = write_sidecar(report)
+        assert path == sidecar_path(report)
+        assert path.parent.name == "SG"
+        assert path.exists()
+
+
 def test_ashare_600519_2024() -> None:
     plugin = get_plugin(Exchange.A_SHARE)
     ticker = plugin.resolve_name("600519")
@@ -96,6 +106,57 @@ def test_tw_2330_2024_q2_interim() -> None:
     reports = plugin.download_reports(ticker, Period(year=2024, type=PeriodType.Q2), out)
     assert any(report.kind == "interim_report" for report in reports)
     _assert_downloaded_reports(reports)
+
+
+def test_sg_d05_2024_annual() -> None:
+    plugin = get_plugin(Exchange.SG)
+    ticker = plugin.resolve_name("D05")
+    assert ticker.name
+    company = plugin.fetch_company(ticker)
+    assert company.currency == "SGD"
+    out = Path.cwd() / "e2e_output"
+    reports = plugin.download_reports(ticker, Period(year=2024, type=PeriodType.ANNUAL), out)
+    assert any(report.kind == "annual_report" for report in reports)
+    _assert_downloaded_reports(reports)
+    _assert_sg_sidecars(reports)
+
+
+def test_sg_u11_2024_annual_and_h1() -> None:
+    plugin = get_plugin(Exchange.SG)
+    ticker = plugin.resolve_name("U11")
+    assert ticker.name
+    out = Path.cwd() / "e2e_output"
+    annual = plugin.download_reports(ticker, Period(year=2024, type=PeriodType.ANNUAL), out)
+    h1 = plugin.download_reports(ticker, Period(year=2024, type=PeriodType.Q2), out)
+    assert any(report.kind == "annual_report" for report in annual)
+    assert any(report.kind == "interim_report" for report in h1)
+    _assert_downloaded_reports(annual)
+    _assert_downloaded_reports(h1)
+    _assert_sg_sidecars(annual + h1)
+
+
+def test_sg_z74_2024_annual() -> None:
+    plugin = get_plugin(Exchange.SG)
+    ticker = plugin.resolve_name("Z74")
+    assert ticker.name
+    out = Path.cwd() / "e2e_output"
+    reports = plugin.download_reports(ticker, Period(year=2024, type=PeriodType.ANNUAL), out)
+    assert any(report.kind == "annual_report" for report in reports)
+    _assert_downloaded_reports(reports)
+    _assert_sg_sidecars(reports)
+
+
+def test_sg_3407_2024_ipo_prospectus() -> None:
+    plugin = get_plugin(Exchange.SG)
+    ticker = plugin.resolve_name("3407")
+    assert ticker.name == "LION-CM EM ASIA INDEX ETF"
+    out = Path.cwd() / "e2e_output"
+    reports = plugin.download_reports(
+        ticker, Period(year=2024, type=PeriodType.IPO_PROSPECTUS), out
+    )
+    assert any(report.kind == "ipo_prospectus" for report in reports)
+    _assert_downloaded_reports(reports)
+    _assert_sg_sidecars(reports)
 
 
 @pytest.mark.skipif(

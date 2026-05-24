@@ -49,6 +49,18 @@ def test_main_view_has_no_cjk_labels_after_switching_to_en() -> None:
     assert offenders == []
 
 
+def test_sg_exchange_chip_and_panel_retranslate() -> None:
+    view = _main_view()
+
+    assert view.exchange_selector.chips[Exchange.SG].name_label.text() == "新股"
+    assert view._panels[Exchange.SG].title_label.text() == "新股 · Singapore"  # type: ignore[attr-defined]
+
+    LanguageManager.instance().set_language("en")
+
+    assert view.exchange_selector.chips[Exchange.SG].name_label.text() == "Singapore"
+    assert view._panels[Exchange.SG].title_label.text() == "Singapore"  # type: ignore[attr-defined]
+
+
 def test_ticker_row_preserves_input_when_language_changes() -> None:
     view = _main_view()
     row = view._panels[Exchange.A_SHARE]._rows[0]  # type: ignore[attr-defined]

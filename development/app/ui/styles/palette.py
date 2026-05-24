@@ -77,6 +77,7 @@ _EXCHANGE_ACCENT = {
     Exchange.TW: "#0EA5E9",  # sky-500 — 台股
     Exchange.JP: "#059669",  # emerald-600 — 日股
     Exchange.UK: "#DC2626",  # red-600 — 英股
+    Exchange.SG: "#0F766E",  # teal-700 — 新股
 }
 
 

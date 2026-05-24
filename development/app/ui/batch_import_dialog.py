@@ -26,6 +26,7 @@ _KR_RE = re.compile(r"^\d{1,6}(?:\.(?:KS|KQ))?$", re.IGNORECASE)
 _TW_RE = re.compile(r"^(?:TW)?\d{4}(?:\.(?:TW|TWO))?$", re.IGNORECASE)
 _JP_RE = re.compile(r"^(?:JP)?\d{4}(?:\.(?:T|JP))?$", re.IGNORECASE)
 _UK_RE = re.compile(r"^[A-Z]{1,5}(?:\.L)?$", re.IGNORECASE)
+_SG_RE = re.compile(r"^[A-Z0-9]{1,5}(?:\.SI)?$", re.IGNORECASE)
 
 _PATTERNS = {
     Exchange.A_SHARE: _A_SHARE_RE,
@@ -35,6 +36,7 @@ _PATTERNS = {
     Exchange.TW: _TW_RE,
     Exchange.JP: _JP_RE,
     Exchange.UK: _UK_RE,
+    Exchange.SG: _SG_RE,
 }
 
 _US_STOPWORDS = {
@@ -99,7 +101,7 @@ def _candidate_tokens_from_line(line: str, exchange: Exchange):
         if not cell:
             continue
         tokens = [t for t in _SPACE_SPLIT_RE.split(cell) if t]
-        if exchange == Exchange.US and len(tokens) > 1:
+        if exchange in {Exchange.US, Exchange.SG} and len(tokens) > 1:
             yield tokens[0]
         else:
             yield from tokens
@@ -148,6 +150,8 @@ def _normalize_token(token: str, exchange: Exchange) -> str:
         return code.zfill(4)
     if exchange == Exchange.UK:
         return re.sub(r"\.L$", "", code)
+    if exchange == Exchange.SG:
+        return re.sub(r"\.SI$", "", code)
     return code
 
 
@@ -219,6 +223,7 @@ class BatchImportDialog(QDialog):
             Exchange.TW: ui_strings.ES_NAME_TW,
             Exchange.JP: ui_strings.ES_NAME_JP,
             Exchange.UK: ui_strings.ES_NAME_UK,
+            Exchange.SG: ui_strings.ES_NAME_SG,
         }[exchange]
 
     @staticmethod
@@ -231,4 +236,5 @@ class BatchImportDialog(QDialog):
             Exchange.TW: "2330\n2317\n2454",
             Exchange.JP: "7203\n6758\n9984",
             Exchange.UK: "ULVR\nHSBA\nAZN",
+            Exchange.SG: "D05\nU11\nZ74",
         }[exchange]

@@ -34,6 +34,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "EP_TITLE_TW": "台股 · Taiwan",
         "EP_TITLE_JP": "日股 · Japan",
         "EP_TITLE_UK": "英股 · United Kingdom",
+        "EP_TITLE_SG": "新股 · Singapore",
         "EP_SUBTITLE_A_SHARE": "巨潮资讯网 · 东方财富",
         "EP_SUBTITLE_HK": "披露易 · 东方财富",
         "EP_SUBTITLE_US": "SEC EDGAR 披露系统",
@@ -41,6 +42,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "EP_SUBTITLE_TW": "公開資訊觀測站 MOPS",
         "EP_SUBTITLE_JP": "EDINET · 东京证券交易所",
         "EP_SUBTITLE_UK": "FCA 国家存储机制 NSM",
+        "EP_SUBTITLE_SG": "SGXNet 公开披露",
         # exchange_selector
         "ES_NAME_A_SHARE": "A股",
         "ES_NAME_HK": "港股",
@@ -49,6 +51,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "ES_NAME_TW": "台股",
         "ES_NAME_JP": "日股",
         "ES_NAME_UK": "英股",
+        "ES_NAME_SG": "新股",
         "ES_META_A_SHARE": "上交所 · 深交所 · 北交所",
         "ES_META_HK": "香港交易所",
         "ES_META_US": "纽交所 · 纳斯达克",
@@ -56,10 +59,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "ES_META_TW": "台交所 · 櫃買中心",
         "ES_META_JP": "EDINET · 东京证券交易所",
         "ES_META_UK": "伦敦证券交易所 · NSM",
+        "ES_META_SG": "新加坡交易所 SGX",
         # main_view
         "MV_SECTION": "FILINGS ATLAS · 全球披露图谱",
         "MV_TITLE": "全球披露图谱",
-        "MV_SUBTITLE": "跨 7 大市场 · 上市公司官方披露 · 一键 PDF 归档",
+        "MV_SUBTITLE": "跨 8 大市场 · 上市公司官方披露 · 一键 PDF 归档",
         "MV_SETTINGS_BUTTON": "⚙  设置",
         "MV_RUN_BUTTON": "▶  抓报告",
         "MV_INCREMENTAL_BUTTON": "增量更新",
@@ -91,7 +95,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "MW_SUBTITLE": "全球披露图谱 · 跨市场官方披露归档",
         # onboarding_dialog
         "OB_WINDOW_TITLE": "欢迎使用 Filings Atlas / 全球披露图谱",
-        "OB_TITLE": "Filings Atlas / 全球披露图谱帮你一键下载 7 市场上市公司官方披露 PDF",
+        "OB_TITLE": "Filings Atlas / 全球披露图谱帮你一键下载 8 市场上市公司官方披露 PDF",
         "OB_HINT": "输入第一个股票代码试试。确认公司名称后，选择年份和报告类型即可开始下载。",
         "OB_DART_BODY": (
             "韩股默认通过 DART 公网披露页抓取，无需配置。如需更快更稳的体验，"
@@ -158,6 +162,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "TR_PLACEHOLDER_TW": "如 2330 / 2317",
         "TR_PLACEHOLDER_JP": "如 7203 / 6758",
         "TR_PLACEHOLDER_UK": "如 ULVR / HSBA",
+        "TR_PLACEHOLDER_SG": "如 D05 / U11 / Z74",
     },
     "en": {
         # Common
@@ -188,6 +193,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "EP_TITLE_TW": "Taiwan",
         "EP_TITLE_JP": "Japan",
         "EP_TITLE_UK": "United Kingdom",
+        "EP_TITLE_SG": "Singapore",
         "EP_SUBTITLE_A_SHARE": "CNINFO · Eastmoney",
         "EP_SUBTITLE_HK": "HKEXnews · Eastmoney",
         "EP_SUBTITLE_US": "SEC EDGAR",
@@ -195,6 +201,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "EP_SUBTITLE_TW": "MOPS disclosure portal",
         "EP_SUBTITLE_JP": "EDINET · TSE",
         "EP_SUBTITLE_UK": "FCA National Storage Mechanism",
+        "EP_SUBTITLE_SG": "SGXNet public disclosures",
         # exchange_selector
         "ES_NAME_A_SHARE": "A-Share",
         "ES_NAME_HK": "Hong Kong",
@@ -203,6 +210,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "ES_NAME_TW": "Taiwan",
         "ES_NAME_JP": "Japan",
         "ES_NAME_UK": "United Kingdom",
+        "ES_NAME_SG": "Singapore",
         "ES_META_A_SHARE": "SSE · SZSE · BSE",
         "ES_META_HK": "Hong Kong Exchange",
         "ES_META_US": "NYSE · NASDAQ",
@@ -210,10 +218,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "ES_META_TW": "TWSE · TPEx",
         "ES_META_JP": "EDINET · TSE",
         "ES_META_UK": "LSE · NSM",
+        "ES_META_SG": "Singapore Exchange",
         # main_view
         "MV_SECTION": "FILINGS ATLAS · GLOBAL DISCLOSURE",
         "MV_TITLE": "Filings Atlas",
-        "MV_SUBTITLE": "Seven markets · Official disclosures · One-click PDF archive",
+        "MV_SUBTITLE": "Eight markets · Official disclosures · One-click PDF archive",
         "MV_SETTINGS_BUTTON": "⚙  Settings",
         "MV_RUN_BUTTON": "▶  Download Reports",
         "MV_INCREMENTAL_BUTTON": "Incremental Update",
@@ -245,7 +254,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "MW_SUBTITLE": "Global Disclosure Atlas · Cross-market archive",
         # onboarding_dialog
         "OB_WINDOW_TITLE": "Welcome to Filings Atlas",
-        "OB_TITLE": "Filings Atlas downloads official disclosure PDFs across 7 markets",
+        "OB_TITLE": "Filings Atlas downloads official disclosure PDFs across 8 markets",
         "OB_HINT": "Try your first ticker code. Confirm the company name, choose years and report types, then start downloading.",
         "OB_DART_BODY": (
             "Korea uses the public DART disclosure pages by default and does not require setup. "
@@ -312,6 +321,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "TR_PLACEHOLDER_TW": "e.g. 2330 / 2317",
         "TR_PLACEHOLDER_JP": "e.g. 7203 / 6758",
         "TR_PLACEHOLDER_UK": "e.g. ULVR / HSBA",
+        "TR_PLACEHOLDER_SG": "e.g. D05 / U11 / Z74",
     },
 }
 

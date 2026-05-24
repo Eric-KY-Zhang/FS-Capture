@@ -67,6 +67,15 @@ def test_parse_uk_codes_normalizes_l_suffix() -> None:
     assert rejected == []
 
 
+def test_parse_sg_codes_normalizes_si_suffix() -> None:
+    text = "D05 DBS\nu11.si\nZ74\nD05.SI"
+
+    codes, rejected = parse_ticker_codes(text, Exchange.SG)
+
+    assert codes == ["D05", "U11", "Z74"]
+    assert rejected == []
+
+
 def test_parse_returns_rejected_tokens() -> None:
     codes, rejected = parse_ticker_codes("600519\nINVALID\n000001", Exchange.A_SHARE)
 
