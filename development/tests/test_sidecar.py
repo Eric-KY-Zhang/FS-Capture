@@ -41,6 +41,39 @@ def test_write_sidecar_contains_report_metadata(tmp_path) -> None:
     assert len(meta["sha256"]) == 64
 
 
+def test_write_sidecar_replaces_existing_file_without_temp_leftovers(tmp_path) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    cache_root = tmp_path / "cache"
+    pdf_path = output_dir / "US_AAPL_Apple_2024_年报.pdf"
+    pdf_path.write_bytes(b"%PDF-1.7\nfirst")
+    ticker = Ticker(exchange=Exchange.US, code="AAPL", name="Apple")
+    period = Period(year=2024, type=PeriodType.ANNUAL)
+    report = ReportFile(
+        ticker=ticker,
+        period=period,
+        kind="annual_report",
+        local_path=str(pdf_path),
+        source_url="https://example.com/first.pdf",
+        title="First",
+    )
+
+    sidecar = write_sidecar(report, cache_root)
+    first = json.loads(sidecar.read_text(encoding="utf-8"))
+
+    pdf_path.write_bytes(b"%PDF-1.7\nsecond")
+    report.source_url = "https://example.com/second.pdf"
+    report.title = "Second"
+    second_sidecar = write_sidecar(report, cache_root)
+    second = json.loads(second_sidecar.read_text(encoding="utf-8"))
+
+    assert second_sidecar == sidecar
+    assert first["sha256"] != second["sha256"]
+    assert second["source_url"] == "https://example.com/second.pdf"
+    assert second["title"] == "Second"
+    assert list(sidecar.parent.glob("*.tmp")) == []
+
+
 def test_sidecar_path_prefers_accession_number(tmp_path) -> None:
     ticker = Ticker(exchange=Exchange.US, code="AAPL", name="Apple")
     period = Period(year=2024, type=PeriodType.ANNUAL)
