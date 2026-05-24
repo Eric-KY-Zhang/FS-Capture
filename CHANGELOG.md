@@ -33,6 +33,8 @@ First GitHub release for Filings Atlas / 全球披露图谱. This release adds S
 - Workbench refresh with Atlas map identity, including a cloud-light palette, route accents, and MarketPin market selectors.
 - New application icon redesigned with the cloud-pin concept; the `.ico` now ships 16/32/48/64/128/256 sizes.
 - Multilingual screenshots refreshed for both Chinese and English UI.
+- Titlebar contour pattern realigned to Claude Design source: UK navy `#1E3A8A` at ~7% opacity (was misset to a generic gray at ~18%).
+- Primary "Download Reports" CTA now carries an indigo drop-shadow glow via `QGraphicsDropShadowEffect` (Qt QSS does not support CSS `box-shadow`).
 
 ### Performance
 

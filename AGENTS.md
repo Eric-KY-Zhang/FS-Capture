@@ -184,28 +184,32 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 | 版本 | 状态 | 计划文档 |
 |---|---|---|
 | v0.6 | ✅ 已发布 2026-05-17 | `roadmap/archive/` |
-| v0.6.1 | ✅ **已完成 2026-05-23**（6 commit `dfa461d → 3fa6c12`，72/72 tests，5 票 smoke 实跑） | `roadmap/SPRINT_v0.6.1_patch.md` |
-| v0.7 | ✅ **已完成 2026-05-23**（11 commit `2dc5fd2 → d07d133`，85/85 tests，KR 无 Key 4 家实跑） | `roadmap/SPRINT_v0.7_kr_public_crawler.md` |
-| v0.8 | ✅ **已完成 2026-05-23**（6 批次，100/100 tests，Playwright 池化 + 断点续传 + UI strings + lint 锁定） | `roadmap/SPRINT_v0.8_perf_and_ui_strings.md` |
-| v0.9 | ✅ **已完成 2026-05-23**（11 批次 + 3 Reviewer Checkpoint，7 市场 + 双语 UI + sidecar 迁移 + JP/UK + 增量 + 品牌升级） | `roadmap/SPRINT_v0.9_filings_atlas.md` |
-| **v1.0** | 🟡 **待启动**：SG 新加坡市场 + 抓取性能优化 + 视情况压缩体积（首发 GitHub release） | `roadmap/SPRINT_v1.0_sg_and_perf.md` |
+| v0.6.1 | ✅ 已完成 2026-05-23（6 commit `dfa461d → 3fa6c12`，72/72 tests，5 票 smoke 实跑） | `roadmap/archive/SPRINT_v0.6.1_patch.md` |
+| v0.7 | ✅ 已完成 2026-05-23（11 commit `2dc5fd2 → d07d133`，85/85 tests，KR 无 Key 4 家实跑） | `roadmap/archive/SPRINT_v0.7_kr_public_crawler.md` |
+| v0.8 | ✅ 已完成 2026-05-23（6 批次，100/100 tests，Playwright 池化 + 断点续传 + UI strings + lint 锁定） | `roadmap/archive/SPRINT_v0.8_perf_and_ui_strings.md` |
+| v0.9 | ✅ 已完成 2026-05-23（11 批次 + 3 Reviewer Checkpoint，7 市场 + 双语 UI + sidecar 迁移 + JP/UK + 增量 + 品牌升级） | `roadmap/archive/SPRINT_v0.9_filings_atlas.md` |
+| **v1.0** | ✅ **已完成 2026-05-24**（首发 GitHub release：SG 新加坡 + 性能 -55.5% + JP 公网真双模式 + UI refresh + 8 市场 e2e sweep 81MB PDF 实证；183 tests 全过） | `roadmap/SPRINT_v1.0_sg_and_perf.md` + `addendum_jp.md` + `addendum_ui_refresh.md` |
+| v1.1 | 🟡 待规划 | — |
 
-**发布策略**：v0.6.x / v0.7 / v0.8 / v0.9 内部迭代不发 release；**GitHub Release 只发当前 `roadmap/SPRINT_v1.0_sg_and_perf.md` 对应版本**。意味着 v0.7/v0.8/v0.9 期间：
-- 不更新 README 顶部版本号或 "What's new" 段
-- 但仍写 `PROJECT_RETROSPECTIVE.md` postscript 章节，保留迭代历史
-- 不打 git tag
+**发布策略**：v0.6.x / v0.7 / v0.8 / v0.9 内部迭代不发 release；**v1.0 是首个 GitHub Release**（含 tag `v1.0.0` + windows zip artifact）。v1.1+ 发布策略 TBD。
 
 ---
 
 ## 11. 路线图速览
 
-详细见 `roadmap/ROADMAP_v0.6.1_to_v0.9.md` 与当前 `roadmap/SPRINT_v1.0_sg_and_perf.md`。
+详细见 `roadmap/archive/ROADMAP_v0.6.1_to_v0.9.md`（v0.6.1→v0.9 历史）与 `roadmap/SPRINT_v1.0_*.md`（v1.0 主+2 addendum）。
 
 - **v0.6.1**（已完成）：7 个 bug 修复（ratelimit 热更新 / HK PDF drop / HK 财年表扩 / KR `induty_code` 兼容 / A 股 strict zip / batch import 反馈 / settings 返回值）
-- **v0.7**（已完成）：KR 公网爬虫去 Key（双模式）+ US 分页 fallback 单元测试 + Playwright audit 渲染兜底实跑验证。**架构清债项已澄清**：httpx verify 已在 v0.6 后期修过；plugin 重试统一是误判；HK 真实场景测试 v0.6.1 已覆盖；UI 字符串挪到 v0.8
-- **v0.8**（已完成）：Playwright **池化**（不删）+ 大 PDF 断点续传 + name_resolver 单飞缓存 + UI 字符串集中（11 文件）+ Lint pre-commit/CI 锁定。**已校准**：ruff 已 0 warning 改为锁定；Playwright 不可删（KR/US 必要依赖）；bundle 体积挪到后续版本。
-- **v0.9**（已完成）：原首发 release 的 11 批次内容下调为内部迭代。①品牌重命名 "FS Capture" → "Filings Atlas / 全球披露图谱"（仓库目录名不变）②中英双语 UI（Pattern B Python dict + Signal，运行时切换）+ README 双语 ③Sidecar 从 `output/` 迁移到 `data/cache/sidecars/`（启动一次性迁移）④日本 EDINET plugin（双模式）⑤英国 NSM plugin（公网为主）⑥增量更新（独立按钮，基于 sidecar diff）⑦IPO 路径统一（删 ashare/hk helper）⑧"如何加新市场" 文档
-- **v1.0**（3-4 周，7 批次 + 3 Reviewer Checkpoint；`roadmap/SPRINT_v1.0_sg_and_perf.md`）：**首发 GitHub release**。新增新加坡 SGX（年报 + H1 + IPO）、抓取性能优化、零体验代价的体积压缩。
+- **v0.7**（已完成）：KR 公网爬虫去 Key（双模式）+ US 分页 fallback 单元测试 + Playwright audit 渲染兜底实跑验证
+- **v0.8**（已完成）：Playwright 池化 + 大 PDF 断点续传 + name_resolver 单飞缓存 + UI 字符串集中（11 文件）+ Lint pre-commit/CI 锁定
+- **v0.9**（已完成）：品牌重命名 FS Capture → Filings Atlas / 全球披露图谱、中英双语 UI（Pattern B Python dict + Signal）、Sidecar 迁移到 `data/cache/sidecars/`、JP EDINET plugin（双模式）、UK NSM plugin、增量更新、IPO 路径统一
+- **v1.0**（已完成 2026-05-24，**首个 GitHub release**）：
+  - 主 sprint（SG + 性能 + 体积）：新增新加坡 SGX（年报 + H1 + IPO）、并发 4→6、Playwright thread-local pool、stream chunk 64K→256K、批量抓取性能 -55.5%（211.76s→94.22s，21 任务）、bundle 449→441 MB
+  - JP addendum：EDINET 公网真双模式真实现（v0.9 占位 stub 补齐），无 key 3 票实跑通
+  - UI refresh addendum：云端 Atlas 设计语言、ExchangeChip→MarketPin 重做（map pin 形态 + 地理顺序 UK/US‖A/HK/TW/KR/JP/SG + 重设计 8 accent color，A 股 #E11D48 保留）、新图标（cloud + atlas contour + pin，6 尺寸 ico）、titlebar 等高线（UK navy 7% opacity）+ 主按钮 indigo glow
+  - 打包修复：pandas.plotting 锁定 hiddenimport（防 frozen akshare 闪退）
+  - 验证：183 tests，ruff 干净，8 市场 e2e sweep 81MB PDF 实证
+- **v1.1**（待规划）
 
 **明确不做**：印度市场、数字财务底稿、跨市场对标、桌面 web 化。
 
@@ -229,4 +233,4 @@ Planner (Claude)  →  Worker (Codex)  →  Reviewer (Claude)  →  User 验收
 
 ---
 
-**最后更新**：2026-05-24（SG + 性能 sprint 启动）
+**最后更新**：2026-05-24（v1.0 release ready：SG + 性能 + JP 公网双模式 + UI refresh 全部完成）

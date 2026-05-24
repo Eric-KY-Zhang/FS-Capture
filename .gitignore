@@ -23,6 +23,11 @@ _internal/
 FS-Capture-v*-windows.zip
 FilingsAtlas-v*-windows.zip
 
+# Release artifacts (zips for each version go under release/)
+# The directory is tracked via release/README.md; the zips themselves are not.
+release/*
+!release/README.md
+
 # Python build / cache artifacts
 __pycache__/
 *.py[cod]
