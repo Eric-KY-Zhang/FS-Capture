@@ -4,7 +4,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Eric-KY-Zhang/FS-Capture)](https://github.com/Eric-KY-Zhang/FS-Capture/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Eric-KY-Zhang/FS-Capture/total)](https://github.com/Eric-KY-Zhang/FS-Capture/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue.svg)]()
+
+> 🎉 **v1.0.0 is out** · 8 markets (A/HK/US/KR/TW/JP/UK/SG) · bilingual UI · batch fetch -55% · [Release notes](https://github.com/Eric-KY-Zhang/FS-Capture/releases/tag/v1.0.0) · [⬇ Download Windows ZIP (187 MB)](https://github.com/Eric-KY-Zhang/FS-Capture/releases/download/v1.0.0/FilingsAtlas-v1.0.0-windows.zip)
 
 ---
 
