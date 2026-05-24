@@ -78,7 +78,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "MP_META_SG": "SGX 新加坡",
         # main_view
         "MV_SECTION": "选择市场 · SELECT MARKETS · UK / US || A股 · HK · TW · KR · JP · SG",
-        "MV_TITLE": "八大市场披露归档工作台",
+        "MV_TITLE": "全球上市公司公告获取",
         "MV_SUBTITLE": "官方披露来源统一接入，按市场、公司与报告期间集中归档 PDF。",
         "MV_SETTINGS_BUTTON": "⚙  设置",
         "MV_RUN_BUTTON": "▶  抓报告",
@@ -253,9 +253,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "MP_META_SG": "SGX",
         # main_view
         "MV_SECTION": "SELECT MARKETS · UK / US || A-Share · HK · TW · KR · JP · SG",
-        "MV_TITLE": "Eight-Market Disclosure Workbench",
+        "MV_TITLE": "Global Official Filings Gateway",
         "MV_SUBTITLE": (
-            "Official filing sources in one queue, organized by market, company, "
+            "Official filing sources, unified access — organized by market, company, "
             "and reporting period."
         ),
         "MV_SETTINGS_BUTTON": "⚙  Settings",
