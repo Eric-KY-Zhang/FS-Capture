@@ -174,7 +174,10 @@ class _TitleBar(QWidget):
         super().paintEvent(event)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        pen = QPen(QColor(203, 213, 225, 46), 1)
+        # Atlas contour pattern — matches HTML design spec
+        # `ContourPattern opacity={0.07} color={FA.market.UK.color #1E3A8A}` (board-03 line 100).
+        # UK navy color anchors the "Western markets on the left" geographical metaphor.
+        pen = QPen(QColor(30, 58, 138, 18), 1)  # #1E3A8A at ~7% opacity (18/255)
         painter.setPen(pen)
         w = self.width()
         for offset in (0, 42, 86):

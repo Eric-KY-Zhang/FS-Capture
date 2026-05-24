@@ -4,8 +4,10 @@ from collections.abc import Callable
 
 from loguru import logger
 from PySide6.QtCore import QRunnable, Qt, QThreadPool, Slot
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QFrame,
+    QGraphicsDropShadowEffect,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -176,6 +178,14 @@ class MainView(QWidget):
         self.run_btn.setMinimumWidth(160)
         self.run_btn.setCursor(Qt.PointingHandCursor)
         self.run_btn.clicked.connect(lambda: self._start_job(incremental=False))
+        # Primary CTA indigo glow — matches HTML design spec
+        # `boxShadow: 0 6px 18px rgba(99,102,241,.28)` (board-03-workbench.jsx:315).
+        # Qt QSS doesn't support box-shadow, so we use QGraphicsDropShadowEffect.
+        run_btn_shadow = QGraphicsDropShadowEffect(self.run_btn)
+        run_btn_shadow.setBlurRadius(18)
+        run_btn_shadow.setColor(QColor(99, 102, 241, 71))  # alpha 71/255 ≈ 0.28
+        run_btn_shadow.setOffset(0, 6)
+        self.run_btn.setGraphicsEffect(run_btn_shadow)
 
         self.incremental_btn = QPushButton(ui_strings.MV_INCREMENTAL_BUTTON)
         self.incremental_btn.setMinimumHeight(40)
